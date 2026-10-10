@@ -1,0 +1,44 @@
+<Project>
+
+  <!--
+    Shared paths for every project in the solution.
+    Override RumblePath on the command line if Steam is installed elsewhere:
+      dotnet build /p:RumblePath="D:\Games\RUMBLE"
+  -->
+  <PropertyGroup>
+    <RumblePath Condition="'$(RumblePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\RUMBLE</RumblePath>
+    <Il2CppPath>$(RumblePath)\MelonLoader\Il2CppAssemblies</Il2CppPath>
+    <ModsOutputPath>$(RumblePath)\Mods</ModsOutputPath>
+  </PropertyGroup>
+
+  <!--
+    Code quality. EnforceCodeStyleInBuild promotes the .editorconfig IDE rules (file-scoped
+    namespaces, naming, using placement) from editor-only hints into build diagnostics, so the
+    build is what proves the solution is clean rather than the editor.
+
+    Drop TreatWarningsAsErrors if you would rather warnings stayed warnings.
+  -->
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!--
+      Required for IDE0005 (unused usings) to report on build at all - without it the rule is
+      silently skipped no matter what severity .editorconfig gives it. It also switches on CS1591
+      (missing doc comments), which .editorconfig turns back off.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      LangVersion is a compiler setting, independent of the net6.0 target: primary constructors,
+      collection expressions, raw strings and list patterns all compile fine. Only features needing
+      a newer BCL fail - e.g. `required` members want RequiredMemberAttribute (.NET 7+), which can
+      be polyfilled with a few internal attribute declarations. Records and `init` already work at
+      the net6.0 default of C# 10.
+    -->
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+</Project>

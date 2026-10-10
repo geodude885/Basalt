@@ -1,0 +1,90 @@
+using BossBattles.Core;
+using Il2CppRUMBLE.Interactions.InteractionBase;
+using UnityEngine;
+
+namespace BossBattles.UI;
+
+/// <summary>
+/// The game's own push button, for the mod's UI: a copy of the Gym tutorial's "next page" button -
+/// what RumbleModdingAPI's <c>Create.NewButton</c> and RockUI copy too - kept across scene loads, so
+/// buttons press with the game's own feel, sound and haptics. Captured from the Gym the first time
+/// it is needed there; until then (or if the Gym changes) there is no template and callers use
+/// their own.
+/// </summary>
+internal static class GameButtons
+{
+    private static GameObject? _template;
+    private static bool _reported;
+
+    /// <summary>A live game button under <paramref name="parent"/>, pressing <paramref name="onPressed"/>; null without a template.</summary>
+    public static GameObject? Create(Transform parent, Action onPressed)
+    {
+        if (!EnsureTemplate()) return null;
+
+        try
+        {
+            GameObject button = UnityEngine.Object.Instantiate(_template!, parent, false);
+            button.name = "GameButton";
+            button.SetActive(true);
+
+            InteractionButton? interaction = button.GetComponentInChildren<InteractionButton>(true);
+            if (interaction == null)
+            {
+                UnityEngine.Object.Destroy(button);
+                return null;
+            }
+
+            interaction.onPressed.AddListener(onPressed);
+            return button;
+        }
+        catch (Exception e)
+        {
+            Mod.Note("GameButtons.Failed", e.ToString());
+            return null;
+        }
+    }
+
+    private static bool EnsureTemplate()
+    {
+        if (_template != null) return true;
+
+        try
+        {
+            var buttons = Resources.FindObjectsOfTypeAll<InteractionButton>()
+                .Where(b => b != null && b.gameObject.scene.IsValid() && b.transform.parent != null)
+                .ToList();
+
+            // The button object is the InteractionButton component's parent (RumbleModdingAPI's
+            // NextPageButton/InteractionButton, whose child 0 carries the component).
+            InteractionButton? next = buttons.FirstOrDefault(b => PathOf(b.transform).Contains("Next", StringComparison.OrdinalIgnoreCase)
+                                                                  && PathOf(b.transform).Contains("tutorial", StringComparison.OrdinalIgnoreCase));
+            if (next == null)
+            {
+                if (!_reported) Mod.Note("GameButtons.NoTemplate", $"no tutorial button in this scene ({buttons.Count} other buttons) - using the mod's own", echo: false);
+                _reported = true;
+                return false;
+            }
+
+            _template = UnityEngine.Object.Instantiate(next.transform.parent.gameObject);
+            _template.name = "BossBattles_ButtonTemplate";
+            _template.SetActive(false);
+            UnityEngine.Object.DontDestroyOnLoad(_template);
+            Mod.Note("GameButtons.Template", $"copied {PathOf(next.transform.parent)} (scale {Describe.Vector(next.transform.parent.lossyScale)})", echo: false);
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (!_reported) Mod.Note("GameButtons.Failed", e.ToString());
+            _reported = true;
+            return false;
+        }
+    }
+
+    private static string PathOf(Transform transform)
+    {
+        var names = new List<string>();
+        for (Transform? t = transform; t != null; t = t.parent) names.Add(t.name);
+        names.Reverse();
+        return string.Join("/", names);
+    }
+}

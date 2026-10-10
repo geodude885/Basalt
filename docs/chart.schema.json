@@ -1,0 +1,496 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BossBattles chart",
+  "description": "A BossBattles chart, format 2. See docs/chart-format.md.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "format": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2,
+      "default": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "string",
+      "examples": [
+        "Easy",
+        "Normal",
+        "Hard",
+        "Expert"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "arena": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "enum": [
+            "here",
+            "gym",
+            "ring",
+            "pit"
+          ],
+          "default": "here"
+        },
+        "at": {
+          "type": "object",
+          "description": "Where you stand: metres from the arena's centre (Gym: world). Ctrl+W prints yours.",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "z"
+          ]
+        },
+        "facing": {
+          "type": "number",
+          "description": "Compass degrees the lane runs from you: 0 = +Z, 90 = +X."
+        }
+      }
+    },
+    "music": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(ogg|wav|mp3)$"
+        },
+        "start": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        }
+      },
+      "required": [
+        "file"
+      ]
+    },
+    "cover": {
+      "type": "string",
+      "description": "A PNG or JPG beside the chart, shown on the picker.",
+      "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(png|jpg|jpeg)$"
+    },
+    "bpm": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "beat": {
+                "type": "number",
+                "minimum": 0
+              },
+              "bpm": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "beat",
+              "bpm"
+            ]
+          }
+        }
+      ]
+    },
+    "lane": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "number",
+          "exclusiveMinimum": 2,
+          "default": 12
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 3
+        }
+      }
+    },
+    "actors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "at": {
+            "$ref": "#/$defs/spot"
+          },
+          "shiftstones": {
+            "description": "\"you\" for whoever plays's stones, or up to two names.",
+            "oneOf": [
+              { "const": "you" },
+              { "type": "array", "maxItems": 2, "items": { "type": "string", "examples": [ "Adamant", "Charge", "Flow", "Guard", "Stubborn", "Surge", "Vigor", "Volatile" ] } }
+            ]
+          },
+          "look": {
+            "type": "string",
+            "examples": [
+              "you",
+              "default",
+              "defaultMale",
+              "defaultFemale"
+            ]
+          }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "startBeat": {
+            "type": "number",
+            "minimum": 0
+          },
+          "colours": {
+            "type": "object",
+            "description": "The lane's colours from this phase on, over the chart's.",
+            "properties": {
+              "edges": { "$ref": "#/$defs/colour" },
+              "ends": { "$ref": "#/$defs/colour" },
+              "zone": { "$ref": "#/$defs/colour" },
+              "backstop": { "$ref": "#/$defs/colour" },
+              "walls": { "$ref": "#/$defs/colour" }
+            }
+          },
+          "scoreMultiplier": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 1
+          },
+          "actor": {
+            "type": "string"
+          },
+          "at": {
+            "$ref": "#/$defs/spot"
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t": {
+            "type": "number",
+            "minimum": 0
+          },
+          "beat": {
+            "type": "number",
+            "minimum": 0
+          },
+          "actor": {
+            "type": "string"
+          },
+          "projectile": {
+            "type": "object",
+            "properties": {
+              "structure": {
+                "enum": [
+                  "Disc",
+                  "Ball",
+                  "Pillar",
+                  "Wall",
+                  "RockCube",
+                  "BoulderBall",
+                  "SmallRock",
+                  "LargeRock"
+                ]
+              },
+              "from": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "z": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "to": {
+                "oneOf": [
+                  {
+                    "const": "player"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                ]
+              },
+              "speed": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "telegraph": {
+                "type": "number",
+                "minimum": 0,
+                "default": 0.5
+              },
+              "grounded": {
+                "type": "boolean",
+                "description": "Thrown along the floor in the game's grounded state. Default true for Pillar, RockCube and Wall."
+              },
+              "by": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "structure",
+              "from",
+              "speed"
+            ]
+          },
+          "move": {
+            "type": "string",
+            "examples": [
+              "Straight",
+              "Uppercut",
+              "Kick",
+              "Stomp",
+              "Explode",
+              "Flick",
+              "Parry",
+              "Jump",
+              "RockSlide",
+              "Disc",
+              "SpawnBall",
+              "SpawnCube",
+              "SpawnPillar",
+              "SpawnWall",
+              "HoldLeft",
+              "HoldRight"
+            ]
+          },
+          "clip": {
+            "type": "string"
+          },
+          "at": {
+            "$ref": "#/$defs/spot"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "projectile"
+            ]
+          },
+          {
+            "required": [
+              "move"
+            ]
+          },
+          {
+            "required": [
+              "clip"
+            ]
+          },
+          {
+            "required": [
+              "at"
+            ]
+          }
+        ]
+      }
+    },
+    "end": {
+      "type": "number",
+      "minimum": 0
+    },
+    "tracks": {
+      "type": "array",
+      "description": "Recorded performances, written by RECORD / KEEP. Needs format 2.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string"
+          },
+          "takes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "t": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "beat": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "clip": {
+                  "type": "string"
+                },
+                "from": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "to": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "clip"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "zone": {
+      "type": "object",
+      "description": "Where you may go: length along the lane from your end, height above the floor.",
+      "properties": {
+        "length": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "default": 3.5
+        }
+      }
+    },
+    "colours": {
+      "type": "object",
+      "description": "The lane's colours, as #RRGGBB or #RRGGBBAA.",
+      "properties": {
+        "edges": { "$ref": "#/$defs/colour" },
+        "ends": { "$ref": "#/$defs/colour" },
+        "zone": { "$ref": "#/$defs/colour" },
+        "backstop": { "$ref": "#/$defs/colour" },
+        "walls": { "$ref": "#/$defs/colour", "description": "Shows the invisible walls as see-through panes; give an opacity, e.g. #66ccff33." }
+      }
+    },
+    "visuals": {
+      "type": "array",
+      "description": "Shader looks over time, for players with RumbleReShaded.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t": { "type": "number", "minimum": 0 },
+          "beat": { "type": "number", "minimum": 0 },
+          "pack": { "type": "string", "description": "An installed RumbleReShaded pack's name, e.g. UltraShade." },
+          "set": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Slider values by label or property." },
+          "on": { "type": "boolean" },
+          "off": { "type": "boolean" },
+          "fade": { "type": "number", "minimum": 0, "default": 0 }
+        },
+        "required": [ "pack" ]
+      }
+    },
+    "rules": {
+      "type": "object",
+      "properties": {
+        "cleanup": {
+          "type": "number",
+          "minimum": 0,
+          "default": 3,
+          "description": "Seconds a structure may sit still in a battle before it breaks; 0 never."
+        },
+        "spawn": {
+          "enum": [
+            "all",
+            "discs",
+            "none"
+          ],
+          "default": "all"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "colour": {
+      "type": "string",
+      "pattern": "^(#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})|none)$"
+    },
+    "spot": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number",
+          "minimum": 0
+        },
+        "facing": {
+          "type": "number",
+          "default": 0
+        }
+      },
+      "required": [
+        "x",
+        "z"
+      ]
+    }
+  }
+}

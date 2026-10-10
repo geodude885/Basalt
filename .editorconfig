@@ -1,0 +1,142 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{csproj,props,slnx,json,editorconfig}]
+indent_size = 2
+
+[*.cs]
+indent_size = 4
+
+#### Namespaces ####
+
+csharp_style_namespace_declarations = file_scoped:error
+
+#### using directives ####
+
+csharp_using_directive_placement = outside_namespace:error
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+#### Language style ####
+
+csharp_prefer_braces = when_multiline:silent
+csharp_style_var_for_built_in_types = true:silent
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_var_elsewhere = false:silent
+
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_prefer_not_pattern = true:suggestion
+csharp_style_inlined_variable_declaration = true:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_prefer_auto_properties = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+
+#### Naming ####
+
+dotnet_naming_rule.private_fields_underscore_camel.severity = warning
+dotnet_naming_rule.private_fields_underscore_camel.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore_camel.style = underscore_camel_case
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers =
+
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+dotnet_naming_rule.constants_pascal.severity = warning
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal_case
+
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+
+# Static readonly fields are effectively constants, so they take the constant's casing rather than
+# the underscore prefix that marks per-instance state.
+dotnet_naming_rule.static_readonly_pascal.severity = warning
+dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_pascal.style = pascal_case
+
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static,readonly
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+#### Severity ####
+
+# Surface every IDE style diagnostic as a build warning rather than an editor-only hint, so the
+# build proves the solution is clean instead of the Error List.
+#
+# Note: Visual Studio and `dotnet build` do not always agree on severity precedence. This
+# category-wide setting can outrank an `option = value:severity` suffix in VS while the build
+# honours the suffix, so a rule can appear in the IDE but not on the command line. When they
+# disagree, pin the rule explicitly with `dotnet_diagnostic.<id>.severity`, which wins in both.
+dotnet_analyzer_diagnostic.category-Style.severity = warning
+
+#### Analyzer rules relaxed for a MelonLoader mod ####
+
+# Mods are not localised and log in one language.
+dotnet_diagnostic.CA1303.severity = none
+# Broad catches are deliberate: an exception escaping a MelonLoader callback repeats every frame,
+# and a mod should degrade quietly rather than take the game down with it.
+dotnet_diagnostic.CA1031.severity = none
+# Discarding a return value is normal (StringBuilder chains, best-effort Try* calls); assigning
+# each to a discard adds noise without meaning.
+dotnet_diagnostic.IDE0058.severity = none
+# GenerateDocumentationFile is on so IDE0005 runs on build; that also demands doc comments, which
+# are not required here.
+dotnet_diagnostic.CS1591.severity = none
+
+# LangVersion=latest makes these available; it does not make them mandatory. Silent keeps the
+# Ctrl+. refactoring on offer without demanding a rewrite of working code.
+dotnet_diagnostic.IDE0290.severity = silent
+dotnet_diagnostic.IDE0028.severity = silent
+dotnet_diagnostic.IDE0300.severity = silent
+dotnet_diagnostic.IDE0301.severity = silent
+dotnet_diagnostic.IDE0302.severity = silent
+dotnet_diagnostic.IDE0303.severity = silent
+dotnet_diagnostic.IDE0304.severity = silent
+dotnet_diagnostic.IDE0305.severity = silent
+
+#### Test project ####
+# Scoped to the tests, so these relaxations cannot quietly weaken the mod itself.
+
+[BossBattles.Tests/**.cs]
+# Test names are deliberately long sentences describing the behaviour under test.
+dotnet_diagnostic.CA1707.severity = none
+# Inline arrays of expected values read better than hoisting each one to a field.
+dotnet_diagnostic.CA1861.severity = none
+
+# Guard clauses read better than the conditional expressions IDE0046/IDE0045 want, and a switch with
+# a deliberate default arm is not an omission, so the "populate switch" rules are noise here. Same
+# reasoning as the IDE rules pinned above: the analyzer's preference, not the project's.
+[BossBattles/**.cs]
+dotnet_diagnostic.IDE0046.severity = silent
+dotnet_diagnostic.IDE0045.severity = silent
+dotnet_diagnostic.IDE0010.severity = silent
+dotnet_diagnostic.IDE0072.severity = silent
+
+# Harmony binds patch parameters by exact name - __instance, __result, __state - so the underscores
+# are required by the framework rather than chosen. Without this, the first patch that injects one
+# fails the build, since warnings are errors.
+[BossBattles/Patches/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+# Flatscreen/ carries its own Harmony patches so it can become a separate mod.
+[BossBattles/Flatscreen/**.cs]
+dotnet_diagnostic.CA1707.severity = none

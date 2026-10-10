@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Version.props" />
+  </Folder>
+  <Project Path="BossBattles.Tests/BossBattles.Tests.csproj" />
+  <Project Path="BossBattles/BossBattles.csproj" />
+</Solution>

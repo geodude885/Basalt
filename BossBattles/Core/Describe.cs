@@ -1,4 +1,3 @@
-using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
@@ -14,9 +13,6 @@ internal static class Describe
         var name = player.Data?.GeneralData?.PublicUsername ?? "?";
         return $"{name}(hp={player.Data?.HealthPoints})";
     }
-
-    public static string Structure(Structure? structure) =>
-        structure == null ? "null-structure" : $"{structure.name}@{Vector(structure.transform.position)}";
 
     public static string Vector(Vector3 v) => $"({v.x:F2},{v.y:F2},{v.z:F2})";
 

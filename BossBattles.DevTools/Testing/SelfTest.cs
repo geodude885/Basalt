@@ -2,7 +2,7 @@ using System.Collections;
 using BossBattles.Actors;
 using BossBattles.Battle;
 using BossBattles.Core;
-using BossBattles.Flatscreen;
+using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Audio;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
@@ -13,18 +13,11 @@ using MelonLoader;
 using MelonLoader.Utils;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// An automatic run of the "Self Test" chart, for checking a build without anyone in the headset.
-/// Launch the game with <c>--bossbattles-selftest</c> (or <c>--bossbattles-selftest=ring</c> /
-/// <c>=pit</c>); once the Gym is up it plays the chart, judges the run, writes the verdict to
-/// <c>UserData/BossBattles/selftest.txt</c> and the log, and quits the game.
-/// <para>
-/// It checks what a person would otherwise have to watch for: actors came up as simulated players
-/// with a body, every projectile spawned and launched, every command ran, the battle finished, and
-/// nothing threw - no failed patches, spawns, or commands.
-/// </para>
+/// <c>--bossbattles-selftest[=ring|=pit]</c>: once the Gym is up, plays the self-test chart, judges
+/// the run, writes the verdict to <c>UserData/BossBattles/selftest.txt</c> and quits the game.
 /// </summary>
 internal static partial class SelfTest
 {
@@ -85,8 +78,6 @@ internal static partial class SelfTest
         "Battle.MovesNotReleased",
         "Board.Failed",
     };
-
-    private static bool _enabled;
     private static bool _started;
     private static ArenaKind _arena = ArenaKind.Here;
     private static ClipLibrary? _clips;
@@ -99,7 +90,7 @@ internal static partial class SelfTest
     private static string? _laneProblem;
     private static string _song = "";
 
-    public static bool Enabled => _enabled;
+    public static bool Enabled { get; private set; }
 
     public static void Configure(ClipLibrary clips, Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture, ChartPicker picker, Func<string?> newChart)
     {
@@ -113,7 +104,7 @@ internal static partial class SelfTest
             .FirstOrDefault(a => a.StartsWith(Flag, StringComparison.OrdinalIgnoreCase));
         if (argument == null) return;
 
-        _enabled = true;
+        Enabled = true;
         _clips = clips;
         if (argument.EndsWith("=ring", StringComparison.OrdinalIgnoreCase)) _arena = ArenaKind.Ring;
         if (argument.EndsWith("=pit", StringComparison.OrdinalIgnoreCase)) _arena = ArenaKind.Pit;
@@ -123,12 +114,12 @@ internal static partial class SelfTest
         var chartAt = argument.IndexOf(ChartPrefix, StringComparison.OrdinalIgnoreCase);
         if (chartAt >= 0) _playbackChart = argument[(chartAt + ChartPrefix.Length)..].Trim('"');
 
-        Mod.Say($"[SelfTest] armed: will play \"{StarterCharts.SelfTestName}\" in {_arena} once the Gym loads{(_shots ? ", with screenshots" : "")}");
+        Mod.Say($"[SelfTest] armed: will play \"{SelfTestChart.Name}\" in {_arena} once the Gym loads{(_shots ? ", with screenshots" : "")}");
     }
 
     public static void OnSceneLoaded(string scene)
     {
-        if (!_enabled || _started || !string.Equals(scene, Arena.GymScene, StringComparison.Ordinal)) return;
+        if (!Enabled || _started || !string.Equals(scene, Arena.GymScene, StringComparison.Ordinal)) return;
 
         _started = true;
         MelonCoroutines.Start(Run());
@@ -137,7 +128,7 @@ internal static partial class SelfTest
     /// <summary>Called each frame: notes whether an actor was ever seen as a simulated player.</summary>
     public static void Update()
     {
-        if (_enabled && !_sawSimulatedActor && Mod.Actors.All.Any(a => a.Ready && a.IsSimulated)) _sawSimulatedActor = true;
+        if (Enabled && !_sawSimulatedActor && Mod.Actors.All.Any(a => a.Ready && a.Exists)) _sawSimulatedActor = true;
     }
 
     private static IEnumerator Run()
@@ -194,7 +185,7 @@ internal static partial class SelfTest
 
         // The chart built into this build, not the copy in the chart folder (written once, so it
         // can be older than the code under test); its clip is supplied in memory.
-        ChartLoadResult loaded = ChartLoader.Load(StarterCharts.SelfTest);
+        ChartLoadResult loaded = ChartLoader.Load(SelfTestChart.Json);
         Chart? chart = loaded.Chart;
         if (chart == null)
         {
@@ -202,7 +193,7 @@ internal static partial class SelfTest
             yield break;
         }
 
-        _clips?.Put(SyntheticClips.Sway(StarterCharts.SelfTestClip, 1.5f));
+        _clips?.Put(SyntheticClips.Sway(SelfTestChart.Clip, 1.5f));
 
         // A song beside the chart, as a chart folder would have one: a metronome written here, or
         // a song dropped in by hand to check a format Unity has to decode.
@@ -249,10 +240,7 @@ internal static partial class SelfTest
         Finish(Judge(chart, result));
     }
 
-    /// <summary>
-    /// The picker stands in front of you in the Gym, and a press changes its card - and is undone,
-    /// so the chosen chart is left as it was. With shots, a picture of it.
-    /// </summary>
+    /// <summary>The picker appears in the Gym and a press changes its card; the press is undone after.</summary>
     private static IEnumerator CheckPicker()
     {
         if (_picker == null)
@@ -296,10 +284,7 @@ internal static partial class SelfTest
         Mod.Say($"[SelfTest] picker ({(gameButton ? "the game's NEXT button" : "the mod's own buttons")}): {Flatten(before)} -> {Flatten(after)}");
     }
 
-    /// <summary>
-    /// A cover shows on the card: one is drawn here, saved as a PNG beside the self-test's song, and
-    /// previewed on the picker in place of the chosen chart's card.
-    /// </summary>
+    /// <summary>A cover image drawn here shows on the picker's card.</summary>
     private static IEnumerator CheckCover()
     {
         var path = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles", "SelfTest", "selftest-cover.png");
@@ -331,10 +316,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.4f);
     }
 
-    /// <summary>
-    /// The self-test chart allows discs only: once the battle runs, the other spawn moves are off
-    /// your list and the disc is not; at the end they are all back.
-    /// </summary>
+    /// <summary>A discs-only chart takes the other spawn moves and gestures away while running, and gives them back.</summary>
     private static IEnumerator CheckRules()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
@@ -376,11 +358,7 @@ internal static partial class SelfTest
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
     }
 
-    /// <summary>
-    /// With the lane still up after the battle, walk into each wall - right, left, back, forward -
-    /// with the flatscreen walk stick, dashing into it twice on the way (a dash once went through a
-    /// thin wall), and check you are still inside the lane each time. Needs no headset.
-    /// </summary>
+    /// <summary>After the battle, walking and dashing into each wall must leave you inside the lane.</summary>
     private static IEnumerator CheckWalls()
     {
         if (!FlatscreenControls.IsFlatscreen || Mod.Battle.LaneSize is not { } lane) yield break;
@@ -428,12 +406,7 @@ internal static partial class SelfTest
         return folder;
     }
 
-    /// <summary>
-    /// Four screenshots from an overview camera behind you - the lane at the countdown, the first
-    /// projectile telegraphing and just launched, the results - into
-    /// <c>UserData/BossBattles/SelfTestShots/&lt;arena&gt;</c>. Only with
-    /// <c>--bossbattles-shots</c>, so a plain self-test stays quick.
-    /// </summary>
+    /// <summary>With <c>--bossbattles-shots</c>: the lane, a telegraph, a flight and the results, into <c>SelfTestShots/&lt;arena&gt;</c>.</summary>
     private static IEnumerator TakeShots()
     {
         // One folder per arena, so a Ring run does not overwrite the Gym's pictures.

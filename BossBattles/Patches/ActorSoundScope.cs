@@ -4,10 +4,8 @@ using Il2CppRUMBLE.Players;
 namespace BossBattles.Patches;
 
 /// <summary>
-/// Marks "an actor's own code is running right now", so a sound played inside that window is
-/// known to be the actor's - which its position alone cannot say. Entered and left by the prefix
-/// and postfix pairs in <see cref="ActorPatches"/>; <see cref="Reset"/> runs every frame in case a
-/// call ever ends without its postfix.
+/// Marks that an actor's own code is running, so a sound played meanwhile is known to be the actor's
+/// (its position cannot say). <see cref="Reset"/> runs each frame in case a postfix never ran.
 /// </summary>
 internal static class ActorSoundScope
 {
@@ -15,14 +13,14 @@ internal static class ActorSoundScope
 
     public static bool Active => _depth > 0;
 
-    /// <returns>Whether the scope was entered, which the matching <see cref="Exit"/> needs.</returns>
+    /// <returns>Whether the scope was entered, for the matching <see cref="Exit"/>.</returns>
     public static bool Enter(PlayerController? controller)
     {
         var entered = false;
 
         PatchGuard.Run(nameof(ActorSoundScope), () =>
         {
-            if (Mod.Actors.Find(controller)?.IsSimulated != true) return;
+            if (Mod.Actors.Find(controller)?.Exists != true) return;
 
             _depth++;
             entered = true;

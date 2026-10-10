@@ -4,10 +4,8 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>
-/// Materials for the mod's own shapes. A primitive's default material uses a shader the game build
-/// does not carry - the first screenshot showed the lane and backstop magenta - so the shader is
-/// borrowed from what the game has loaded: a URP unlit or lit one by name, else any loaded shader
-/// with "Unlit" in its name. Chosen once, logged.
+/// Materials for the mod's own shapes. A primitive's default shader is not in the game build (it
+/// draws magenta), so one the game has loaded is borrowed.
 /// </summary>
 internal static class Paint
 {
@@ -23,7 +21,7 @@ internal static class Paint
     private static Shader? _shader;
     private static bool _searched;
 
-    /// <summary>A material in a flat colour, or null when no usable shader is loaded (the shape is then left as it is).</summary>
+    /// <summary>A flat colour; null when no usable shader is loaded.</summary>
     public static Material? Colour(Color colour)
     {
         Shader? shader = FindShader();
@@ -35,13 +33,9 @@ internal static class Paint
         return material;
     }
 
-    /// <summary>
-    /// A see-through material for the colour's opacity: URP Unlit switched to its transparent
-    /// surface (alpha blending, no depth write, drawn after the opaque world), both faces drawn.
-    /// </summary>
+    /// <summary>A see-through, double-sided colour: URP Unlit on its transparent surface, even when opaque, so it can fade.</summary>
     public static Material? Glass(Color colour)
     {
-        // Always set up see-through, even when opaque now: a phase can fade it.
         Material? material = Colour(colour);
         if (material == null) return material;
 

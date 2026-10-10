@@ -4,9 +4,8 @@ using NVorbis;
 namespace BossBattles.Services.Audio;
 
 /// <summary>
-/// A song being decoded: interleaved samples in -1..1, read a block at a time so a long song is
-/// never all in memory twice. <see cref="Frames"/> is the length in sample frames (one sample per
-/// channel) - exact for WAV and OGG, estimated from the duration for MP3.
+/// A song being decoded into interleaved samples, a block at a time. <see cref="Frames"/> is exact
+/// for WAV and OGG, estimated for MP3.
 /// </summary>
 public interface IPcmSource : IDisposable
 {
@@ -20,10 +19,7 @@ public interface IPcmSource : IDisposable
     int Read(float[] buffer, int offset, int count);
 }
 
-/// <summary>
-/// Opens a song by its extension: MP3 (NLayer), OGG Vorbis (NVorbis) or WAV (read here). The game
-/// ships without Unity's own audio decoder, so songs are decoded in managed code.
-/// </summary>
+/// <summary>Opens an MP3, OGG or WAV by its extension; the game ships without Unity's own decoders.</summary>
 public static class AudioDecoder
 {
     public static IPcmSource Open(string path) => Path.GetExtension(path).ToLowerInvariant() switch

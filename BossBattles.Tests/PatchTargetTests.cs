@@ -1,5 +1,5 @@
 using System.Reflection;
-using BossBattles.Flatscreen;
+using BossBattles.DevTools.Flatscreen;
 using BossBattles.Patches;
 using HarmonyLib;
 using Xunit;
@@ -7,9 +7,8 @@ using Xunit;
 namespace BossBattles.Tests;
 
 /// <summary>
-/// Checks every trace patch against the interop assemblies: the target method still exists, and
-/// each injected parameter is one the target really declares (Harmony binds by the game's names).
-/// A game update that moves a target fails here instead of in the headset.
+/// Every patch's target still exists in the interop assemblies, with the parameters it injects
+/// (Harmony binds by the game's names), so a game update fails here instead of in the headset.
 /// </summary>
 public sealed class PatchTargetTests
 {

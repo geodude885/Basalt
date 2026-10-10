@@ -6,10 +6,8 @@ using BossBattles.Services.Clips;
 namespace BossBattles.Services.Charts;
 
 /// <summary>
-/// What keeping a recorded take does to a chart, as text edits (<see cref="ChartDocument"/>): the
-/// actor's track becomes the take, the chart's format is raised to one that reads tracks, and its
-/// end is pushed out to cover the take. Takes are named <c>&lt;actor&gt;-take-&lt;n&gt;</c> and kept
-/// in the chart's <c>clips/</c>.
+/// Keeping a recorded take, as text edits to the chart: the actor's track takes it, and the end is
+/// pushed out to cover it. Takes are named <c>&lt;actor&gt;-take-&lt;n&gt;</c> in the chart's <c>clips/</c>.
 /// </summary>
 public static class Takes
 {
@@ -41,10 +39,7 @@ public static class Takes
         return $"{prefix}{highest + 1}";
     }
 
-    /// <summary>
-    /// The chart text after keeping <paramref name="take"/> as the whole of <paramref name="actorId"/>'s
-    /// track. The take keeps chart time, so it plays from its own first frame's time.
-    /// </summary>
+    /// <summary>The chart text with <paramref name="take"/> as the whole of <paramref name="actorId"/>'s track.</summary>
     public static string KeepWhole(string chartText, Chart chart, string actorId, Clip take, bool mime = false)
     {
         var tracks = chart.Tracks.Where(t => t.ActorId != actorId).ToList();
@@ -53,10 +48,8 @@ public static class Takes
     }
 
     /// <summary>
-    /// The actor's takes with chart time <paramref name="from"/> to <paramref name="to"/> replaced
-    /// by <paramref name="take"/> (recorded on chart time, so played from <paramref name="from"/>):
-    /// what played before is cut off there, and whatever was playing at <paramref name="to"/>
-    /// resumes from the right point. Earlier takes are not touched - only which parts play.
+    /// The actor's takes with <paramref name="from"/> to <paramref name="to"/> replaced by
+    /// <paramref name="take"/>; whatever was playing at <paramref name="to"/> resumes from the right point.
     /// </summary>
     public static IReadOnlyList<TakeSegment> PunchIn(IReadOnlyList<TakeSegment> takes, string take, double from, double to, bool mime = false)
     {

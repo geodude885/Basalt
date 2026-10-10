@@ -5,9 +5,8 @@ namespace BossBattles.Patches;
 internal static class PatchGroup
 {
     /// <summary>
-    /// Patch each nested class of a group on its own, so one moved target does not take the rest
-    /// down. <c>PatchAll</c> on the container would patch nothing and report success. Written
-    /// through before each, so a native crash while patching names the patch.
+    /// Patches each nested class of a group on its own (<c>PatchAll</c> on the container patches
+    /// nothing), logging before each so a native crash while patching names the patch.
     /// </summary>
     public static int Apply(HarmonyLib.Harmony harmony, Type group)
     {

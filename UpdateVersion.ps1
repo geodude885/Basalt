@@ -25,6 +25,15 @@ $modCs = $modCs -replace $melonInfo, "MelonInfo(typeof($modName.ModEntry), `"$mo
 Set-Content $modCsPath -Value $modCs -NoNewline
 Write-Host "[OK] Updated ModEntry.cs" -ForegroundColor Green
 
+# The dev tools carry the same version.
+$devCsPath = Join-Path $root "$modName.DevTools\DevToolsEntry.cs"
+$devCs = Get-Content $devCsPath -Raw
+$devInfo = "MelonInfo\(typeof\($modName\.DevTools\.DevToolsEntry\),\s*"".*?"",\s*"".*?"",\s*"".*?""\)"
+if ($devCs -notmatch $devInfo) { throw "MelonInfo attribute not found in $devCsPath" }
+$devCs = $devCs -replace $devInfo, "MelonInfo(typeof($modName.DevTools.DevToolsEntry), `"$modName.DevTools`", `"$version`", `"$author`")"
+Set-Content $devCsPath -Value $devCs -NoNewline
+Write-Host "[OK] Updated DevToolsEntry.cs" -ForegroundColor Green
+
 # Thunderstore manifest — update name, version, author
 $manifestPath = Join-Path $root "Thunderstore\manifest.json"
 $manifest = Get-Content $manifestPath -Raw

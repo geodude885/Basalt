@@ -5,10 +5,8 @@ using Il2CppRUMBLE.Networking.MatchFlow;
 namespace BossBattles.Patches;
 
 /// <summary>
-/// Keeping you in the Ring or Pit with no opponent: the match handler force-quits a solo player
-/// back to the Gym. MultiplayerMapsInSinglePlayer blocks that with the same prefix; this one only
-/// acts while a battle holds the arena, so it is harmless alongside that mod and changes nothing
-/// in real matches.
+/// The match handler force-quits a solo player from the Ring or Pit back to the Gym; blocked only
+/// while a battle holds the arena, so real matches and MultiplayerMapsInSinglePlayer are unaffected.
 /// </summary>
 public static class ArenaPatches
 {

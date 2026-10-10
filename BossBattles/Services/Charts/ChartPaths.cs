@@ -3,11 +3,7 @@ namespace BossBattles.Services.Charts;
 /// <summary>Checks on file names that come from charts and packages - other people's files.</summary>
 public static class ChartPaths
 {
-    /// <summary>
-    /// True for a relative path that stays inside its folder: not rooted, no drive, no "..". A chart
-    /// naming "../../something" must not reach outside its own folder, nor a package entry be
-    /// unpacked there.
-    /// </summary>
+    /// <summary>True for a relative path that stays inside its folder: not rooted, no drive, no "..".</summary>
     public static bool IsSafeRelative(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return false;

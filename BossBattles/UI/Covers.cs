@@ -4,19 +4,15 @@ using UnityEngine;
 
 namespace BossBattles.UI;
 
-/// <summary>
-/// Chart cover images as textures, loaded with Unity's own decoder (<c>ImageConversion.LoadImage</c>:
-/// PNG, JPG) and kept until the file changes - textures are assets, so they outlive scene loads.
-/// </summary>
+/// <summary>Chart cover images (PNG or JPG) as textures, cached until the file changes.</summary>
 internal static class Covers
 {
-    /// <summary>Bigger files are not loaded: a cover is shown about 30 cm across.</summary>
-    // 16 MB: a 2048 px PNG saved from the editor was 8.8 MB, and a 4 MB limit hid it.
+    /// <summary>Room for a 2048 px PNG saved from the editor.</summary>
     private const long MaxBytes = 16 * 1024 * 1024;
 
     private static readonly Dictionary<string, (DateTime Written, Texture2D? Texture)> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The cover at <paramref name="path"/>, or null when missing, too big or not an image (noted once per file version).</summary>
+    /// <summary>The cover at <paramref name="path"/>; null when missing, too big or not an image.</summary>
     public static Texture2D? Get(string path)
     {
         try
@@ -43,7 +39,7 @@ internal static class Covers
         }
     }
 
-    /// <summary>A material showing <paramref name="texture"/> unlit, or null without a usable shader.</summary>
+    /// <summary>The texture unlit; null without a usable shader.</summary>
     public static Material? Material(Texture2D texture)
     {
         Material? material = Paint.Colour(Color.white);

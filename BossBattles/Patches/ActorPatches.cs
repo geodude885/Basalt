@@ -1,6 +1,5 @@
 using BossBattles.Actors;
 using BossBattles.Core;
-using BossBattles.Flatscreen;
 using HarmonyLib;
 using Il2CppRUMBLE.Audio;
 using Il2CppRUMBLE.Combat.ShiftStones;
@@ -14,16 +13,12 @@ using UnityEngine;
 namespace BossBattles.Patches;
 
 /// <summary>
-/// Everything that makes an actor behave as a player that is not you, keyed by
-/// <see cref="ActorRegistry.Find(Player?)"/> so each patch touches actors only - your own player runs
-/// the game's code untouched (apart from <see cref="HealthWatch"/>, which only reads).
-/// Each body runs through <see cref="PatchGuard"/>; skipping prefixes fail open.
+/// What makes an actor behave as a player that is not you. Each patch acts on actors only; your own
+/// player runs the game's code untouched (<see cref="HealthWatch"/> only reads). Skipping prefixes fail open.
 /// </summary>
 public static class ActorPatches
 {
     public static int Apply(HarmonyLib.Harmony harmony) => PatchGroup.Apply(harmony, typeof(ActorPatches));
-
-    // ---- Health ----------------------------------------------------------------------------------
 
     /// <summary>Lethal damage knocks an actor out instead of running the game's death handling.</summary>
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.ReduceHealth))]
@@ -81,8 +76,8 @@ public static class ActorPatches
     }
 
     /// <summary>
-    /// SetHealth on a Local player plays the non-positional "you were hit" sound and can raise the
-    /// change over Photon; an actor is Local, so for the length of the call it is Remote.
+    /// SetHealth on a Local player plays the 2D "you were hit" sound and can raise the change over
+    /// Photon, so an actor is Remote for the length of the call.
     /// </summary>
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.SetHealth))]
     public static class ActorHealthAsRemote
@@ -95,7 +90,7 @@ public static class ActorPatches
             PatchGuard.Run(nameof(ActorHealthAsRemote), () =>
             {
                 PlayerController? controller = __instance.ParentController;
-                if (controller == null || Mod.Actors.Find(controller)?.IsSimulated != true) return;
+                if (controller == null || Mod.Actors.Find(controller)?.Exists != true) return;
                 if (controller.controllerType != ControllerType.Local) return;
 
                 controller.controllerType = ControllerType.Remote;
@@ -117,7 +112,7 @@ public static class ActorPatches
         }
     }
 
-    /// <summary>Observes every health change - yours and the actors' - for the battle's score. Read-only.</summary>
+    /// <summary>Reads every health change, yours and the actors', for the battle's score.</summary>
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.SetHealth))]
     public static class HealthWatch
     {
@@ -141,17 +136,12 @@ public static class ActorPatches
         });
     }
 
-    // ---- Knockback -------------------------------------------------------------------------------
-
-    /// <summary>
-    /// A simulated actor takes <see cref="Actor.KnockbackTaken"/> of the game's knockback (0 skips
-    /// it). A puppet cannot be moved by it at all, so it gets its own slide.
-    /// </summary>
+    /// <summary>An actor takes <see cref="Actor.KnockbackTaken"/> of the game's knockback; 0 skips it.</summary>
     [HarmonyPatch(typeof(CombatManager), nameof(CombatManager.ApplyPlayerKnockbackForce))]
     public static class Knockback
     {
         [HarmonyPriority(Priority.First)]
-        public static bool Prefix(PlayerController controller, int tierPoints, Vector3 direction, ref float knockbackMultiplier, float forceModifier)
+        public static bool Prefix(PlayerController controller, ref float knockbackMultiplier)
         {
             var runOriginal = true;
             var multiplier = knockbackMultiplier;
@@ -160,13 +150,6 @@ public static class ActorPatches
             {
                 Actor? actor = Mod.Actors.Find(controller);
                 if (actor == null) return;
-
-                if (actor.IsPuppet) // PUPPET
-                {
-                    runOriginal = false;
-                    actor.ApplyPuppetKnockback(direction.normalized * (tierPoints * Actor.PuppetKnockbackScale * multiplier * forceModifier));
-                    return;
-                }
 
                 if (actor.KnockbackTaken <= 0f)
                 {
@@ -182,13 +165,9 @@ public static class ActorPatches
         }
     }
 
-    // ---- Input -----------------------------------------------------------------------------------
-
     /// <summary>
-    /// A Local player's ProcessInput reads the global input actions - your joystick. For a
-    /// bot-controlled actor it is replaced with the actor's own sticks, through the game's own
-    /// formula (<see cref="MovementInput"/>). Gestures need nothing here: pose recognition is pure
-    /// head/hand geometry.
+    /// A Local player's ProcessInput reads your joystick; a bot-controlled actor gets its own sticks
+    /// instead. Gestures need nothing: pose recognition is pure head and hand geometry.
     /// </summary>
     [HarmonyPatch(typeof(PlayerMovement), nameof(PlayerMovement.ProcessInput))]
     public static class BotSticks
@@ -211,8 +190,8 @@ public static class ActorPatches
         }
 
         /// <summary>
-        /// Without a headset the game's own ProcessInput throws every frame for your player; once
-        /// patched, the interop trampoline reports each one. Suppress, log the first, count the rest.
+        /// Without a headset the game's ProcessInput throws every frame, and once patched the interop
+        /// trampoline reports each one: log the first, count the rest.
         /// </summary>
         public static Exception? Finalizer(Exception? __exception)
         {
@@ -225,10 +204,8 @@ public static class ActorPatches
         }
     }
 
-    // ---- Sounds ----------------------------------------------------------------------------------
-    // Some of a player's own sounds are authored 2D because only your own player runs those paths.
-    // While one runs for an actor, sounds it plays are made positional; every other sound is left
-    // as authored. See ActorSoundScope.
+    // Sounds only your own player plays are authored 2D; played inside these scopes for an actor,
+    // they are made positional (ActorSoundsPositional).
 
     [HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseCompleted))]
     public static class PoseSoundScope

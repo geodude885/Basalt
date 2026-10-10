@@ -6,9 +6,8 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>
-/// Floating text over the lane: the countdown, phase names, and the results. A TextMeshPro object
-/// built at runtime; the font is taken from whatever TextMeshPro font the game has loaded, since a
-/// built game may carry no default.
+/// Floating text over the lane: the countdown, phase names and results. Uses whatever TextMeshPro
+/// font the game has loaded, since a built game may carry no default.
 /// </summary>
 internal sealed class Board
 {
@@ -56,12 +55,6 @@ internal sealed class Board
     public void Update()
     {
         if (_holder != null && Time.time >= _hideAt) Hide();
-    }
-
-    public void Destroy()
-    {
-        if (_holder != null) UnityEngine.Object.Destroy(_holder);
-        Forget();
     }
 
     /// <summary>For a scene change: the board went with the scene.</summary>

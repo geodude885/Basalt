@@ -1,9 +1,6 @@
 namespace BossBattles.Services.Charts;
 
-/// <summary>
-/// What the game side should do, and when. <see cref="ChartRunner"/> turns a chart into these in
-/// time order; executing them is all the game side does, so timing lives in tested code.
-/// </summary>
+/// <summary>What the game side should do, and when; timing lives in <see cref="ChartRunner"/>, which is tested.</summary>
 public abstract record ChartCommand(double Time);
 
 public sealed record EnterPhase(double Time, Phase Phase) : ChartCommand(Time);
@@ -19,10 +16,7 @@ public sealed record RunMove(double Time, string ActorId, string Stack) : ChartC
 
 public sealed record PlayClip(double Time, string ActorId, string Clip) : ChartCommand(Time);
 
-/// <summary>
-/// An actor performs a recorded take - its poses, its path in the lane and its moves - from the
-/// clip's <see cref="From"/>, until chart time <see cref="Until"/> (null: the clip's end).
-/// </summary>
+/// <summary>An actor performs a take from the clip's <see cref="From"/> until chart time <see cref="Until"/> or the clip's end.</summary>
 public sealed record PlayTake(double Time, string ActorId, string Clip, double From, double? Until) : ChartCommand(Time)
 {
     /// <summary>Moves as recorded, but runs none of the take's moves - see <see cref="TakeSegment.Mime"/>.</summary>

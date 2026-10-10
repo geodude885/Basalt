@@ -1,9 +1,6 @@
 namespace BossBattles.Services.Clips;
 
-/// <summary>
-/// The clips in a folder (<c>UserData/BossBattles/Clips</c> in the game), by name - the clip's own
-/// name or its file name. Read lazily and cached until <see cref="Reload"/>.
-/// </summary>
+/// <summary>The clips in a folder, by the clip's name or its file name.</summary>
 public sealed class ClipLibrary
 {
     private Dictionary<string, Clip> _clips = new(StringComparer.OrdinalIgnoreCase);

@@ -8,18 +8,12 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>
-/// RumbleReShaded (RRS), when it is installed: a chart's shader looks and the battle's signals.
-/// Found by reflection, so BossBattles neither needs it nor references it, and nothing here runs
-/// without it.
-/// <para><b>Looks</b>: RRS has no call for another mod to switch a pack or set its sliders, but it
-/// reads both from its own MelonPreferences entries every frame - so a chart's look is written
-/// there (found through <c>RumbleReShadedMod.Packs</c>, never by guessing names), and the player's
-/// own values are put back when the run ends, stops, changes scene or the game quits.</para>
-/// <para><b>Signals</b>, for packs to react to: events through <c>RRS.Fire</c> on
-/// <c>bossbattles.*</c> channels, and floats as <c>_RRS_bossbattles_*</c> shader globals - RRS's
-/// own <c>SetGlobal</c> requires a dotted key and publishes <c>_RRS_mod.key</c>, which no shader
-/// can declare. See docs/chart-format.md.</para>
-/// <para><see cref="Strength"/> (the Chart visuals setting) scales all of it; 0 is off.</para>
+/// RumbleReShaded, found by reflection when installed: a chart's shader looks and the battle's signals.
+/// <para><b>Looks</b>: RRS reads each pack's on/off and sliders from its MelonPreferences every
+/// frame, so a chart's look is written there and your own values are put back afterwards.</para>
+/// <para><b>Signals</b>: events through <c>RRS.Fire</c> on <c>bossbattles.*</c> channels, and floats
+/// as <c>_RRS_bossbattles_*</c> shader globals (RRS's own <c>SetGlobal</c> publishes names no shader
+/// can declare). See docs/chart-format.md.</para>
 /// </summary>
 internal sealed class ReShade
 {
@@ -31,7 +25,7 @@ internal sealed class ReShade
     private readonly Dictionary<object, Original> _originals = [];
     private readonly HashSet<string> _reported = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>0 (off) to 1: how strongly looks and signals apply.</summary>
+    /// <summary>How strongly looks and signals apply: 0 off, 1 full.</summary>
     public float Strength { get; set; } = 1f;
 
     public static bool Installed
@@ -45,7 +39,7 @@ internal sealed class ReShade
 
     private static bool Ready => _ready?.GetValue(null) is true;
 
-    /// <summary>A one-shot event for packs listening on <paramref name="name"/> (sent as "bossbattles.name").</summary>
+    /// <summary>A one-shot event on the "bossbattles.<paramref name="name"/>" channel.</summary>
     public void Fire(string name, Vector3 at, float strength = 1f, float duration = 1f, float radius = 0f)
     {
         if (Strength <= 0f || !Installed || !Ready) return;
@@ -60,10 +54,8 @@ internal sealed class ReShade
         }
     }
 
-    /// <summary>A float any shader can read as <c>_RRS_bossbattles_name</c>; scaled by nothing - it is state, not a look.</summary>
+    /// <summary>A float any shader can read as <c>_RRS_bossbattles_name</c>; state, so never scaled.</summary>
     public static void SetGlobal(string name, float value) => Shader.SetGlobalFloat($"_RRS_bossbattles_{name}", value);
-
-    // ---- Looks -----------------------------------------------------------------------------------
 
     /// <summary>Applies the chart's looks at chart time <paramref name="time"/>.</summary>
     public void Apply(IReadOnlyList<VisualCue> cues, double time)
@@ -99,7 +91,7 @@ internal sealed class ReShade
                         continue;
                     }
 
-                    // The setting scales the chart's change, not the value: at 0.5 a look goes halfway from yours.
+                    // Strength scales the chart's change from your value, not the value itself.
                     var yours = original.Values.TryGetValue(param.Entry, out var v) ? v : param.Entry.Value;
                     Set(param.Entry, Mathf.Clamp(yours + ((value - yours) * Strength), param.Min, param.Max));
                 }
@@ -112,10 +104,8 @@ internal sealed class ReShade
     }
 
     /// <summary>
-    /// Loads the chart's packs before they are needed. RRS loads a pack's AssetBundle and material
-    /// synchronously, in its render pass, on the first frame the pack is on - a hitch mid-battle if a
-    /// look first switches a pack on there. Done in the countdown instead; once loaded a pack stays
-    /// loaded (switched off, it is only skipped), so later switches cost nothing.
+    /// Loads the chart's packs during the countdown: RRS loads a pack synchronously the first frame
+    /// it is on, a hitch mid-battle. Once loaded a pack stays loaded, so later switches cost nothing.
     /// </summary>
     public void Preload(IEnumerable<string> packNames)
     {
@@ -140,7 +130,7 @@ internal sealed class ReShade
         }
     }
 
-    /// <summary>Puts back every pack setting a chart changed - its on/off and every slider.</summary>
+    /// <summary>Puts back every pack setting a chart changed.</summary>
     public void RestoreAll()
     {
         if (_originals.Count == 0) return;
@@ -162,7 +152,7 @@ internal sealed class ReShade
         _originals.Clear();
     }
 
-    /// <summary>The installed packs and their parameters, for the log - what a chart can name.</summary>
+    /// <summary>The installed packs and their parameters, for the log.</summary>
     public static string Describe()
     {
         if (!Installed) return "RumbleReShaded is not installed";
@@ -195,7 +185,7 @@ internal sealed class ReShade
         foreach ((MelonPreferences_Entry<float> entry, var value) in original.Values) Set(entry, value);
     }
 
-    /// <summary>Writes only a real change - each write raises the entry's changed event, which the menu redraws on.</summary>
+    /// <summary>Writes only a real change: each write raises the entry's changed event.</summary>
     private static void Set(MelonPreferences_Entry<bool> entry, bool value)
     {
         if (entry.Value != value) entry.Value = value;
@@ -219,7 +209,7 @@ internal sealed class ReShade
 
     private static List<Pack>? _packCache;
 
-    /// <summary>Reads the pack list again - RRS's "Reload packs" can change it between runs.</summary>
+    /// <summary>Reads the pack list again: RRS's "Reload packs" can change it between runs.</summary>
     public static void Refresh() => _packCache = null;
 
     private static List<Pack> Packs() => _packCache ??= ReadPacks().ToList();
@@ -283,7 +273,7 @@ internal sealed class ReShade
 
     private sealed record Pack(object Handle, string Name, string Id, MelonPreferences_Entry<bool> Enabled, List<Param> Params)
     {
-        /// <summary>A parameter by label ("Chromatic Aberration"), property ("_ChromAb") or property without its underscore ("ChromAb").</summary>
+        /// <summary>A parameter by label or shader property, ignoring case, spaces and underscores.</summary>
         public Param? Find(string key)
         {
             var wanted = Squash(key);

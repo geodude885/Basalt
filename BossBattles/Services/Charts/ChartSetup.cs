@@ -4,11 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace BossBattles.Services.Charts;
 
-/// <summary>
-/// What lane setup saves: the chart's <c>arena</c>, <c>lane</c> and <c>actors</c>, written in place
-/// (<see cref="ChartDocument"/>) so the rest of the chart - events, tracks, comments - is untouched.
-/// Comments inside those three values are replaced along with them.
-/// </summary>
+/// <summary>What lane setup saves: the chart's <c>arena</c>, <c>lane</c> and <c>actors</c>, written in place.</summary>
 public static class ChartSetup
 {
     public const float MinLength = 3f;
@@ -33,11 +29,8 @@ public static class ChartSetup
     }
 
     /// <summary>
-    /// The chart text with every distance along the lane - projectile origins, actor moves, phase
-    /// spots: each <c>"z"</c> inside <c>events</c> and <c>phases</c> - scaled by
-    /// <paramref name="factor"/>, so a chart keeps its shape when its lane is lengthened or shortened
-    /// (and nothing is left past the far end). The numbers are changed where they stand; layout and
-    /// comments stay.
+    /// The chart text with every <c>"z"</c> in <c>events</c> and <c>phases</c> scaled by
+    /// <paramref name="factor"/>, so it keeps its shape on a resized lane. Changed where they stand.
     /// </summary>
     public static string ScaleDepth(string chartText, float factor, float length)
     {
@@ -80,10 +73,7 @@ public static class ChartSetup
     private static readonly System.Text.RegularExpressions.Regex DepthNumber =
         new(@"(""z""\s*:\s*)(-?\d+(?:\.\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-    /// <summary>
-    /// A lane resized: clamped to sensible sizes, with actors that stood at the old far end (or past
-    /// the new one) moved to the new far end.
-    /// </summary>
+    /// <summary>A lane resized within limits; actors at the old far end, or past the new one, move to the new far end.</summary>
     public static (Lane Lane, IReadOnlyList<ActorSpec> Actors) Resize(Lane lane, IReadOnlyList<ActorSpec> actors, float length, float width)
     {
         var resized = new Lane(Math.Clamp(Round(length), MinLength, MaxLength), Math.Clamp(Round(width), MinWidth, MaxWidth));

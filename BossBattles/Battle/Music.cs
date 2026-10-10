@@ -9,7 +9,6 @@ using UnityEngine.Audio;
 
 namespace BossBattles.Battle;
 
-/// <summary>Where a song is in loading.</summary>
 internal enum MusicState
 {
     None,
@@ -19,18 +18,15 @@ internal enum MusicState
 }
 
 /// <summary>
-/// A chart's song - MP3, OGG or WAV - played 2D through the game's Music mixer group, so the game's
-/// own music volume applies.
+/// A chart's song, played 2D through the game's Music mixer group so your music volume applies.
 /// <para>
-/// The game ships without Unity's audio decoding, so songs are decoded in managed code
-/// (<see cref="AudioDecoder"/>) on a background thread and handed to an <c>AudioClip</c> a second at a
-/// time on the main thread: a long song is never held whole twice. Past
-/// <see cref="MonoAbove"/> samples a song is kept in mono, which halves its memory. A decoded song is
-/// kept for its file (until the file changes), so playing a chart again starts at once.
+/// The game ships without Unity's audio decoding, so songs are decoded in managed code on a
+/// background thread and handed to the clip a second at a time; long songs are kept in mono, and
+/// decoded songs are cached until their file changes.
 /// </para>
 /// <para>
-/// The song is the battle's clock: it is started on the audio clock (<c>PlayScheduled</c>) and
-/// <see cref="Clock"/> reads the same clock, so frame hitches cannot drift the chart off the beat.
+/// The song is the battle's clock: started with <c>PlayScheduled</c> and read back from the same
+/// audio clock, so frame hitches cannot drift the chart off the beat.
 /// </para>
 /// </summary>
 internal sealed class Music
@@ -58,24 +54,20 @@ internal sealed class Music
     /// <summary>How much of a loading song is ready, 0 to 1.</summary>
     public float Progress { get; private set; }
 
-    /// <summary>
-    /// Full volume is this much of the clip's own level: chart songs are mastered loud, and at
-    /// 100% one was painful in VR.
-    /// </summary>
+    /// <summary>Full volume is this much of the clip's own level: chart songs are mastered loud.</summary>
     public const float Headroom = 0.7f;
 
-    /// <summary>Your music volume (the setting), times the chart's own.</summary>
+    /// <summary>Your music volume; the chart's own multiplies it.</summary>
     public float Volume { get; set; } = 1f;
 
     public string? Name => _clip?.name;
 
-    /// <summary>Whether a started song has played through.</summary>
     public bool Ended => _started && _clip != null && AudioSettings.dspTime - _dspStart > _clip.length + 0.5;
 
-    /// <summary>Seconds of chart time since the song was started (negative just before), or null with no song playing.</summary>
+    /// <summary>Seconds since the song started (negative just before); null with no song playing.</summary>
     public double? Clock => _started ? AudioSettings.dspTime - _dspStart : null;
 
-    /// <summary>Starts loading a song file; <see cref="State"/> says when it is ready.</summary>
+    /// <summary>Starts loading a song; <see cref="State"/> says when it is ready.</summary>
     public void Load(string path)
     {
         Stop();
@@ -104,7 +96,7 @@ internal sealed class Music
         MelonCoroutines.Start(Decode(path, written, load));
     }
 
-    /// <summary>Plays the loaded song from <paramref name="start"/> seconds in, on the audio clock; <see cref="Clock"/> runs from then.</summary>
+    /// <summary>Plays the loaded song from <paramref name="start"/> seconds in; <see cref="Clock"/> runs from then.</summary>
     public void Play(double start, float chartVolume)
     {
         if (State != MusicState.Ready || _clip == null || !EnsureSource()) return;
@@ -119,7 +111,7 @@ internal sealed class Music
         Mod.Note("Music.Playing", $"{_clip.name} from {start:0.00}s at volume {_source.volume:0.00}", echo: false);
     }
 
-    /// <summary>Fades out (the battle ended); the clock keeps running until <see cref="Stop"/>.</summary>
+    /// <summary>Fades out; the clock keeps running until <see cref="Stop"/>.</summary>
     public void FadeOut()
     {
         if (_source != null && _source.isPlaying) MelonCoroutines.Start(Fade(_source, _load));
@@ -131,7 +123,7 @@ internal sealed class Music
         _started = false;
     }
 
-    /// <summary>Forgets the song (a new battle); loading in flight is dropped.</summary>
+    /// <summary>Forgets the song, dropping any load in flight.</summary>
     public void Clear()
     {
         Stop();
@@ -141,7 +133,6 @@ internal sealed class Music
         State = MusicState.None;
     }
 
-    /// <summary>What the decoding thread reports to the main thread.</summary>
     private sealed class Decoding
     {
         public readonly ConcurrentQueue<float[]> Chunks = new();
@@ -188,7 +179,7 @@ internal sealed class Music
             yield break;
         }
 
-        long written_ = 0;
+        long filled = 0;
         long capacity = clip.samples;
         while (true)
         {
@@ -197,13 +188,13 @@ internal sealed class Music
             for (var i = 0; i < ChunksPerFrame && job.Chunks.TryDequeue(out var chunk); i++)
             {
                 var frames = chunk.Length / job.Channels;
-                if (written_ + frames > capacity) frames = (int)(capacity - written_);
+                if (filled + frames > capacity) frames = (int)(capacity - filled);
                 if (frames <= 0) continue;
 
                 var data = frames * job.Channels == chunk.Length ? chunk : chunk.Take(frames * job.Channels).ToArray();
                 try
                 {
-                    clip.SetData(data, (int)written_);
+                    clip.SetData(data, (int)filled);
                 }
                 catch (Exception e)
                 {
@@ -212,10 +203,10 @@ internal sealed class Music
                     yield break;
                 }
 
-                written_ += frames;
+                filled += frames;
             }
 
-            Progress = job.Frames > 0 ? Math.Min(1f, written_ / (float)job.Frames) : 0f;
+            Progress = job.Frames > 0 ? Math.Min(1f, filled / (float)job.Frames) : 0f;
             if (job.Error != null) { Failed(name, job.Error); yield break; }
             if (job.Done && job.Chunks.IsEmpty) break;
             yield return null;
@@ -225,10 +216,10 @@ internal sealed class Music
         Progress = 1f;
         State = MusicState.Ready;
         Cache[path] = (written, clip);
-        Mod.Note("Music.Loaded", $"{name}: {written_ / (double)job.SampleRate:0.0}s, {job.Channels} ch, {job.SampleRate} Hz, decoded in {timer.Elapsed.TotalSeconds:0.0}s", echo: false);
+        Mod.Note("Music.Loaded", $"{name}: {filled / (double)job.SampleRate:0.0}s, {job.Channels} ch, {job.SampleRate} Hz, decoded in {timer.Elapsed.TotalSeconds:0.0}s", echo: false);
     }
 
-    /// <summary>Background thread: decode a second at a time into the queue (pure managed code - no game calls here).</summary>
+    /// <summary>On a background thread, so no game calls: decodes a second at a time into the queue.</summary>
     private static void DecodeOnThread(string path, Decoding job)
     {
         try
@@ -244,7 +235,7 @@ internal sealed class Music
             int read;
             while (!job.Cancelled && (read = source.Read(block, 0, block.Length)) > 0)
             {
-                // Keep the queue a few seconds ahead of the main thread, not the whole song.
+                // A few seconds ahead of the main thread, not the whole song.
                 while (job.Chunks.Count > 30 && !job.Cancelled) Thread.Sleep(5);
                 job.Chunks.Enqueue(mono ? Downmix(block, read, source.Channels) : block.Take(read).ToArray());
             }
@@ -292,7 +283,7 @@ internal sealed class Music
             _source.spatialBlend = 0f;
             _source.priority = 0;
 
-            // "Music" exactly when the game has it - "Environmental music" is the maps' ambience.
+            // "Music" exactly when there is one: "Environmental music" is the maps' ambience.
             var groups = Resources.FindObjectsOfTypeAll<AudioMixerGroup>().Where(g => g != null).ToList();
             AudioMixerGroup? music = groups.FirstOrDefault(g => string.Equals(g.name, "Music", StringComparison.OrdinalIgnoreCase))
                                      ?? groups.FirstOrDefault(g => g.name.Contains("Music", StringComparison.OrdinalIgnoreCase));

@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<Import Project="..\Rumble.props" />
+
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -30,31 +32,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\BossBattles\BossBattles.csproj" />
-	</ItemGroup>
-
-	<!-- The main project references these, so the test project needs them on its reference path too. -->
-	<ItemGroup>
-		<Reference Include="Il2Cppmscorlib">
-			<HintPath>$(Il2CppPath)\Il2Cppmscorlib.dll</HintPath>
-		</Reference>
-		<Reference Include="Il2CppRUMBLE.Runtime">
-			<HintPath>$(Il2CppPath)\Il2CppRUMBLE.Runtime.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.AudioModule">
-			<HintPath>$(Il2CppPath)\UnityEngine.AudioModule.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.PhysicsModule">
-			<HintPath>$(Il2CppPath)\UnityEngine.PhysicsModule.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>$(Il2CppPath)\UnityEngine.CoreModule.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.VRModule">
-			<HintPath>$(Il2CppPath)\UnityEngine.VRModule.dll</HintPath>
-		</Reference>
-		<Reference Include="UIFramework">
-			<HintPath>$(ModsOutputPath)\UIFramework.dll</HintPath>
-		</Reference>
+		<ProjectReference Include="..\BossBattles.DevTools\BossBattles.DevTools.csproj" />
 	</ItemGroup>
 
 </Project>

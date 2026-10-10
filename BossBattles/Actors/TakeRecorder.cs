@@ -4,19 +4,13 @@ using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
-using UnityEngine;
 
 namespace BossBattles.Actors;
 
 /// <summary>
-/// Records you as a take for an actor: what <see cref="ClipRecorder"/> records - head-and-hands
-/// poses inside your rig and your sticks - plus where you stand in the lane and every move the game
-/// recognises from you, all on the chart's clock, so the take lines up with the chart (and its song).
-/// <para>
-/// Moves are observed, not intercepted: your stack processor's own <c>OnStackExecutionStart</c>
-/// event is joined for the take and left afterwards (the converted delegate is kept, so leaving
-/// removes the same object that was added).
-/// </para>
+/// Records you as a take for an actor: a clip plus where you stand in the lane and every move the
+/// game recognises from you, on the chart's clock. Moves come from your stack processor's
+/// <c>OnStackExecutionStart</c>; the converted delegate is kept so leaving removes the same object.
 /// </summary>
 internal sealed class TakeRecorder
 {
@@ -32,7 +26,6 @@ internal sealed class TakeRecorder
 
     public bool Recording { get; private set; }
 
-    /// <summary>Seconds recorded so far, on the chart's clock.</summary>
     public double Length => _frames.Count == 0 ? 0 : _frames[^1].Time - _frames[0].Time;
 
     public int MoveCount => _moves.Count;
@@ -61,7 +54,7 @@ internal sealed class TakeRecorder
         Mod.Note("Take.Recording", "started", echo: false);
     }
 
-    /// <summary>Stops, and returns the take - or null when nothing was recorded.</summary>
+    /// <summary>Stops; null if nothing was recorded.</summary>
     public Clip? Stop(string name)
     {
         if (!Recording) return null;
@@ -79,7 +72,6 @@ internal sealed class TakeRecorder
         return take;
     }
 
-    /// <summary>Called each frame while recording.</summary>
     public void Update()
     {
         if (!Recording || _clock == null) return;
@@ -95,17 +87,17 @@ internal sealed class TakeRecorder
         System.Numerics.Vector3 lane = _lane.ToLane(Describe.ToNumerics(rig.FloorPoint));
         _frames.Add(new ClipFrame(
             (float)now,
-            Pose(rig.Offset),
-            Pose(rig.Head),
-            Pose(rig.LeftHand),
-            Pose(rig.RightHand),
-            Stick(you.PlayerMovement.currentRawWalkInput),
-            Stick(you.PlayerMovement.currentRawTurnInput),
+            ActorRig.LocalPose(rig.Offset),
+            ActorRig.LocalPose(rig.Head),
+            ActorRig.LocalPose(rig.LeftHand),
+            ActorRig.LocalPose(rig.RightHand),
+            ActorRig.Stick(you.PlayerMovement.currentRawWalkInput),
+            ActorRig.Stick(you.PlayerMovement.currentRawTurnInput),
             new System.Numerics.Vector2(lane.X, lane.Z),
             _lane.ToLaneYaw(rig.Vr.eulerAngles.y)));
     }
 
-    /// <summary>Abandons a recording (a scene change, a stop elsewhere) without a take.</summary>
+    /// <summary>Abandons a recording without a take.</summary>
     public void Cancel()
     {
         Recording = false;
@@ -147,10 +139,4 @@ internal sealed class TakeRecorder
 
         _processor = null;
     }
-
-    private static ClipPose Pose(Transform part) => new(
-        new System.Numerics.Vector3(part.localPosition.x, part.localPosition.y, part.localPosition.z),
-        new System.Numerics.Quaternion(part.localRotation.x, part.localRotation.y, part.localRotation.z, part.localRotation.w));
-
-    private static System.Numerics.Vector2 Stick(Vector2 stick) => new(stick.x, stick.y);
 }

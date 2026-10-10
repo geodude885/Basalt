@@ -3,9 +3,8 @@ using BossBattles.Core;
 namespace BossBattles.Patches;
 
 /// <summary>
-/// No patch body may throw - a throw surfaces as the game's own method failing, every frame. Each
-/// body runs through here: the first failure is logged and switches every patch body off for the
-/// session, leaving the game's own behaviour.
+/// Runs patch bodies so none can throw into the game: the first failure is logged and turns every
+/// patch body off for the session, leaving the game's own behaviour.
 /// </summary>
 internal static class PatchGuard
 {

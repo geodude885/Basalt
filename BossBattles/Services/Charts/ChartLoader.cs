@@ -11,9 +11,8 @@ public sealed record ChartLoadResult(Chart? Chart, IReadOnlyList<string> Errors)
 }
 
 /// <summary>
-/// Reads a chart from JSON and validates it, collecting every problem rather than stopping at the
-/// first, so one pass over a broken file reports all of it. Comments and trailing commas are
-/// allowed - charts are hand-written.
+/// Reads and validates a chart, collecting every problem rather than stopping at the first.
+/// Comments and trailing commas are allowed: charts are hand-written.
 /// </summary>
 public static class ChartLoader
 {

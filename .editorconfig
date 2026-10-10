@@ -2,10 +2,13 @@ root = true
 
 [*]
 charset = utf-8
-end_of_line = crlf
+end_of_line = lf
 indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[*.bat]
+end_of_line = crlf
 
 [*.{csproj,props,slnx,json,editorconfig}]
 indent_size = 2
@@ -123,20 +126,13 @@ dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1861.severity = none
 
 # Guard clauses read better than the conditional expressions IDE0046/IDE0045 want, and a switch with
-# a deliberate default arm is not an omission, so the "populate switch" rules are noise here. Same
-# reasoning as the IDE rules pinned above: the analyzer's preference, not the project's.
-[BossBattles/**.cs]
+# a deliberate default arm is not an omission.
+[{BossBattles,BossBattles.DevTools}/**.cs]
 dotnet_diagnostic.IDE0046.severity = silent
 dotnet_diagnostic.IDE0045.severity = silent
 dotnet_diagnostic.IDE0010.severity = silent
 dotnet_diagnostic.IDE0072.severity = silent
 
-# Harmony binds patch parameters by exact name - __instance, __result, __state - so the underscores
-# are required by the framework rather than chosen. Without this, the first patch that injects one
-# fails the build, since warnings are errors.
-[BossBattles/Patches/**.cs]
-dotnet_diagnostic.CA1707.severity = none
-
-# Flatscreen/ carries its own Harmony patches so it can become a separate mod.
-[BossBattles/Flatscreen/**.cs]
+# Harmony binds patch parameters by exact name (__instance, __result, __state).
+[{BossBattles/Patches,BossBattles.DevTools/Flatscreen}/**.cs]
 dotnet_diagnostic.CA1707.severity = none

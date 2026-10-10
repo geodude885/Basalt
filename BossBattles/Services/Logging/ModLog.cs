@@ -1,9 +1,8 @@
 namespace BossBattles.Services.Logging;
 
 /// <summary>
-/// A log that survives a native crash: every line is written through to disk before the call
-/// returns, so the last thing logged before an AccessViolationException is still there to read.
-/// MelonLoader's own log is buffered and loses exactly that part.
+/// A log that survives a native crash: each line is written through to disk before the call returns.
+/// MelonLoader's own log is buffered and loses exactly the last lines.
 /// </summary>
 public sealed class ModLog : IDisposable
 {

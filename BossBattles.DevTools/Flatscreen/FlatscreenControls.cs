@@ -1,3 +1,4 @@
+using BossBattles.Actors;
 using HarmonyLib;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
@@ -5,17 +6,9 @@ using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 using UnityEngine.XR;
 
-namespace BossBattles.Flatscreen;
+namespace BossBattles.DevTools.Flatscreen;
 
-/// <summary>
-/// Walk and turn your own player from the numpad when there is no headset: 8/2/4/6 walk
-/// (relative to where your head faces), 7/9 snap turn. Only while <c>XRSettings.isDeviceActive</c>
-/// is false, so in VR your controllers are never overridden.
-/// <para>
-/// Self-contained like the rest of <c>Flatscreen/</c>: the host calls <see cref="Apply"/> once,
-/// <see cref="Update"/> every frame, and may set <see cref="Log"/>.
-/// </para>
-/// </summary>
+/// <summary>Walks (numpad 8/2/4/6) and snap-turns (7/9) your player when no headset is active.</summary>
 public static class FlatscreenControls
 {
     private static Vector2 _walk;

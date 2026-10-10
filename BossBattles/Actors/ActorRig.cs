@@ -1,4 +1,5 @@
 using BossBattles.Core;
+using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
@@ -9,8 +10,7 @@ internal sealed record ActorRig(Transform Vr, Transform Offset, Transform Head, 
 {
     private static readonly HashSet<string> ReportedFallbacks = new(StringComparer.Ordinal);
 
-    // Names as logged from a live player in the Gym (VR/"Headset Offset"/Headset, "Left Controller",
-    // "Right Controller"), with ReplayMod's indices as the fallback.
+    /// <summary>Found by name, falling back to ReplayMod's child indices.</summary>
     public static ActorRig Of(PlayerController controller)
     {
         Transform vr = Root(controller);
@@ -41,6 +41,12 @@ internal sealed record ActorRig(Transform Vr, Transform Offset, Transform Head, 
     public static void CopyLocal(Transform source, Transform target) =>
         target.SetLocalPositionAndRotation(source.localPosition, source.localRotation);
 
+    public static ClipPose LocalPose(Transform part) => new(
+        new System.Numerics.Vector3(part.localPosition.x, part.localPosition.y, part.localPosition.z),
+        new System.Numerics.Quaternion(part.localRotation.x, part.localRotation.y, part.localRotation.z, part.localRotation.w));
+
+    public static System.Numerics.Vector2 Stick(Vector2 stick) => new(stick.x, stick.y);
+
     private static Transform FindOr(Transform parent, string path, Func<Transform> fallback)
     {
         Transform found = parent.Find(path);
@@ -52,24 +58,20 @@ internal sealed record ActorRig(Transform Vr, Transform Offset, Transform Head, 
     }
 }
 
-/// <summary>A held head-and-hands pose, as local poses inside a rig - what an actor's "headset" and "controllers" report.</summary>
+/// <summary>A held head-and-hands pose, local to a rig: what an actor's headset and controllers report.</summary>
 internal sealed record ActorPose(
     (Vector3 Position, Quaternion Rotation) Offset,
     (Vector3 Position, Quaternion Rotation) Head,
     (Vector3 Position, Quaternion Rotation) LeftHand,
     (Vector3 Position, Quaternion Rotation) RightHand)
 {
-    /// <summary>Your current pose, as it is right now.</summary>
     public static ActorPose Snapshot(ActorRig rig) => new(
         (rig.Offset.localPosition, rig.Offset.localRotation),
         (rig.Head.localPosition, rig.Head.localRotation),
         (rig.LeftHand.localPosition, rig.LeftHand.localRotation),
         (rig.RightHand.localPosition, rig.RightHand.localRotation));
 
-    /// <summary>
-    /// Standing upright, looking straight down the rig's forward, hands up in front - a fighter's
-    /// guard - at your height (from your rig), so the body proportions look right.
-    /// </summary>
+    /// <summary>A fighter's guard at your height: upright, looking ahead, hands up in front.</summary>
     public static ActorPose Guard(ActorRig yours)
     {
         var eye = yours.Head.localPosition.y;

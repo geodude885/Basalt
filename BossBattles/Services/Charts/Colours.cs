@@ -28,11 +28,7 @@ public readonly record struct Rgba(float R, float G, float B, float A = 1f)
     }
 }
 
-/// <summary>
-/// How a chart's lane looks: the lines on the floor, the backstop's frame and - when given - the
-/// invisible walls, drawn as see-through panes on their inner faces. Null keeps the mod's own colour
-/// (and the walls unseen).
-/// </summary>
+/// <summary>The lane's colours; null keeps the mod's own, and a wall colour shows the walls as see-through panes.</summary>
 public sealed record LaneColours(Rgba? Edges = null, Rgba? Ends = null, Rgba? Zone = null, Rgba? Backstop = null, Rgba? Walls = null)
 {
     public static LaneColours Default { get; } = new();

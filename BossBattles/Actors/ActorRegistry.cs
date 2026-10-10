@@ -3,15 +3,14 @@ using UnityEngine;
 
 namespace BossBattles.Actors;
 
-/// <summary>
-/// Every actor in play. Patches ask it "is this player one of ours?" (<see cref="Find(Player?)"/>),
-/// so any number of actors get the same treatment.
-/// </summary>
+/// <summary>Every actor in play; patches ask it whether a player is one of ours.</summary>
 internal sealed class ActorRegistry
 {
     private readonly List<Actor> _actors = [];
 
     public IReadOnlyList<Actor> All => _actors;
+
+    public Actor? First => _actors.FirstOrDefault(a => a.Exists);
 
     public void Add(Actor actor) => _actors.Add(actor);
 
@@ -31,11 +30,6 @@ internal sealed class ActorRegistry
 
     public Actor? Find(PlayerController? controller) => controller == null ? null : Find(controller.assignedPlayer);
 
-    public Actor? FindById(string id) => _actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
-
-    /// <summary>The actor whose body is nearest a point - for keyboard testing.</summary>
-    public Actor? First => _actors.FirstOrDefault(a => a.Exists);
-
     public void Update()
     {
         foreach (Actor actor in _actors.ToArray()) actor.Update();
@@ -46,12 +40,6 @@ internal sealed class ActorRegistry
         foreach (Actor actor in _actors.ToArray()) actor.LateUpdate();
     }
 
-    public void DespawnAll()
-    {
-        foreach (Actor actor in _actors.ToArray()) actor.Despawn();
-        _actors.Clear();
-    }
-
     /// <summary>For a scene change: the bodies went with the scene.</summary>
     public void ForgetSceneObjects()
     {
@@ -59,7 +47,7 @@ internal sealed class ActorRegistry
         _actors.Clear();
     }
 
-    /// <summary>Ignore collisions between every actor's body and a structure for a while - see <see cref="Actor.IgnoreStructure"/>.</summary>
+    /// <inheritdoc cref="Actor.IgnoreStructure"/>
     public void IgnoreStructure(GameObject structure, float seconds)
     {
         foreach (Actor actor in _actors) actor.IgnoreStructure(structure, seconds);

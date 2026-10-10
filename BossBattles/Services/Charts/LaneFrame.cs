@@ -3,14 +3,9 @@ using System.Numerics;
 namespace BossBattles.Services.Charts;
 
 /// <summary>
-/// Places a lane in the world: <see cref="Origin"/> is the centre of your end at floor height, and
-/// the lane runs along <see cref="Forward"/> (horizontal) towards the far end. Lane x is to the
-/// right looking down the lane, y is up. <see cref="DepthScale"/> fits a chart's lane length to a
-/// shorter or longer real one - an arena's two player spots - by scaling z only.
-/// <para>
-/// System.Numerics, so it stays testable without the game; the game side converts to and from
-/// Unity's Vector3. Unity is left-handed: right = up x forward.
-/// </para>
+/// A lane in the world: <see cref="Origin"/> is the centre of your end on the floor, and it runs
+/// along <see cref="Forward"/>. <see cref="DepthScale"/> fits a chart's length to a real one by
+/// scaling z only. Unity is left-handed: right = up x forward.
 /// </summary>
 public readonly record struct LaneFrame(Vector3 Origin, Vector3 Forward, float DepthScale = 1f)
 {
@@ -22,10 +17,7 @@ public readonly record struct LaneFrame(Vector3 Origin, Vector3 Forward, float D
         return new LaneFrame(origin, Vector3.Normalize(flat), depthScale);
     }
 
-    /// <summary>
-    /// A frame running from <paramref name="near"/> (your end) to <paramref name="far"/>, scaled so a
-    /// chart lane of <paramref name="chartLength"/> fits exactly between them.
-    /// </summary>
+    /// <summary>A frame from <paramref name="near"/> to <paramref name="far"/>, scaled to fit <paramref name="chartLength"/> between them.</summary>
     public static LaneFrame Between(Vector3 near, Vector3 far, float chartLength)
     {
         var flat = new Vector3(far.X - near.X, 0f, far.Z - near.Z);

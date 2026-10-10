@@ -9,11 +9,8 @@ using SceneManager = Il2CppRUMBLE.Managers.SceneManager;
 namespace BossBattles.Battle;
 
 /// <summary>
-/// Loading the match maps solo and finding where a lane goes in them. Both maps have
-/// <c>Logic/ArenaLocation/PlayerOneLocation</c> and <c>PlayerTwoLocation</c> - the two match spots -
-/// which make the lane's ends. Loading is the game's own <c>SceneManager.LoadSceneAsync</c>, as
-/// MultiplayerMapsInSinglePlayer does; <see cref="Patches.ArenaPatches"/> stops the match handler
-/// sending you straight back.
+/// Loads the match maps solo, with the game's own <c>SceneManager.LoadSceneAsync</c>, and finds
+/// where a lane goes in them. <see cref="Patches.ArenaPatches"/> stops the match handler sending you back.
 /// </summary>
 internal static class Arena
 {
@@ -37,18 +34,21 @@ internal static class Arena
         _ => null,
     };
 
-    /// <summary>The Ring or Pit - a match map, which the match handler would otherwise send you back from.</summary>
     public static bool IsMatchMap(ArenaKind kind) => kind is ArenaKind.Ring or ArenaKind.Pit;
 
-    /// <summary>
-    /// Whether a ray hit is the ground: not a trigger, not a player, and not one of the mod's own
-    /// invisible walls - the zone's ceiling once stood in for the floor and spawned walls 3 m up.
-    /// </summary>
+    /// <summary>Whether a ray hit is the ground: not a trigger, a player, or one of the mod's own walls.</summary>
     public static bool IsGround(Collider? collider) =>
         collider != null && !collider.isTrigger && !IsOurs(collider) && collider.GetComponentInParent<PlayerController>() == null;
 
-    /// <summary>The mod's own parts - lane lines, walls, ceilings, markers - all named BossBattles_.</summary>
+    /// <summary>The mod's own objects are all named BossBattles_.</summary>
     public static bool IsOurs(Collider collider) => collider.gameObject.name.StartsWith("BossBattles_", StringComparison.Ordinal);
+
+    /// <summary>The chart map you are on, or Here for any other scene.</summary>
+    public static ArenaKind CurrentMap()
+    {
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        return new[] { ArenaKind.Gym, ArenaKind.Ring, ArenaKind.Pit }.FirstOrDefault(k => SceneFor(k) == scene);
+    }
 
     public static bool InScene(ArenaKind kind) =>
         kind == ArenaKind.Here || string.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, SceneFor(kind), StringComparison.Ordinal);
@@ -84,11 +84,7 @@ internal static class Arena
             : (locations.transform.GetChild(0), locations.transform.GetChild(1));
     }
 
-    /// <summary>
-    /// Logs every transform in the match map that could mark the two players' ends - the first
-    /// Ring run found both ArenaLocation children at one point - so the right ones can be chosen
-    /// from data. Includes inactive objects (MultiplayerMapsInSinglePlayer hides the pedestals).
-    /// </summary>
+    /// <summary>Logs every transform in a match map that could mark the players' ends, inactive ones included.</summary>
     public static void DumpSpotCandidates()
     {
         var logic = GameObject.Find("Logic");
@@ -118,13 +114,10 @@ internal static class Arena
         }
     }
 
-    /// <summary>
-    /// What a chart's arena spot is measured from: the Ring's or Pit's centre (where both match
-    /// spots sit when solo), the Gym's world origin, or null for "here".
-    /// </summary>
+    /// <summary>What a chart's arena spot is measured from: a match map's centre, the Gym's origin, or null for "here".</summary>
     public static Vector3? Anchor(ArenaKind kind) => kind == ArenaKind.Here ? null : kind == ArenaKind.Gym ? Vector3.zero : MatchSpots()?.You.position ?? Vector3.zero;
 
-    /// <summary>A compass direction in degrees (0 = world +Z, 90 = +X) as a flat vector.</summary>
+    /// <summary>A compass bearing in degrees (0 = +Z, 90 = +X) as a flat vector.</summary>
     public static Vector3 Compass(float degrees) => Quaternion.Euler(0f, degrees, 0f) * Vector3.forward;
 
     /// <summary>A flat direction's compass bearing, 0 to 360.</summary>
@@ -135,9 +128,8 @@ internal static class Arena
     }
 
     /// <summary>
-    /// The lane for a battle in <paramref name="kind"/>, with the chart's own spot when it has one:
-    /// from there, along its facing (or towards the centre), at the chart's own length. Without a
-    /// spot: here and the Gym from your feet; the Ring and Pit across the floor through the centre.
+    /// The lane: from the chart's spot when it has one; otherwise from your feet here and in the Gym,
+    /// and across the floor through the centre in the Ring and Pit.
     /// </summary>
     public static LaneFrame? Frame(ArenaKind kind, ArenaSpec spec, Lane lane, Vector3 yourFloor, Vector3 yourFacing)
     {
@@ -186,7 +178,7 @@ internal static class Arena
             if (Vector2.Distance(new Vector2(you.x, you.z), new Vector2(them.x, them.z)) >= MinimumArenaLane)
                 return LaneFrame.Between(Describe.ToNumerics(you), Describe.ToNumerics(them), lane.Length);
 
-            // Solo, both spots sit on the arena's centre (measured in the Ring): no lane between them.
+            // Solo, both spots sit on the arena's centre.
             Mod.Note("Arena.SpotsTogether", $"{kind}: the match spots are {Describe.Vector(you)} and {Describe.Vector(them)} - measuring the arena floor instead", echo: false);
         }
         else
@@ -201,12 +193,9 @@ internal static class Arena
             : towardCentre.sqrMagnitude > 0.25f ? towardCentre.normalized
             : ActorRig.Flat(yourFacing);
 
-        // Across the arena floor through its centre, the way you came in, kept clear of the edge:
-        // the chart's lane is fitted to that diameter.
+        // Across the floor through its centre, kept clear of the edge; the arena may shrink a lane, never stretch it.
         if (TryArenaFloor(centre, out Bounds floor))
         {
-            // The arena may only shrink a lane, never stretch it: the Ring's floor collider measured
-            // 22.7 m square, and doubling a chart's distances is not what its author wrote.
             var radius = Mathf.Min(Mathf.Min(floor.extents.x, floor.extents.z) - EdgeMargin, lane.Length / 2f);
             if (radius >= MinimumArenaLane / 2f)
             {
@@ -224,11 +213,7 @@ internal static class Arena
         return LaneFrame.From(Describe.ToNumerics(yourFloor), Describe.ToNumerics(direction));
     }
 
-    /// <summary>
-    /// The way out from a point with the most clear space at chest height, of
-    /// <paramref name="directions"/> evenly spread - so a lane laid that way is not run into a
-    /// wall. Player colliders and triggers do not count as blocking.
-    /// </summary>
+    /// <summary>Of <paramref name="directions"/> evenly spread, the one with the most clear space at chest height.</summary>
     public static (Vector3 Direction, float Clear) OpenestDirection(Vector3 floor, int directions = 16, float reach = 30f)
     {
         Vector3 from = floor + (Vector3.up * 1.2f);
@@ -252,26 +237,7 @@ internal static class Arena
         return best;
     }
 
-    /// <summary>
-    /// The first ground within <paramref name="reach"/> below <paramref name="from"/> - a short look
-    /// down, for whether something stands on the floor; skipping players and triggers.
-    /// </summary>
-    public static bool TryGroundBelow(Vector3 from, float reach, out float height)
-    {
-        foreach (RaycastHit hit in Physics.RaycastAll(from, Vector3.down, reach).OrderBy(h => h.distance))
-        {
-            Collider collider = hit.collider;
-            if (!IsGround(collider)) continue;
-
-            height = hit.point.y;
-            return true;
-        }
-
-        height = from.y;
-        return false;
-    }
-
-    /// <summary>The height of the ground under a point (from well above it), skipping players and triggers.</summary>
+    /// <summary>The height of the ground under a point, looking down from well above it.</summary>
     public static bool TryFloorHeight(Vector3 point, out float height)
     {
         foreach (RaycastHit hit in Physics.RaycastAll(new Vector3(point.x, point.y + 20f, point.z), Vector3.down, 60f).OrderBy(h => h.distance))
@@ -287,7 +253,7 @@ internal static class Arena
         return false;
     }
 
-    /// <summary>The bounds of the floor collider under a point - the arena platform, skipping players and triggers.</summary>
+    /// <summary>The bounds of the floor collider under a point: the arena platform.</summary>
     private static bool TryArenaFloor(Vector3 centre, out Bounds floor)
     {
         foreach (RaycastHit hit in Physics.RaycastAll(centre + (Vector3.up * 3f), Vector3.down, 10f).OrderBy(h => h.distance))
@@ -304,11 +270,7 @@ internal static class Arena
         return false;
     }
 
-    /// <summary>
-    /// The layer the floor under a point is on - one players and structures already collide with.
-    /// Your own body is in the way of the ray (the first self-test put the backstop on
-    /// PlayerHitbox), so player colliders and triggers are skipped.
-    /// </summary>
+    /// <summary>The layer of the floor under a point, which players and structures already collide with.</summary>
     public static int FloorLayer(Vector3 near)
     {
         RaycastHit[] hits = Physics.RaycastAll(near + (Vector3.up * 1.5f), Vector3.down, 6f);

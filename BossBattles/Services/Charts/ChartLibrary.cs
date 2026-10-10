@@ -1,45 +1,41 @@
 namespace BossBattles.Services.Charts;
 
-/// <summary>How a chart is stored.</summary>
 public enum ChartSource
 {
-    /// <summary>A lone <c>name.json</c> in the chart folder. Its songs and clips sit beside it.</summary>
+    /// <summary>A lone <c>name.json</c>, its songs and clips beside it.</summary>
     File,
 
-    /// <summary>A folder holding <c>chart.json</c> and its own songs and <c>clips/</c> - for writing a chart.</summary>
+    /// <summary>A folder holding <c>chart.json</c>, its songs and <c>clips/</c>.</summary>
     Folder,
 
-    /// <summary>A <c>.bbchart</c> package - the same folder zipped, for sharing (see <see cref="ChartPackage"/>).</summary>
+    /// <summary>A <c>.bbchart</c> package: the folder zipped, for sharing.</summary>
     Package,
 }
 
 /// <summary>One chart and what loading it gave.</summary>
-/// <param name="File">Where it came from: the .json, the folder's chart.json, or the .bbchart.</param>
+/// <param name="File">The .json, the folder's chart.json, or the .bbchart.</param>
 /// <param name="Result">The chart, or what is wrong with it.</param>
 /// <param name="Source">How it is stored.</param>
-/// <param name="Folder">Where its songs and clips are looked up - for a package, where it was unpacked.</param>
+/// <param name="Folder">Where its songs and clips are; for a package, where it was unpacked.</param>
 public sealed record ChartEntry(string File, ChartLoadResult Result, ChartSource Source = ChartSource.File, string? Folder = null)
 {
-    /// <summary>The chart's own name when it loaded, the file (or folder) name when it did not.</summary>
+    /// <summary>The chart's name, or its file or folder name when it does not load.</summary>
     public string Name => Result.Chart?.Name ?? Stem;
 
-    /// <summary>The file or folder name without extension - also accepted by <see cref="ChartLibrary.Find"/>.</summary>
+    /// <summary>The file or folder name without extension.</summary>
     public string Stem => Source == ChartSource.Folder
         ? Path.GetFileName(Path.GetDirectoryName(File)) ?? ""
         : Path.GetFileNameWithoutExtension(File);
 
     public string AssetFolder => Folder ?? Path.GetDirectoryName(File) ?? "";
 
-    /// <summary>A key for best scores that survives renaming the file: name and author.</summary>
+    /// <summary>A best-score key that survives renaming the file.</summary>
     public string ScoreKey => $"{Name}|{Result.Chart?.Info.Author}";
 }
 
 /// <summary>
-/// The charts in a folder (<c>UserData/BossBattles/Charts</c> in the game): loose <c>*.json</c>
-/// files, chart folders (<c>*/chart.json</c>) and <c>*.bbchart</c> packages, which are unpacked
-/// into a cache folder. An empty or missing folder is given the starter charts, so there is always
-/// something to play; later, starter charts still exactly as written are brought up to date, and
-/// nothing else in the folder is ever written to.
+/// The charts in a folder: loose <c>*.json</c>, chart folders and <c>*.bbchart</c> packages. An
+/// empty folder gets the starter charts, and starters still exactly as written are kept up to date.
 /// </summary>
 public sealed class ChartLibrary
 {
@@ -47,7 +43,7 @@ public sealed class ChartLibrary
     private List<ChartEntry> _entries = [];
 
     /// <param name="folder">The chart folder.</param>
-    /// <param name="cache">Where packages are unpacked; by default a "ChartCache" folder beside <paramref name="folder"/>.</param>
+    /// <param name="cache">Where packages are unpacked; default "ChartCache" beside <paramref name="folder"/>.</param>
     public ChartLibrary(string folder, string? cache = null)
     {
         Folder = folder;
@@ -58,7 +54,7 @@ public sealed class ChartLibrary
 
     public string Cache { get; }
 
-    /// <summary>Every chart found, loaded or not: files, then folders, then packages, each in name order.</summary>
+    /// <summary>Every chart, loaded or not: files, folders, then packages, each in name order.</summary>
     public IReadOnlyList<ChartEntry> Entries => _entries;
 
     public IEnumerable<ChartEntry> Playable => _entries.Where(e => e.Result.Ok);
@@ -94,7 +90,7 @@ public sealed class ChartLibrary
         _entries.FirstOrDefault(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase))
         ?? _entries.FirstOrDefault(e => string.Equals(e.Stem, name, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Remembers each starter chart as written (file and content hash), so a newer mod can tell it was never edited.</summary>
+    /// <summary>Each starter chart's hash as written, so a newer mod can tell it was never edited.</summary>
     private const string StartersRecord = ".starters";
 
     private int WriteStarters()
@@ -110,10 +106,7 @@ public sealed class ChartLibrary
         return StarterCharts.All.Count;
     }
 
-    /// <summary>
-    /// Brings starter charts up to date - only those still exactly as the mod wrote them. One you
-    /// edited, or deleted, is left alone.
-    /// </summary>
+    /// <summary>Brings starter charts still exactly as written up to date; edited or deleted ones are left alone.</summary>
     private int UpdateStarters()
     {
         Dictionary<string, string> record = LoadRecord();
@@ -162,7 +155,7 @@ public sealed class ChartLibrary
         || Packages().Any()
         || Directory.EnumerateDirectories(Folder).Any(d => File.Exists(Path.Combine(d, FolderChartFile)));
 
-    /// <summary>Packages: <c>.bbchart</c>, or a <c>.zip</c> - what the hosted editor saves, where only zips can be offered.</summary>
+    /// <summary>Packages: <c>.bbchart</c>, or <c>.zip</c> as the hosted editor saves them.</summary>
     private IEnumerable<string> Packages() =>
         Directory.EnumerateFiles(Folder, "*" + ChartPackage.Extension).Concat(Directory.EnumerateFiles(Folder, "*.zip"));
 

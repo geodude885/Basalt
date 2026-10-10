@@ -4,10 +4,8 @@ using System.Text.Json;
 namespace BossBattles.Services.Clips;
 
 /// <summary>
-/// Clips on disk: JSON, one compact row per frame - a recording runs to thousands of frames. Each
-/// pose is <c>[px, py, pz, qx, qy, qz, qw]</c>, each stick <c>[x, y]</c>; a take recorded in a lane
-/// adds the performer's lane spot <c>"p": [x, z]</c> and facing <c>"a"</c> (degrees from down the
-/// lane) per frame, and the moves made.
+/// Clips on disk: JSON, one compact row per frame. Poses are <c>[px, py, pz, qx, qy, qz, qw]</c>,
+/// sticks <c>[x, y]</c>; a take adds its lane spot <c>"p"</c>, facing <c>"a"</c> and moves.
 /// <code>
 /// { "name": "boss-take-1", "moves": [ { "t": 2.1, "move": "Straight" } ],
 ///   "frames": [ { "t": 0, "o": [...], "h": [...], "l": [...], "r": [...], "w": [0, 0], "n": [0, 0], "p": [0, 12] }, ... ] }

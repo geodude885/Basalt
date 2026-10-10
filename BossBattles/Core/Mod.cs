@@ -2,18 +2,17 @@ using BossBattles.Actors;
 using BossBattles.Battle;
 using BossBattles.Services.Logging;
 using MelonLoader;
+using UnityEngine;
 
 namespace BossBattles.Core;
 
 /// <summary>
-/// What the whole mod shares: the log, the census of what happened, the actors in play, and the
-/// battle. Every observation goes through <see cref="Note"/>: counted by name, written through to
-/// <c>UserData/BossBattles/battles.log</c> (so a run that ends in a crash still says what happened),
-/// and optionally echoed to the MelonLoader console.
+/// State the whole mod shares. Observations go through <see cref="Note"/>: counted in the census and
+/// written through to <c>battles.log</c>, so a run that ends in a crash still says what happened.
 /// </summary>
 internal static class Mod
 {
-    /// <summary>Past this many lines a counter is only counted - a structure resting on an actor fires every physics step.</summary>
+    /// <summary>Past this many lines a counter is only counted: some fire every physics step.</summary>
     private const int MaxLinesPerCounter = 30;
 
     public static Census Census { get; } = new();
@@ -26,12 +25,14 @@ internal static class Mod
 
     public static BattleController Battle { get; } = new();
 
-    /// <summary>Recording takes into charts (chart editing).</summary>
     public static Studio Studio { get; } = new();
 
-    /// <param name="counter">Census name; one per kind of observation.</param>
-    /// <param name="detail">What was seen, for the log line.</param>
-    /// <param name="echo">Also print to the MelonLoader console. Off for anything frequent.</param>
+    /// <summary>The camera mouse clicks come through, when not the main one (the dev tools' desktop camera).</summary>
+    public static Func<Camera?>? ClickCamera { get; set; }
+
+    /// <param name="counter">Census name, one per kind of observation.</param>
+    /// <param name="detail">The log line.</param>
+    /// <param name="echo">Also print to the MelonLoader console; off for anything frequent.</param>
     public static void Note(string counter, string detail, bool echo = true)
     {
         Census.Count(counter);
@@ -46,7 +47,7 @@ internal static class Mod
         if (echo) Melon?.Msg(line);
     }
 
-    /// <summary>A line that is never capped or counted - battle results, self-test verdicts.</summary>
+    /// <summary>A line that is never capped or counted.</summary>
     public static void Say(string line)
     {
         Log?.Line(line);

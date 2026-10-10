@@ -5,10 +5,7 @@ namespace BossBattles.Services.Placement;
 /// <summary>Where something stands: a world position and a yaw in degrees.</summary>
 public sealed record SavedSpot(float X, float Y, float Z, float Yaw);
 
-/// <summary>
-/// Remembered spots by name (a scene's, for the chart picker), in a JSON file
-/// (<c>UserData/BossBattles/places.json</c> in the game). An unreadable file starts empty.
-/// </summary>
+/// <summary>Remembered spots by name, in a JSON file; an unreadable file starts empty.</summary>
 public sealed class SpotBook
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };

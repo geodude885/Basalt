@@ -8,14 +8,11 @@ using Il2CppRUMBLE.Players;
 using MelonLoader.Utils;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// <c>--bossbattles-selftest=look</c>: makes a chart the way a player does (the panel's NEW CHART),
-/// checks its boss stores your look and stones and wears them, then changes one part of the stored
-/// look - swapped for the default character's part in the same place, so it is still a look the
-/// game can read - plays it again and checks the boss wears the changed one. A close-up of the boss
-/// each time, into <c>SelfTestShots/Look</c>. The chart is removed afterwards.
+/// <c>--bossbattles-selftest=look</c>: a new chart's boss stores and wears your look and stones, and
+/// wears a changed look after editing one part. Close-ups go to <c>SelfTestShots/Look</c>.
 /// </summary>
 internal static partial class SelfTest
 {
@@ -79,11 +76,7 @@ internal static partial class SelfTest
         }
     }
 
-    /// <summary>
-    /// Your look with one part swapped for the default character's in the same place - the gloves
-    /// ("g", in the outfit group) when they differ, else the first part that does - so it is still
-    /// a look the game can read.
-    /// </summary>
+    /// <summary>Your look with one part (the gloves when they differ) swapped for the default character's.</summary>
     private static string EditOnePart(string yours, string plain, out string change)
     {
         var mine = yours.Split(':');
@@ -145,9 +138,7 @@ internal static partial class SelfTest
         if (worn != expected) problems.Add($"{shot}: the boss wears \"{worn}\", not the chart's \"{expected}\"");
         else Mod.Say($"[SelfTest] look {shot}: the boss wears the chart's look");
 
-        // A close-up from in front of the boss, looking back at it - framed on its drawn body: a
-        // simulated actor's VR head transform was found 7 m under the floor, and its controller's
-        // transform away from where the body is drawn.
+        // Framed on the drawn body: an actor's head and controller transforms are not where it is drawn.
         SkinnedMeshRenderer? mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
         Vector3 chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
         Mod.Say($"[SelfTest] look {shot}: framing the body at {Describe.Vector(chest)}{(mesh == null ? " (no mesh found)" : "")}");

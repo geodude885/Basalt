@@ -73,7 +73,7 @@ public sealed class ChartLibraryTests : IDisposable
 
         Assert.Equal(StarterCharts.All.Count, library.Reload());
         Assert.Equal(StarterCharts.All.Count, library.Playable.Count());
-        Assert.NotNull(library.Find(StarterCharts.SelfTestName));
+        Assert.NotNull(library.Find("Warm-up"));
     }
 
     [Fact]

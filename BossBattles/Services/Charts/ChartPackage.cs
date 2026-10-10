@@ -8,14 +8,9 @@ namespace BossBattles.Services.Charts;
 public sealed record PackResult(string Path, IReadOnlyList<string> Included, IReadOnlyList<string> Missing);
 
 /// <summary>
-/// The sharing format: a <c>.bbchart</c> is a zip of a chart folder - <c>chart.json</c> at the top,
-/// the song and cover it names, and a <c>clips/</c> folder with every clip it plays. Drop one into the chart
-/// folder and it is listed; it is unpacked into a cache folder keyed by its contents, so a changed
-/// package is unpacked again and an unchanged one is not.
-/// <para>
-/// Packages are other people's files: entry names that would land outside the folder, too many
-/// entries, or too many bytes are refused rather than unpacked.
-/// </para>
+/// The sharing format: a <c>.bbchart</c> is a zip of a chart folder, unpacked into a cache keyed by
+/// its contents. Packages are other people's files, so entries outside the folder, too many entries
+/// or too many bytes are refused.
 /// </summary>
 public static class ChartPackage
 {
@@ -69,9 +64,8 @@ public static class ChartPackage
     }
 
     /// <summary>
-    /// Packs a chart for sharing: its own JSON as written (comments kept), its song, and its clips -
-    /// from its folder's <c>clips/</c>, else from <paramref name="clips"/> (your recordings).
-    /// Overwrites <paramref name="output"/>.
+    /// Packs a chart as written, with its song, cover and clips (from its <c>clips/</c>, else
+    /// <paramref name="clips"/>), overwriting <paramref name="output"/>.
     /// </summary>
     public static PackResult Pack(ChartEntry entry, string output, Func<string, Clip?>? clips = null)
     {

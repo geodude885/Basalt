@@ -7,12 +7,11 @@ using Il2CppRUMBLE.Pools;
 using MelonLoader.Utils;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// <c>--bossbattles-selftest=measure</c>: fetches each structure a chart can throw from its pool,
-/// posed as a projectile is (looking down the lane, at you), and writes its solid colliders' size -
-/// across, up and along - to <c>SelfTest/structures.json</c>, for the editor's top-down view.
+/// <c>--bossbattles-selftest=measure</c>: writes each throwable structure's collider size, posed as
+/// a projectile, to <c>SelfTest/structures.json</c> for the editor's top-down view.
 /// </summary>
 internal static partial class SelfTest
 {

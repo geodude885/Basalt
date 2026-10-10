@@ -4,7 +4,9 @@
     <File Path="README.md" />
     <File Path="Directory.Build.props" />
     <File Path="Version.props" />
+    <File Path="Rumble.props" />
   </Folder>
   <Project Path="BossBattles.Tests/BossBattles.Tests.csproj" />
   <Project Path="BossBattles/BossBattles.csproj" />
+  <Project Path="BossBattles.DevTools/BossBattles.DevTools.csproj" />
 </Solution>

@@ -3,11 +3,7 @@ namespace BossBattles.Services.Charts;
 /// <summary>A tempo from a beat on: <see cref="Bpm"/> beats per minute from <see cref="Beat"/>.</summary>
 public readonly record struct TempoChange(double Beat, double Bpm);
 
-/// <summary>
-/// A chart's tempo - one bpm, or a list of changes - turning beats into seconds and back. Each
-/// change holds from its beat to the next, so beat 70 in <c>120 bpm from 0, 140 from 64</c> is
-/// 64 beats at 120 then 6 at 140.
-/// </summary>
+/// <summary>A chart's tempo, one bpm or a list of changes, turning beats into seconds and back.</summary>
 public sealed class TempoMap
 {
     private readonly TempoChange[] _changes;

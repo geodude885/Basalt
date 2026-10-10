@@ -5,18 +5,15 @@ using UnityEngine;
 namespace BossBattles.UI;
 
 /// <summary>
-/// The game's own push button, for the mod's UI: a copy of the Gym tutorial's "next page" button -
-/// what RumbleModdingAPI's <c>Create.NewButton</c> and RockUI copy too - kept across scene loads, so
-/// buttons press with the game's own feel, sound and haptics. Captured from the Gym the first time
-/// it is needed there; until then (or if the Gym changes) there is no template and callers use
-/// their own.
+/// The game's own push button, copied from the Gym tutorial's "next page" button the first time it
+/// is seen and kept across scene loads, so the mod's buttons press with the game's feel and sound.
 /// </summary>
 internal static class GameButtons
 {
     private static GameObject? _template;
     private static bool _reported;
 
-    /// <summary>A live game button under <paramref name="parent"/>, pressing <paramref name="onPressed"/>; null without a template.</summary>
+    /// <summary>A game button under <paramref name="parent"/>; null until a template has been seen.</summary>
     public static GameObject? Create(Transform parent, Action onPressed)
     {
         if (!EnsureTemplate()) return null;
@@ -54,8 +51,7 @@ internal static class GameButtons
                 .Where(b => b != null && b.gameObject.scene.IsValid() && b.transform.parent != null)
                 .ToList();
 
-            // The button object is the InteractionButton component's parent (RumbleModdingAPI's
-            // NextPageButton/InteractionButton, whose child 0 carries the component).
+            // The button object is the InteractionButton component's parent.
             InteractionButton? next = buttons.FirstOrDefault(b => PathOf(b.transform).Contains("Next", StringComparison.OrdinalIgnoreCase)
                                                                   && PathOf(b.transform).Contains("tutorial", StringComparison.OrdinalIgnoreCase));
             if (next == null)

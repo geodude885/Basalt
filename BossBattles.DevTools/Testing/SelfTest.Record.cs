@@ -2,7 +2,7 @@ using System.Collections;
 using BossBattles.Actors;
 using BossBattles.Battle;
 using BossBattles.Core;
-using BossBattles.Flatscreen;
+using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Managers;
@@ -10,14 +10,11 @@ using Il2CppRUMBLE.Players;
 using MelonLoader.Utils;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// <c>--bossbattles-selftest=record</c>: records a take the way a chart maker would - from the
-/// actor's end, walking and making two real moves - stops it with the panel's STOP, watches the
-/// actor perform it, keeps it, and checks the chart and take on disk. Flatscreen: the walking is the
-/// flatscreen stick and the moves are run on your own player, which is what recognising a gesture
-/// would do.
+/// <c>--bossbattles-selftest=record</c>: records, reviews and keeps a take as a chart maker would,
+/// walking and making two moves, then checks the chart and take on disk.
 /// </summary>
 internal static partial class SelfTest
 {

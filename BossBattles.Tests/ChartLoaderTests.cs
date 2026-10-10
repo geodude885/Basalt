@@ -1,4 +1,5 @@
 using System.Numerics;
+using BossBattles.DevTools.Testing;
 using BossBattles.Services.Charts;
 using Xunit;
 
@@ -149,5 +150,12 @@ public sealed class ChartLoaderTests
             ChartLoadResult result = ChartLoader.Load(json);
             Assert.True(result.Ok, $"{file}: {string.Join("; ", result.Errors)}");
         }
+    }
+
+    [Fact]
+    public void TheSelfTestChartLoads()
+    {
+        ChartLoadResult result = ChartLoader.Load(SelfTestChart.Json);
+        Assert.True(result.Ok, string.Join("; ", result.Errors));
     }
 }

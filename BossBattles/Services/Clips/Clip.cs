@@ -10,11 +10,9 @@ public readonly record struct ClipPose(Vector3 Position, Quaternion Rotation)
 }
 
 /// <summary>
-/// One sample of a performance: the head-and-hands poses inside the rig (with the headset offset,
-/// which carries height calibration), the two sticks in the game's own units (-1..1), and - for a
-/// take recorded in a lane - where the performer stood in it (<see cref="Lane"/>: lane x and z of
-/// the floor under their head) and which way their body was turned (<see cref="Yaw"/>: degrees from
-/// facing down the lane, clockwise from above), which an actor playing it back is kept to.
+/// One sample of a performance: head and hands inside the rig, the two sticks (-1..1), and for a
+/// take recorded in a lane, where the performer stood (<see cref="Lane"/>: x, z) and faced
+/// (<see cref="Yaw"/>: degrees from down the lane, clockwise from above).
 /// </summary>
 public sealed record ClipFrame(
     float Time,
@@ -31,10 +29,8 @@ public sealed record ClipFrame(
 public readonly record struct ClipMove(float Time, string Move);
 
 /// <summary>
-/// A recorded performance: what a player's tracked parts and sticks did over time. Played back on
-/// an actor, it goes through the same pose and stick input the game reads from a headset and
-/// controllers - so the game itself recognises the gestures, and the actor's moves are real ones.
-/// Rig-local, so it plays anywhere and facing any way.
+/// A recorded performance, rig-local so it plays anywhere. Played on an actor through its pose and
+/// stick input, the game recognises the gestures itself.
 /// </summary>
 public sealed record Clip(string Name, IReadOnlyList<ClipFrame> Frames)
 {
@@ -46,11 +42,7 @@ public sealed record Clip(string Name, IReadOnlyList<ClipFrame> Frames)
     /// <summary>The time of its first frame - a take keeps chart time, so it may start late.</summary>
     public float Start => Frames.Count == 0 ? 0f : Frames[0].Time;
 
-    /// <summary>
-    /// The pose and sticks at <paramref name="time"/>: poses interpolated between the frames either
-    /// side, sticks held from the earlier one (a stick is a press, not a motion). Clamped to the
-    /// first and last frames.
-    /// </summary>
+    /// <summary>The frame at <paramref name="time"/>: poses interpolated, sticks held from the earlier frame.</summary>
     public ClipFrame Sample(float time)
     {
         if (Frames.Count == 0) throw new InvalidOperationException($"clip \"{Name}\" has no frames");

@@ -1,9 +1,6 @@
 namespace BossBattles.Services.Charts;
 
-/// <summary>
-/// A number that changes when any file under some folders is added, removed, renamed, resized or
-/// rewritten - cheap enough to check every second, so charts reload when their author saves.
-/// </summary>
+/// <summary>A number that changes when any file under some folders changes; cheap enough to check every second.</summary>
 public static class FolderFingerprint
 {
     public static long Of(params string[] folders)

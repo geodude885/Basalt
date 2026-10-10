@@ -4,11 +4,8 @@ using System.Text.Json;
 namespace BossBattles.Services.Charts;
 
 /// <summary>
-/// Edits a chart's text in place: one top-level property's value is replaced (or the property is
-/// added), and every other character - comments, layout, the author's order - stays as written.
-/// What the in-game tools change (<c>format</c>, <c>arena</c>, <c>lane</c>, <c>tracks</c>,
-/// <c>end</c>) is written through this, so a hand-written chart survives being recorded into.
-/// JSON with comments and trailing commas, as the loader reads it.
+/// Edits a chart's text in place: one top-level property's value is replaced or added, and every
+/// other character, comments included, stays as written.
 /// </summary>
 public static class ChartDocument
 {

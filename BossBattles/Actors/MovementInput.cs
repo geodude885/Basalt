@@ -2,22 +2,17 @@ using Il2CppRUMBLE.Combat.ShiftStones;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 
-namespace BossBattles.Flatscreen;
+namespace BossBattles.Actors;
 
 /// <summary>
-/// Feeds stick values to a player in place of <c>PlayerMovement.ProcessInput</c>, which reads the
-/// global input actions (the VR controllers). Same formula as the game's own (read from the ISIL),
-/// so sprinting and the WalkingSpeed / SprintingSpeed shiftstone multipliers still apply, and the
-/// game's own Move / ProcessTurnInput do the rest:
-/// <code>
-/// raw  = stick, zeroed when activeFeatures lacks Movement (walk) / SnapTurn (turn)
-/// walk = raw * WalkingSpeed + normalize(raw) * SprintingSpeed * currentSprintFactor
-/// </code>
+/// Feeds stick values to a player in place of <c>PlayerMovement.ProcessInput</c>, which reads the VR
+/// controllers. Uses the game's own formula, so sprinting and the speed shiftstones still apply:
+/// <code>walk = raw * WalkingSpeed + normalize(raw) * SprintingSpeed * currentSprintFactor</code>
 /// Call from a ProcessInput prefix that then skips the original.
 /// </summary>
 public static class MovementInput
 {
-    // PlayerMovement.Features: Movement = 1, SnapTurn = 2.
+    // PlayerMovement.Features.
     private const int MovementFeature = 1;
     private const int SnapTurnFeature = 2;
 

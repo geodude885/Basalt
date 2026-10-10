@@ -8,17 +8,14 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>
-/// The game's own sounds and effects for spawning a structure and for punching one, read off a
-/// player's moves rather than named here: each move is processes of modifiers, and the spawn moves
-/// carry the structure they spawn (<c>SpawnStructureModifier.StructurePrefabName</c>), their spawn
-/// sound (<c>PlayAudioModifer</c>) and effect (<c>PlayVFXModifier</c>). Chart projectiles play these
-/// so they look and sound like a player's: rising with the spawn sound, flying with the punch.
+/// The game's own sounds and effects for spawning and punching a structure, read off your moves'
+/// modifiers, so chart projectiles look and sound like a player's.
 /// </summary>
 internal static class MoveEffects
 {
     private const string PunchMove = "Straight";
 
-    /// <summary>The spawn moves and what they spawn - used when a move's own data does not name its structure.</summary>
+    /// <summary>What the spawn moves spawn, for a move whose data does not name it.</summary>
     private static readonly Dictionary<string, string> KnownSpawns = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Disc"] = "Disc",
@@ -34,13 +31,13 @@ internal static class MoveEffects
 
     private sealed record Effects(string Move, List<AudioCall> Sounds, List<string> Visuals);
 
-    /// <summary>The spawn sound and effect for a structure (by pool name), at the floor it rises from.</summary>
+    /// <summary>The spawn sound and effect for a structure, by pool name.</summary>
     public static void Spawn(string structure, Vector3 floor, Quaternion facing)
     {
         if (!Ensure()) return;
         if (!_spawns!.TryGetValue(structure, out Effects? effects))
         {
-            // Rocks of the scenery have no spawn move: they sound like a spawned ball.
+            // Scenery rocks have no spawn move: they sound like a ball.
             _spawns.TryGetValue("Ball", out effects);
         }
 
@@ -48,20 +45,18 @@ internal static class MoveEffects
     }
 
     /// <summary>
-    /// Whether the game spawns this structure on the ground (its spawn move's spawn step is the
-    /// grounded kind) - a disc or cube rests on the floor rather than appearing in mid-air.
+    /// Whether the game spawns this structure out of the ground rather than in mid-air. The disc
+    /// does, though its spawn step is not the grounded kind.
     /// </summary>
     public static bool IsGrounded(string structure) =>
-        string.Equals(structure, "Disc", StringComparison.OrdinalIgnoreCase) // comes up out of the ground in game, though its spawn step is not the grounded kind
-        || (Ensure() && _grounded.Contains(structure));
+        string.Equals(structure, "Disc", StringComparison.OrdinalIgnoreCase) || (Ensure() && _grounded.Contains(structure));
 
-    /// <summary>The punch's sound and effect, where a projectile is launched.</summary>
     public static void Punch(Vector3 at, Quaternion facing)
     {
         if (Ensure()) Play(_punch, at, facing);
     }
 
-    /// <summary>For a new scene: what the moves pointed at may have gone with the old one.</summary>
+    /// <summary>For a new scene: what the moves pointed at may have gone.</summary>
     public static void Forget()
     {
         _spawns = null;
@@ -115,21 +110,13 @@ internal static class MoveEffects
                         var kind = spawnStep.GetIl2CppType().Name;
                         kinds.Add($"spawn:{kind}");
                         grounded |= kind.Contains("Grounded", StringComparison.Ordinal) && !kind.Contains("NonGrounded", StringComparison.Ordinal);
-                        if (spawnStep.TryCast<SpawnStructureModifier>() is { } spawnModifier)
-                        {
-                            var name = !string.IsNullOrEmpty(spawnModifier.StructurePrefabName) ? spawnModifier.StructurePrefabName : spawnModifier.StructurePrefab?.name;
-                            if (!string.IsNullOrEmpty(name)) spawned ??= name;
-                        }
+                        spawned ??= PrefabName(spawnStep.TryCast<SpawnStructureModifier>());
                     }
 
                     foreach (Binding binding in process.Bindings.ToArray())
                     {
                         kinds.Add(binding.GetIl2CppType().Name);
-                        if (binding.TryCast<SpawnStructureModifier>() is { } spawn)
-                        {
-                            var name = !string.IsNullOrEmpty(spawn.StructurePrefabName) ? spawn.StructurePrefabName : spawn.StructurePrefab?.name;
-                            if (!string.IsNullOrEmpty(name)) spawned ??= name;
-                        }
+                        spawned ??= PrefabName(binding.TryCast<SpawnStructureModifier>());
 
                         if (binding.TryCast<PlayAudioModifer>() is { AudioCall: { } call }) sounds.Add(call);
                         if (binding.TryCast<PlayVFXModifier>() is { } vfx && !string.IsNullOrEmpty(vfx.VFXPrefabName)) visuals.Add(vfx.VFXPrefabName);
@@ -158,5 +145,11 @@ internal static class MoveEffects
             Mod.Note("Effects.Failed", $"could not read the moves' effects: {e.Message}");
             return false;
         }
+    }
+
+    private static string? PrefabName(SpawnStructureModifier? spawn)
+    {
+        var name = spawn == null ? null : !string.IsNullOrEmpty(spawn.StructurePrefabName) ? spawn.StructurePrefabName : spawn.StructurePrefab?.name;
+        return string.IsNullOrEmpty(name) ? null : name;
     }
 }

@@ -5,18 +5,11 @@ using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// A single test actor outside any battle, driven from the desktop keyboard - for trying the
-/// actor's behaviour, moves and control layers by hand. Ctrl+T spawns or despawns it 3 m in front
-/// of you; Ctrl+Shift+T makes it a puppet instead.
-/// <list type="bullet">
-/// <item>Ctrl+9 mirror (copies you) / bot (holds a guard pose, keys drive it).</item>
-/// <item>Ctrl+P plant / unplant. Ctrl+K knockback taken 1 / 0.5 / 0.2 / 0.</item>
-/// <item>In bot control, plain keys: WASD walk, Q/E turn, F face-you, Space jump, Left Shift dash,
-/// 1-4 spawn cube/pillar/wall/ball, Z/X/C/V straight/uppercut/kick/stomp, T disc, G explode.</item>
-/// </list>
+/// A test actor outside any battle, 3 m in front of you. In bot control plain keys drive it: WASD
+/// walk, Q/E turn, F face you, Space jump, Shift dash, 1-4 spawns, Z/X/C/V strikes, T disc, G explode.
 /// </summary>
 internal static class TestBench
 {
@@ -43,7 +36,7 @@ internal static class TestBench
 
     public static Actor? Actor => _actor is { Exists: true } ? _actor : null;
 
-    public static void ToggleActor(bool puppet)
+    public static void ToggleActor()
     {
         if (Actor != null)
         {
@@ -58,14 +51,14 @@ internal static class TestBench
         var yours = ActorRig.Of(you);
         Vector3 at = yours.FloorPoint + (yours.Facing * SpawnDistance);
 
-        _actor = new Actor("test", "Test Actor", "you", puppet ? ActorMode.Puppet : ActorMode.Simulated); // PUPPET (the mode choice)
+        _actor = new Actor("test", "Test Actor", "you");
         _actor.Spawn(at, Quaternion.LookRotation(-yours.Facing));
         _actor.SetControl(ActorControl.Mirror);
     }
 
     public static void ToggleControl()
     {
-        if (Actor is not { IsSimulated: true } actor) return;
+        if (Actor is not { Exists: true } actor) return;
 
         if (actor.Control == ActorControl.Mirror)
         {
@@ -82,7 +75,7 @@ internal static class TestBench
 
     public static void TogglePlant()
     {
-        if (Actor is not { IsSimulated: true } actor) return;
+        if (Actor is not { Exists: true } actor) return;
 
         if (actor.Planted) actor.Unplant();
         else actor.Plant();
@@ -98,16 +91,16 @@ internal static class TestBench
         Mod.Note("Test.Knockback", $"test actor takes x{actor.KnockbackTaken} of the game's knockback");
     }
 
-    /// <summary>Plays a clip on the test actor, switching it to bot control first.</summary>
+    /// <summary>Plays a clip on the test actor, in bot control.</summary>
     public static void PlayClip(Clip? clip)
     {
         if (clip == null)
         {
-            Mod.Say("[Clips] no clips yet - Ctrl+Shift+R records one");
+            Mod.Say("[Clips] no clips yet - Record clip in the settings records one");
             return;
         }
 
-        if (Actor is not { IsSimulated: true } actor)
+        if (Actor is not { Exists: true } actor)
         {
             Mod.Say("[Clips] spawn a test actor first (Ctrl+T)");
             return;
@@ -128,7 +121,6 @@ internal static class TestBench
         actor.Input.Walk = new Vector2(Axis(KeyCode.D, KeyCode.A), Axis(KeyCode.W, KeyCode.S));
         actor.Input.Turn = new Vector2(Axis(KeyCode.E, KeyCode.Q), 0f);
 
-        // Turning by hand and auto-facing would fight each other.
         if (actor.Input.Turn != Vector2.zero) actor.Input.FaceYou = false;
         if (Input.GetKeyDown(KeyCode.F)) actor.Input.FaceYou = !actor.Input.FaceYou;
 

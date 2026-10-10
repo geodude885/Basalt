@@ -1,0 +1,65 @@
+<Project>
+
+	<!-- The game's interop assemblies, from $(Il2CppPath) (Directory.Build.props). -->
+	<ItemGroup>
+		<Reference Include="Il2CppBucketheadEntertainment.Plugins">
+			<HintPath>$(Il2CppPath)\Il2CppBucketheadEntertainment.Plugins.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppmscorlib">
+			<HintPath>$(Il2CppPath)\Il2Cppmscorlib.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPhoton3Unity3D">
+			<HintPath>$(Il2CppPath)\Il2CppPhoton3Unity3D.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPhotonRealtime">
+			<HintPath>$(Il2CppPath)\Il2CppPhotonRealtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPhotonUnityNetworking">
+			<HintPath>$(Il2CppPath)\Il2CppPhotonUnityNetworking.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppRUMBLE.Runtime">
+			<HintPath>$(Il2CppPath)\Il2CppRUMBLE.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.PhysicsModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.PhysicsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.VRModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.VRModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AudioModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.AudioModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AnimationModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.AnimationModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.InputLegacyModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.InputLegacyModule.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.InputSystem">
+			<HintPath>$(Il2CppPath)\Unity.InputSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UI">
+			<HintPath>$(Il2CppPath)\UnityEngine.UI.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ImageConversionModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.ImageConversionModule.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.TextMeshPro">
+			<HintPath>$(Il2CppPath)\Unity.TextMeshPro.dll</HintPath>
+		</Reference>
+		<Reference Include="UIFramework">
+			<HintPath>$(ModsOutputPath)\UIFramework.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<!-- Copies the built mod into RUMBLE\Mods; warns instead of failing while the game holds the file. -->
+	<Target Name="CopyToMods" AfterTargets="Build" Condition="'$(CopyToMods)' == 'true'">
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsOutputPath)" Retries="2" RetryDelayMilliseconds="500" ContinueOnError="true" />
+		<Message Importance="high" Text="Copied $(TargetName).dll to RUMBLE\Mods." />
+	</Target>
+
+</Project>

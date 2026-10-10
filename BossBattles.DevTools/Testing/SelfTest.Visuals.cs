@@ -5,14 +5,11 @@ using BossBattles.Services.Charts;
 using MelonLoader;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// With RumbleReShaded installed: the self-test chart gets a look - its Grayscale pack faded to a
-/// strength - which must be on the pack's own settings mid-run and gone from them after, every
-/// value back as the player had it. RRS draws only on a VR camera, so this checks the settings a
-/// look writes, not the picture. RRS's master switch is turned on for the run if it was off, and
-/// put back.
+/// With RumbleReShaded: a chart look must be on the pack's settings mid-run and every value back as
+/// the player had it after. RRS draws only on a VR camera, so the settings are checked, not the picture.
 /// </summary>
 internal static partial class SelfTest
 {

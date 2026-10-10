@@ -2,9 +2,7 @@ namespace BossBattles.Services.Charts;
 
 /// <summary>
 /// Plays a chart against a clock: <see cref="Advance"/> returns every command due since the last
-/// call, in order. Commands due at the same moment come phase first, then actor placement, then
-/// spawns, launches and moves, each in chart order - so a phase's actor spot is in place before
-/// anything that phase throws.
+/// call. At the same moment, phases come first, then placements, then the rest in chart order.
 /// </summary>
 public sealed class ChartRunner
 {
@@ -21,9 +19,8 @@ public sealed class ChartRunner
 
     /// <param name="chart">The chart.</param>
     /// <param name="startAt">
-    /// Chart time to start from - re-recording a section, practising one. What is in force then is
-    /// brought forward to it (the phase, actors' spots, a take part-way through - from the right
-    /// point - and a projectile already telegraphing); what had finished is dropped.
+    /// Chart time to start from. What is in force then is brought forward (the phase, actors' spots,
+    /// a take part-way through, a projectile telegraphing); what had finished is dropped.
     /// </param>
     public ChartRunner(Chart chart, double startAt = 0)
     {

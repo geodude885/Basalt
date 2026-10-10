@@ -1,21 +1,11 @@
 using UnityEngine;
 
-namespace BossBattles.Flatscreen;
+namespace BossBattles.DevTools.Flatscreen;
 
 /// <summary>
-/// A desktop orbit camera for watching the game without a headset - or as a spectator view in the
-/// game window while in VR. Self-contained so it can move to its own mod: it knows nothing of the
-/// lab, takes what to orbit and where to log from its host, and owns its mouse controls.
-/// <list type="bullet">
-/// <item>Right mouse drag: orbit. Scroll: zoom. Middle mouse drag: pan away from the focus.</item>
-/// <item>The host calls <see cref="Toggle"/> (from its own key binding), <see cref="LateUpdate"/>
-/// once per frame, and <see cref="Forget"/> on a scene change.</item>
-/// </list>
-/// <para>
-/// It is a separate camera rather than the game's headset camera moved around - moving that one
-/// would fight the player rig and tracking. It renders only to the desktop window
-/// (<c>stereoTargetEye = None</c>), above the game's camera, copying its field of view and culling.
-/// </para>
+/// A desktop orbit camera for watching without a headset, or spectating in VR: right drag orbits,
+/// scroll zooms, middle drag pans. A camera of its own, rendering only to the desktop window, so it
+/// never fights the player rig.
 /// </summary>
 public sealed class DesktopCamera
 {
@@ -72,10 +62,7 @@ public sealed class DesktopCamera
         _log("desktop camera on - right drag orbit, scroll zoom, middle drag pan");
     }
 
-    /// <summary>
-    /// Turns the camera on at a fixed viewpoint - for screenshots, or a host's own camera shots.
-    /// Mouse control is off until <see cref="Toggle"/> is used.
-    /// </summary>
+    /// <summary>Turns the camera on at a fixed viewpoint, mouse control off until <see cref="Toggle"/>.</summary>
     public void ShowFixed(Vector3 position, Vector3 lookAt)
     {
         if (_camera == null) _camera = Create();
@@ -87,9 +74,8 @@ public sealed class DesktopCamera
     }
 
     /// <summary>
-    /// Renders the camera's current view to a PNG of the given size, or null if it is off. Renders
-    /// through a RenderTexture rather than <c>ScreenCapture.CaptureScreenshot</c>, whose interop
-    /// string marshalling throws MissingMethodException in this MelonLoader build.
+    /// The camera's view as a PNG, or null when it is off. Through a RenderTexture: the interop's
+    /// <c>ScreenCapture.CaptureScreenshot</c> throws MissingMethodException.
     /// </summary>
     public byte[]? CapturePng(int width, int height)
     {

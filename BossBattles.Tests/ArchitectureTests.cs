@@ -4,14 +4,8 @@ using Xunit;
 namespace BossBattles.Tests;
 
 /// <summary>
-/// Keeps <c>Services/</c> free of the game so it stays testable without RUMBLE running.
-/// <para>
-/// This inspects type signatures — base types, interfaces, fields, properties, and method
-/// parameters and returns — which is how the seam normally erodes (a <c>GameObject</c> field, a
-/// method taking a <c>Transform</c>). It does not decompile method bodies, so a stray
-/// <c>UnityEngine.Object.Destroy(...)</c> buried inside a method would slip past. Treat it as a
-/// tripwire, not a proof.
-/// </para>
+/// Keeps <c>Services/</c> free of game types in its signatures, so it stays testable without RUMBLE.
+/// Method bodies are not inspected: a tripwire, not a proof.
 /// </summary>
 public sealed class ArchitectureTests
 {

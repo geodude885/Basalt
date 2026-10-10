@@ -1,17 +1,13 @@
 namespace BossBattles.Services.Charts;
 
-/// <summary>
-/// A new chart to start from: a folder in the chart folder holding a <c>chart.json</c> that plays
-/// as it is and says, in comments, what each part does and how to change it - so a first chart is
-/// editing one that works rather than writing one from nothing.
-/// </summary>
+/// <summary>A new chart folder whose <c>chart.json</c> plays as it is and explains each part in comments.</summary>
 public static class ChartTemplate
 {
-    /// <summary>Creates <c>&lt;charts&gt;/&lt;stem&gt;/chart.json</c> (a fresh folder name when taken); returns its folder.</summary>
+    /// <summary>Creates <c>&lt;charts&gt;/&lt;stem&gt;/chart.json</c> in a fresh folder; returns the folder.</summary>
     /// <param name="chartsFolder">The chart folder to make it in.</param>
     /// <param name="name">Its name, also its folder's.</param>
     /// <param name="author">Who made it; null for "you".</param>
-    /// <param name="look">The maker's character string, for the boss to wear; null for whoever plays.</param>
+    /// <param name="look">The maker's look string for the boss; null for whoever plays.</param>
     /// <param name="stones">The maker's equipped stones, for the boss; null for whoever plays.</param>
     public static string Create(string chartsFolder, string name, string? author, string? look = null, IReadOnlyList<string>? stones = null)
     {
@@ -24,7 +20,6 @@ public static class ChartTemplate
         return folder;
     }
 
-    /// <summary>The template's text - a valid chart, tested.</summary>
     public static string Json(string name, string? author, string? look = null, IReadOnlyList<string>? stones = null) => $$"""
         {
           // A BossBattles chart. Save this file and the game reloads it - pick it on the chart picker
@@ -73,7 +68,7 @@ public static class ChartTemplate
             // ...walks to another spot...
             { "beat": 18, "at": { "x": -1, "z": 11 } },
 
-            // ...or plays a recording of you: Ctrl+Shift+R records, and the clip's name goes here.
+            // ...or plays a recording of you: Record clip in the settings records one, and its name goes here.
             // { "beat": 20, "clip": "my-recording" },
 
             { "beat": 22, "projectile": { "structure": "Disc", "from": { "x": -1, "y": 1.4, "z": 10 }, "to": "player", "speed": 10, "telegraph": 0.8, "by": "boss" } }

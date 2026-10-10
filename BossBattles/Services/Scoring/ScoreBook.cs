@@ -6,9 +6,8 @@ namespace BossBattles.Services.Scoring;
 public sealed record BestScore(int Score, string Rank, bool Survived, DateTime When);
 
 /// <summary>
-/// Best scores per chart, in a JSON file (<c>UserData/BossBattles/scores.json</c> in the game),
-/// keyed by <see cref="Charts.ChartEntry.ScoreKey"/>. A file that cannot be read starts an empty
-/// book rather than stopping the mod - and is left alone until a new best overwrites it.
+/// Best scores per chart in a JSON file, keyed by <see cref="Charts.ChartEntry.ScoreKey"/>. An
+/// unreadable file starts an empty book and is left alone until a new best overwrites it.
 /// </summary>
 public sealed class ScoreBook
 {

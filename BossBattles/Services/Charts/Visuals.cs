@@ -1,10 +1,8 @@
 namespace BossBattles.Services.Charts;
 
 /// <summary>
-/// A change of look at <see cref="Time"/>: a RumbleReShaded shader pack, by name, turned on with
-/// the parameter values in <see cref="Set"/> (keys are a parameter's label or property, e.g.
-/// "Saturation" or "_Saturation"), fading in over <see cref="Fade"/> seconds - or, with
-/// <see cref="Off"/>, faded back to the player's own settings and then put back as it was.
+/// A RumbleReShaded pack turned on at <see cref="Time"/> with the values in <see cref="Set"/>,
+/// fading over <see cref="Fade"/> seconds; or, with <see cref="Off"/>, faded back to the player's own.
 /// </summary>
 public sealed record VisualCue(double Time, string Pack, IReadOnlyDictionary<string, float> Set, bool Off, double Fade);
 
@@ -12,10 +10,8 @@ public sealed record VisualCue(double Time, string Pack, IReadOnlyDictionary<str
 public sealed record PackLook(bool On, IReadOnlyDictionary<string, float> Values);
 
 /// <summary>
-/// Works out every pack's look at a chart time from the cues - stateless, so a run started part
-/// way through (a section) looks as it would have got there. Values not charted are left to the
-/// player; <c>baseline</c> gives the player's own value of a charted one, which a cue
-/// fades from (the first time) and an "off" fades back to.
+/// Every pack's look at a chart time, stateless so a run started part way looks as it would have.
+/// <c>baseline</c> gives the player's own value, which cues fade from and "off" fades back to.
 /// </summary>
 public static class LookTimeline
 {

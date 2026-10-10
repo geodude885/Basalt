@@ -4,6 +4,7 @@
   "website_url": "https://github.com/geodude885/BossBattles",
   "description": "Survive scripted boss battles down a single lane against game-simulated actors.",
   "dependencies": [
-    "LavaGang-MelonLoader-0.7.3"
+    "LavaGang-MelonLoader-0.7.3",
+    "Reverb_and___and_Spice-UIFramework-0.10.2"
   ]
 }

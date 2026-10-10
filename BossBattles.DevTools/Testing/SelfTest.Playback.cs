@@ -10,15 +10,12 @@ using Il2CppRUMBLE.MoveSystem;
 using MelonLoader.Utils;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// <c>--bossbattles-selftest=chart:&lt;name&gt;</c>: plays one of your charts from the chart folder and
-/// measures how its recorded takes come out on the actor - every recorded move fired, how far the
-/// actor strayed from the recorded path before being put back (a punch's recoil fighting the path
-/// would show here), and how fast the structures its moves touched flew, a Straight or Uppercut
-/// straight after a Hold (a slingshot) against one without. You stay invincible, so the run lasts
-/// the whole chart. Per-frame numbers go to <c>SelfTest/playback-&lt;name&gt;.csv</c>.
+/// <c>--bossbattles-selftest=chart:&lt;name&gt;</c>: plays one of your charts, invincible, and measures
+/// its takes on the actor: moves fired, path and facing error, and structure speeds after slingshots.
+/// Per-frame numbers go to <c>SelfTest/playback-&lt;name&gt;.csv</c>.
 /// </summary>
 internal static partial class SelfTest
 {

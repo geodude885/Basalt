@@ -6,11 +6,7 @@ public sealed record PcmAudio(float[] Samples, int Channels, int SampleRate)
     public double Seconds => Samples.Length / (double)(Channels * SampleRate);
 }
 
-/// <summary>
-/// Reads and writes plain PCM WAV (8/16/24/32-bit integer, 32-bit float). The game loads songs
-/// with Unity's own decoder; this is the fallback for WAV should that fail under the interop, and
-/// what the self-test writes its test tone with.
-/// </summary>
+/// <summary>Reads and writes plain PCM WAV: 8, 16, 24 or 32-bit integer, or 32-bit float.</summary>
 public static class WavFile
 {
     private const ushort PcmFormat = 1;

@@ -13,40 +13,31 @@ namespace BossBattles.UI;
 /// <summary>What the picker's card shows: rich text, and a cover image file or none.</summary>
 internal sealed record PickerCard(string Text, string? CoverPath = null);
 
-/// <summary>A button on the picker: an id (for keys and tests), its label, its colour, and what a press does.</summary>
+/// <summary>A button on the picker; the id is for keys and tests.</summary>
 internal sealed record PickerButton(string Id, string Label, Color Colour, Action Press);
 
 /// <summary>Where the picker stands when it appears.</summary>
 internal enum PickerPlacement
 {
-    /// <summary>In front of you (by the placement settings), or at its fixed spot in the Gym.</summary>
+    /// <summary>In front of you by the placement settings, or at its fixed spot in the Gym.</summary>
     InFront,
 
-    /// <summary>Off to your left, out of the way - while recording, with only a stop button.</summary>
+    /// <summary>Off to your left, out of the way while recording.</summary>
     Beside,
 }
 
 /// <summary>
-/// The mod's panel standing in the world: a card - the chosen chart, a take, a recording in
-/// progress - and buttons under it, which its host supplies for the moment (normal play, chart
-/// editing, recording, deciding on a take); the row is rebuilt when they change. Press a button by
-/// pushing it, clicking it (flatscreen), or with the keys. The buttons are the game's own push
-/// buttons (<see cref="GameButtons"/>) once one has been seen in the Gym, so they press like every
-/// other button in RUMBLE; until then they are the mod's own boxes, poked by hand position.
-/// <para>
-/// Shown while its host wants it. It appears where <see cref="Distance"/>, <see cref="Height"/> and
-/// <see cref="Side"/> say (the settings) - except in the Gym once it has a fixed spot:
-/// <see cref="Summon"/> there sets it (saved in places.json, which can be edited by hand).
-/// Built from primitives with no colliders - pokes and clicks are tested against the buttons' boxes
-/// directly - so nothing of it can touch the game's physics.
-/// </para>
+/// The mod's panel in the world: a card and the buttons its host supplies for the moment. Buttons
+/// are the game's own push buttons (<see cref="GameButtons"/>) once one has been seen, else the
+/// mod's boxes poked by hand position; they can also be clicked or pressed from the keys. Built
+/// without colliders, so nothing of it touches the game's physics.
 /// </summary>
 internal sealed class ChartPicker
 {
     private const float PokeMargin = 0.03f;
     private const float PressCooldown = 0.5f;
 
-    /// <summary>After the panel moves - appearing, following you, summoned - its buttons wait this long: it can land right where a hand is.</summary>
+    /// <summary>After the panel moves its buttons wait this long: it can land right where a hand is.</summary>
     private const float ArrivalLockout = 1f;
     private const float PressedSeconds = 0.15f;
     private const float RefreshSeconds = 0.25f;
@@ -62,7 +53,6 @@ internal sealed class ChartPicker
     private readonly Func<PickerCard> _describe;
     private readonly Func<IReadOnlyList<PickerButton>> _buttonsFor;
     private readonly Func<bool> _wanted;
-    private readonly Func<Camera?> _camera;
     private readonly List<Button> _buttons = [];
     private readonly SpotBook _spots;
 
@@ -82,53 +72,46 @@ internal sealed class ChartPicker
     /// <param name="describe">The card for now.</param>
     /// <param name="buttons">The buttons for now.</param>
     /// <param name="wanted">Whether it should stand in the world now.</param>
-    /// <param name="camera">The camera clicks come through - the desktop camera when on.</param>
     /// <param name="spots">Its fixed spots, by scene.</param>
-    public ChartPicker(Func<PickerCard> describe, Func<IReadOnlyList<PickerButton>> buttons, Func<bool> wanted, Func<Camera?> camera, SpotBook spots)
+    public ChartPicker(Func<PickerCard> describe, Func<IReadOnlyList<PickerButton>> buttons, Func<bool> wanted, SpotBook spots)
     {
         _describe = describe;
         _buttonsFor = buttons;
         _wanted = wanted;
-        _camera = camera;
         _spots = spots;
     }
 
-    /// <summary>Whether the picker is wanted between battles (the setting).</summary>
+    /// <summary>Whether the picker is wanted between battles.</summary>
     public bool Open { get; set; } = true;
 
-    /// <summary>How far in front of your eyes it appears, in metres.</summary>
+    /// <summary>Metres in front of your eyes.</summary>
     public float Distance { get; set; } = 0.75f;
 
-    /// <summary>Its centre's height relative to your eyes, in metres (negative is below).</summary>
+    /// <summary>Metres above your eyes; negative is below.</summary>
     public float Height { get; set; } = -0.35f;
 
-    /// <summary>How far to your right it appears, in metres (negative is left).</summary>
+    /// <summary>Metres to your right; negative is left.</summary>
     public float Side { get; set; }
 
-    /// <summary>Whether it keeps a fixed spot in the Gym once one is set, rather than coming to you.</summary>
+    /// <summary>Keeps a fixed spot in the Gym once one is set, rather than coming to you.</summary>
     public bool FixedInGym { get; set; } = true;
 
-    /// <summary>Keep coming back to you when you walk away from it - through lane setup, where you walk the lane.</summary>
+    /// <summary>Comes back to you when you walk away from it.</summary>
     public bool Follow { get; set; }
 
-    /// <summary>Where it stands the next time it appears.</summary>
     public PickerPlacement Placement { get; set; } = PickerPlacement.InFront;
 
-    /// <summary>A card shown instead of the host's - the self-test's preview of a cover. Null for the host's.</summary>
+    /// <summary>A card shown instead of the host's.</summary>
     public PickerCard? Override { get; set; }
 
-    /// <summary>Whether a cover image is showing - the self-test reads it.</summary>
     public bool ShowingCover => _cover != null && _cover.activeSelf;
 
-    /// <summary>Whether it is standing in the world now - the self-test reads it.</summary>
     public bool Visible => _root != null && _root.activeSelf;
 
     public string CardText => _card == null ? "" : _card.text;
 
-    /// <summary>The ids of the buttons showing.</summary>
     public IEnumerable<string> ButtonIds => _buttons.Select(b => b.Spec.Id);
 
-    /// <summary>Where the card is - for the self-test's camera.</summary>
     public Transform? Root => _root?.transform;
 
     public void Update()
@@ -158,7 +141,7 @@ internal sealed class ChartPicker
         CheckClick();
     }
 
-    /// <summary>Brings the picker to you (opening it if closed) - in the Gym this becomes its fixed spot.</summary>
+    /// <summary>Brings the picker to you, opening it; in the Gym this becomes its fixed spot.</summary>
     public void Summon()
     {
         Open = true;
@@ -168,7 +151,7 @@ internal sealed class ChartPicker
         SaveSpot();
     }
 
-    /// <summary>A press from the keys or the self-test - the same as pushing the button. False when no such button shows.</summary>
+    /// <summary>The same as pushing the button; false when no such button shows.</summary>
     public bool Press(string id)
     {
         Button? button = _buttons.FirstOrDefault(b => b.Spec.Id == id);
@@ -181,10 +164,7 @@ internal sealed class ChartPicker
         return true;
     }
 
-    /// <summary>
-    /// Fires a game button's own <c>onPressed</c> - what the game does when a hand pushes it, the
-    /// self-test's stand-in for a hand. False when that button is the mod's own, or not showing.
-    /// </summary>
+    /// <summary>Fires a game button's own <c>onPressed</c>, as a hand pushing it would; false for the mod's own buttons.</summary>
     public bool InvokeGameButton(string id)
     {
         Button? button = _buttons.FirstOrDefault(b => b.Spec.Id == id);
@@ -327,7 +307,7 @@ internal sealed class ChartPicker
     {
         if (!Input.GetMouseButtonDown(0)) return;
 
-        Camera? camera = _camera() ?? Camera.main;
+        Camera? camera = Mod.ClickCamera?.Invoke() ?? Camera.main;
         if (camera == null) return;
 
         Ray ray = camera.ScreenPointToRay(Input.mousePosition);
@@ -352,7 +332,6 @@ internal sealed class ChartPicker
     private Button? ButtonAt(Vector3 point) =>
         _buttons.FirstOrDefault(b => !b.Native && b.Root.activeSelf && b.Contains(point, PokeMargin));
 
-    /// <summary>A game button was pressed - the game debounces its own, the cooldown covers the rest.</summary>
     private void OnGameButton(Button button)
     {
         if (button.Root != null && button.Root.activeInHierarchy && _buttons.Contains(button)) TryPress(button);
@@ -440,8 +419,7 @@ internal sealed class ChartPicker
 
         if (native != null)
         {
-            // The game's button pushes along its local up: turn that towards you. Its label sits on
-            // a coloured plate behind it, which is also what a click hits.
+            // The game's button pushes along its local up: turned towards you, on a plate clicks hit.
             native.transform.localPosition = new Vector3(0f, -0.02f, -0.02f);
             native.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
             face = Box(holder.transform, "Face", new Vector3(0f, 0.01f, 0.01f), new Vector3(ButtonWidth, 0.16f, 0.02f), spec.Colour);
@@ -501,7 +479,7 @@ internal sealed class ChartPicker
         return text;
     }
 
-    /// <summary>Whether a point is inside a unit cube's transform (a primitive box), grown by a margin in metres.</summary>
+    /// <summary>Whether a point is inside a primitive box, grown by a margin in metres.</summary>
     private static bool InBox(Transform box, Vector3 world, float margin)
     {
         Vector3 local = box.InverseTransformPoint(world);
@@ -511,7 +489,6 @@ internal sealed class ChartPicker
                && Mathf.Abs(local.z) <= 0.5f + (margin / scale.z);
     }
 
-    /// <summary>One button: its box is the face's, in the face's own space.</summary>
     private sealed class Button
     {
         private readonly GameObject _face;
@@ -534,12 +511,12 @@ internal sealed class ChartPicker
 
         public GameObject Root { get; }
 
-        /// <summary>A game button, which the game presses itself - not poked by hand position.</summary>
+        /// <summary>A game button, which the game presses itself.</summary>
         public bool Native { get; init; }
 
         public bool Contains(Vector3 world, float margin) => InBox(_face.transform, world, margin);
 
-        /// <summary>How far along the ray the button is, or null if the ray misses it.</summary>
+        /// <summary>How far along the ray the button is; null on a miss.</summary>
         public float? RayDistance(Ray ray)
         {
             Transform face = _face.transform;

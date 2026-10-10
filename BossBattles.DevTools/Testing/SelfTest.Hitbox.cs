@@ -6,14 +6,11 @@ using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Pools;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// Does a structure thrown at the boss hit it? Two balls at its chest from 4 m in front, early in the
-/// battle (later they knocked the boss's own cube about and reset the cleanup check):
-/// a plain one, and one marked as a chart projectile just thrown (actors ignore those for a while,
-/// so a shot launched beside the boss does not bump off it) - the case of a projectile punched
-/// straight back. Each must stop at the boss, not end up behind it.
+/// Structures thrown at the boss hit it: a plain ball, and one marked as a just-launched chart
+/// projectile (which actors briefly ignore), each must stop at the boss rather than pass through.
 /// </summary>
 internal static partial class SelfTest
 {

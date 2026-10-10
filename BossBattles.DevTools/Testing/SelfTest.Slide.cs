@@ -3,13 +3,11 @@ using BossBattles.Core;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
-namespace BossBattles.Testing;
+namespace BossBattles.DevTools.Testing;
 
 /// <summary>
-/// Grounded projectiles must stay the game's to play with while they slide: the first gets the
-/// game's own hitstop (<see cref="Structure.FreezePhysics"/>) mid-slide and must come out of it still
-/// sliding at you, neither stuck frozen nor stopped; the second is knocked back towards the boss mid-slide, as a parry sends it, and
-/// must keep going back rather than being dragged on at you.
+/// Grounded projectiles stay the game's to play with: one must keep sliding after the game's
+/// hitstop (<see cref="Structure.FreezePhysics"/>), another must stay knocked back rather than be dragged on.
 /// </summary>
 internal static partial class SelfTest
 {

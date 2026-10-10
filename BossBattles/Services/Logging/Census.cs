@@ -1,8 +1,6 @@
 namespace BossBattles.Services.Logging;
 
-/// <summary>
-/// Named counters, so "the clone never got hit" becomes "OnTriggerEnter=14, RegisterPlayerHitEvent=0".
-/// </summary>
+/// <summary>Named counters of what happened, for the log.</summary>
 public sealed class Census
 {
     private readonly Dictionary<string, int> _counts = new(StringComparer.Ordinal);

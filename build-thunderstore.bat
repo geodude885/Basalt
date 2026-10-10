@@ -34,7 +34,7 @@ mkdir "%~dp0ThunderstorePackage\UserLibs"
 copy "%USERPROFILE%\.nuget\packages\nlayer\1.16.0\lib\netstandard2.0\NLayer.dll" "%~dp0ThunderstorePackage\UserLibs\" >nul
 copy "%USERPROFILE%\.nuget\packages\nvorbis\0.10.5\lib\netstandard2.0\NVorbis.dll" "%~dp0ThunderstorePackage\UserLibs\" >nul
 copy "%~dp0THIRD-PARTY-NOTICES.md" "%~dp0ThunderstorePackage\" >nul
-copy "%~dp0README.md" "%~dp0ThunderstorePackage\" >nul
+copy "%~dp0Thunderstore\README.md" "%~dp0ThunderstorePackage\" >nul
 REM manifest.json is copied, not regenerated: UpdateVersion.ps1 has already stamped the version
 REM into it, and a second generated copy here would let the two drift apart.
 copy "%~dp0Thunderstore\manifest.json" "%~dp0ThunderstorePackage\" >nul

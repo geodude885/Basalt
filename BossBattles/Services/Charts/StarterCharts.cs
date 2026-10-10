@@ -1,21 +1,12 @@
 namespace BossBattles.Services.Charts;
 
-/// <summary>
-/// Charts written into an empty chart folder, so there is something to play and something to copy
-/// from. Each is loaded in the tests, so a starter chart can never ship broken.
-/// </summary>
+/// <summary>Charts written into an empty chart folder; each is loaded in the tests.</summary>
 public static class StarterCharts
 {
-    public const string SelfTestName = "Self Test";
-
-    /// <summary>The clip the self-test chart plays; the self-test supplies it, so it needs no file.</summary>
-    public const string SelfTestClip = "selftest-sway";
-
     public static IReadOnlyList<(string File, string Json)> All { get; } = new[]
     {
         ("01-warm-up.json", WarmUp),
         ("02-crossfire.json", Crossfire),
-        ("99-self-test.json", SelfTest),
     };
 
     /// <summary>Slow discs from changing places with long warnings: learn to read the lane.</summary>
@@ -80,33 +71,6 @@ public static class StarterCharts
             { "t": 28.5, "projectile": { "structure": "Disc", "from": { "x": 0,    "y": 1.9, "z": 10 }, "to": "player", "speed": 14, "telegraph": 0.5 } }
           ],
           "end": 33
-        }
-        """;
-
-    /// <summary>A few seconds touching every command type - what the automated self-test plays.</summary>
-    public const string SelfTest = /*lang=json,strict*/ """
-        {
-          "format": 1,
-          "name": "Self Test",
-          "author": "BossBattles",
-          "difficulty": "Test",
-          "description": "A few seconds touching every command - what the automated self-test plays.",
-          "zone": { "length": 6, "height": 2.5 },
-          "rules": { "spawn": "discs", "cleanup": 2 },
-          "colours": { "edges": "#33ccff", "ends": "#ff3399", "walls": "#66ccff33" },
-          "lane": { "length": 10, "width": 3 },
-          "actors": [ { "id": "probe", "name": "Self Test", "at": { "x": 0, "z": 10 }, "shiftstones": [ "Vigor", "Flow" ] } ],
-          "phases": [ { "name": "Start", "start": 0 }, { "name": "Moved", "start": 3, "at": { "x": 1, "z": 9 }, "colours": { "edges": "#ffaa00", "walls": "none" } } ],
-          "events": [
-            { "t": 1.5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 8 }, "to": "player", "speed": 10, "telegraph": 0.5, "by": "probe" } },
-            { "t": 2, "projectile": { "structure": "RockCube", "from": { "x": 1.2, "y": 0, "z": 8 }, "to": { "x": 1.4, "y": 1 }, "speed": 8, "telegraph": 0.5 } },
-            { "t": 2.5, "projectile": { "structure": "Ball", "from": { "x": -1, "y": 1.2, "z": 8 }, "to": { "x": 0.5, "y": 1.2 }, "speed": 8, "telegraph": 0.5 } },
-            { "t": 3.2, "projectile": { "structure": "RockCube", "from": { "x": -1.2, "y": 0, "z": 8 }, "to": { "x": -1.4, "y": 1 }, "speed": 8, "telegraph": 0.5 } },
-            { "t": 4,   "move": "SpawnCube" },
-            { "t": 5,   "at": { "x": 0, "z": 10 } },
-            { "t": 5.5, "clip": "selftest-sway" }
-          ],
-          "end": 7
         }
         """;
 }

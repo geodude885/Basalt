@@ -20,7 +20,7 @@ public sealed class ChartRunner
     /// <param name="chart">The chart.</param>
     /// <param name="startAt">
     /// Chart time to start from. What is in force then is brought forward (the phase, actors' spots,
-    /// a take part-way through, a projectile telegraphing); what had finished is dropped.
+    /// a clip part-way through, a projectile telegraphing); what had finished is dropped.
     /// </param>
     public ChartRunner(Chart chart, double startAt = 0)
     {
@@ -44,27 +44,9 @@ public sealed class ChartRunner
         if (now < _now) throw new ArgumentException($"the clock went backwards: {now} after {_now}", nameof(now));
         _now = now;
 
-        var due = new List<ChartCommand>();
-        while (_next < _schedule.Count && _schedule[_next].Time <= now)
-        {
-            due.Add(_schedule[_next]);
-            _next++;
-        }
-
-        return due;
-    }
-
-    /// <summary>The phase in force at <paramref name="time"/>.</summary>
-    public Phase PhaseAt(double time)
-    {
-        Phase current = Chart.Phases[0];
-        foreach (Phase phase in Chart.Phases)
-        {
-            if (phase.Start > time) break;
-            current = phase;
-        }
-
-        return current;
+        var first = _next;
+        while (_next < _schedule.Count && _schedule[_next].Time <= now) _next++;
+        return _next == first ? Array.Empty<ChartCommand>() : _schedule.GetRange(first, _next - first);
     }
 
     private static List<ChartCommand> From(List<ChartCommand> schedule, double startAt)
@@ -78,14 +60,14 @@ public sealed class ChartRunner
         foreach (PlaceActor place in schedule.OfType<PlaceActor>().Where(p => p.Time <= startAt).GroupBy(p => p.ActorId).Select(g => g.Last()))
             started.Add(place with { Time = startAt });
 
-        foreach (PlayTake take in schedule.OfType<PlayTake>().Where(t => t.Time <= startAt && (t.Until == null || t.Until > startAt)))
-            started.Add(take with { Time = startAt, From = take.From + (startAt - take.Time) });
+        foreach (PlayClip clip in schedule.OfType<PlayClip>().Where(t => t.Time <= startAt && (t.To == null || t.Time + (t.To - t.From) > startAt)))
+            started.Add(clip with { Time = startAt, From = clip.From + (startAt - clip.Time) });
 
         foreach (SpawnProjectile spawn in schedule.OfType<SpawnProjectile>().Where(s => s.Time < startAt && launchedLate.Contains(s.Id)))
             started.Add(spawn with { Time = startAt });
 
         // Brought-forward state first, in the usual order, then everything still to come.
-        started.AddRange(schedule.Where(c => c.Time > startAt || (c.Time == startAt && c is not (EnterPhase or PlaceActor or PlayTake))));
+        started.AddRange(schedule.Where(c => c.Time > startAt || (c.Time == startAt && c is not (EnterPhase or PlaceActor or PlayClip))));
         return started;
     }
 
@@ -93,12 +75,10 @@ public sealed class ChartRunner
     {
         var entries = new List<(ChartCommand Command, int Rank, int Order)>();
 
-        for (var i = 0; i < chart.Actors.Count; i++)
-            entries.Add((new PlaceActor(0, chart.Actors[i].Id, chart.Actors[i].At), RankPlace, -chart.Actors.Count + i));
+        entries.AddRange(chart.Actors.Select((actor, i) => ((ChartCommand)new PlaceActor(0, actor.Id, actor.At), RankPlace, -chart.Actors.Count + i)));
 
-        for (var i = 0; i < chart.Phases.Count; i++)
+        foreach ((Phase phase, var i) in chart.Phases.Select((p, i) => (p, i)))
         {
-            Phase phase = chart.Phases[i];
             entries.Add((new EnterPhase(phase.Start, phase), RankPhase, i));
             if (phase.At is Spot spot) entries.Add((new PlaceActor(phase.Start, phase.ActorId ?? chart.DefaultActor.Id, spot), RankPlace, i));
         }
@@ -116,9 +96,6 @@ public sealed class ChartRunner
                 case MoveEvent move:
                     entries.Add((new RunMove(move.Time, move.ActorId, move.Stack), RankMove, move.Order));
                     break;
-                case ClipEvent clip:
-                    entries.Add((new PlayClip(clip.Time, clip.ActorId, clip.Clip), RankMove, clip.Order));
-                    break;
                 case PlaceEvent place:
                     entries.Add((new PlaceActor(place.Time, place.ActorId, place.At), RankPlace, place.Order));
                     break;
@@ -127,12 +104,13 @@ public sealed class ChartRunner
 
         foreach (Track track in chart.Tracks)
         {
-            for (var i = 0; i < track.Takes.Count; i++)
+            // Each clip plays until its own end or the next clip, whichever is first.
+            IEnumerable<double?> nextStarts = track.Clips.Skip(1).Select(t => (double?)t.Time).Append(null);
+            foreach ((TrackClip clip, var next) in track.Clips.Zip(nextStarts))
             {
-                TakeSegment take = track.Takes[i];
-                double? until = take.To is { } to ? take.Time + (to - take.From) : null;
-                if (i + 1 < track.Takes.Count) until = Math.Min(until ?? double.MaxValue, track.Takes[i + 1].Time);
-                entries.Add((new PlayTake(take.Time, track.ActorId, take.Clip, take.From, until) { Mime = take.Mime }, RankMove, -1));
+                var to = clip.To;
+                if (next != null) to = Math.Min(to ?? double.MaxValue, clip.From + (next.Value - clip.Time));
+                entries.Add((new PlayClip(clip.Time, track.ActorId, clip.Clip, clip.From, to) { Mime = clip.Mime }, RankMove, -1));
             }
         }
 

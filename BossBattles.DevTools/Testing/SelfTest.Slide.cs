@@ -1,5 +1,4 @@
 using System.Collections;
-using BossBattles.Core;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
@@ -18,8 +17,8 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
 
         // 1. Hitstop mid-slide.
-        while (Mod.Battle.GroundedLaunched < 1 && Time.realtimeSinceStartup < deadline) yield return null;
-        Rigidbody? first = Mod.Battle.LastGroundedBody;
+        while (GroundedLaunches < 1 && Time.realtimeSinceStartup < deadline) yield return null;
+        Rigidbody? first = SlidingBody();
         yield return new WaitForSeconds(0.1f);
         Structure? structure = first?.GetComponent<Structure>();
         if (first == null || structure == null)
@@ -38,8 +37,8 @@ internal static partial class SelfTest
             _slideProblem = $"a grounded projectile did not carry on after the game's hitstop ({hitstop})";
 
         // 2. Knocked back mid-slide.
-        while (Mod.Battle.GroundedLaunched < 2 && Time.realtimeSinceStartup < deadline) yield return null;
-        Rigidbody? second = Mod.Battle.LastGroundedBody;
+        while (GroundedLaunches < 2 && Time.realtimeSinceStartup < deadline) yield return null;
+        Rigidbody? second = SlidingBody();
         yield return new WaitForSeconds(0.1f);
         if (second == null)
         {
@@ -54,6 +53,6 @@ internal static partial class SelfTest
         var parry = $"knocked back: {back:0.0} m/s back towards the boss";
         if (back <= 0.5f) _slideProblem ??= $"a grounded projectile knocked back mid-slide was dragged on at you ({parry})";
 
-        Mod.Say($"[SelfTest] slides: {hitstop}; {parry}");
+        Logger.Info($"[SelfTest] slides: {hitstop}; {parry}");
     }
 }

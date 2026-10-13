@@ -14,12 +14,11 @@ public sealed record LaunchProjectile(double Time, int Id, ProjectileEvent Proje
 
 public sealed record RunMove(double Time, string ActorId, string Stack) : ChartCommand(Time);
 
-public sealed record PlayClip(double Time, string ActorId, string Clip) : ChartCommand(Time);
 
-/// <summary>An actor performs a take from the clip's <see cref="From"/> until chart time <see cref="Until"/> or the clip's end.</summary>
-public sealed record PlayTake(double Time, string ActorId, string Clip, double From, double? Until) : ChartCommand(Time)
+/// <summary>An actor performs a clip from clip time <see cref="From"/> to <see cref="To"/>, or its end.</summary>
+public sealed record PlayClip(double Time, string ActorId, string Clip, double From, double? To) : ChartCommand(Time)
 {
-    /// <summary>Moves as recorded, but runs none of the take's moves - see <see cref="TakeSegment.Mime"/>.</summary>
+    /// <summary>Moves as recorded, but runs none of the clip's moves - see <see cref="TrackClip.Mime"/>.</summary>
     public bool Mime { get; init; }
 }
 

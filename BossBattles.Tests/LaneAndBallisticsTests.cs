@@ -14,8 +14,8 @@ public sealed class LaneFrameTests
         // Facing +X: down the lane is +X, lane-right is -Z (Unity is left-handed).
         var frame = LaneFrame.From(new Vector3(10, 0, 5), new Vector3(1, 0.3f, 0));
 
-        AssertClose(new Vector3(1, 0, 0), frame.Forward);
-        AssertClose(new Vector3(0, 0, -1), frame.Right);
+        AssertClose(new Vector3(1, 0, 0), frame.Anchor.Forward);
+        AssertClose(new Vector3(0, 0, -1), frame.Anchor.Right);
         AssertClose(new Vector3(22, 1.5f, 4), frame.ToWorld(new Vector3(1, 1.5f, 12)));
     }
 
@@ -69,7 +69,7 @@ public sealed class BallisticsTests
         Vector3 velocity = Ballistics.LaunchVelocity(from, to, speed, Gravity);
         var time = Vector3.Distance(from, to) / speed;
 
-        Vector3 landed = Ballistics.PositionAt(from, velocity, Gravity, time);
+        Vector3 landed = from + (velocity * time) - (Vector3.UnitY * (0.5f * Gravity * time * time));
         Assert.True(Vector3.Distance(to, landed) < 1e-3f, $"landed at {landed}, aimed at {to}");
     }
 

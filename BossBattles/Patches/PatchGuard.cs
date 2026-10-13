@@ -1,5 +1,3 @@
-using BossBattles.Core;
-
 namespace BossBattles.Patches;
 
 /// <summary>
@@ -21,7 +19,7 @@ internal static class PatchGuard
         catch (Exception e)
         {
             Enabled = false;
-            Mod.Note("Patches.Disabled", $"{name} threw, all patch bodies off for this session: {e}");
+            Logger.Error($"[Patches.Disabled] {name} threw, all patch bodies off for this session: {e}");
         }
     }
 }

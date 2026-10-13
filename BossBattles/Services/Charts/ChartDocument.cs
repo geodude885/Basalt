@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 
 namespace BossBattles.Services.Charts;
@@ -112,13 +111,7 @@ public static class ChartDocument
         return text[..insertAt] + (hasComma ? "" : ",") + between + property + "\n" + text[close..];
     }
 
-    private static string Reindent(string json, string indent)
-    {
-        var lines = json.Replace("\r\n", "\n").Split('\n');
-        var builder = new StringBuilder(lines[0]);
-        for (var i = 1; i < lines.Length; i++) builder.Append('\n').Append(indent).Append(lines[i]);
-        return builder.ToString();
-    }
+    private static string Reindent(string json, string indent) => string.Join("\n" + indent, json.Replace("\r\n", "\n").Split('\n'));
 
     /// <summary>Just enough of a JSON-with-comments reader to find where things start and end.</summary>
     private sealed class Scanner

@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using BossBattles.Core;
 using BossBattles.Services.Audio;
 using MelonLoader;
 using UnityEngine;
@@ -22,7 +21,7 @@ internal enum MusicState
 /// <para>
 /// The game ships without Unity's audio decoding, so songs are decoded in managed code on a
 /// background thread and handed to the clip a second at a time; long songs are kept in mono, and
-/// decoded songs are cached until their file changes.
+/// the last song decoded is kept until another loads.
 /// </para>
 /// <para>
 /// The song is the battle's clock: started with <c>PlayScheduled</c> and read back from the same
@@ -40,7 +39,8 @@ internal sealed class Music
     /// <summary>Main-thread work per frame: a few seconds of audio handed to the clip.</summary>
     private const int ChunksPerFrame = 4;
 
-    private static readonly Dictionary<string, (DateTime Written, AudioClip Clip)> Cache = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>The last song decoded: playing a chart again starts at once, and only one song is held at a time.</summary>
+    private static (string Path, DateTime Written, AudioClip Clip)? _cached;
 
     private GameObject? _holder;
     private AudioSource? _source;
@@ -78,17 +78,17 @@ internal sealed class Music
         if (!File.Exists(path))
         {
             State = MusicState.Failed;
-            Mod.Note("Music.Missing", $"no song at {path} - playing without music");
+            Logger.Warning($"[Music.Missing] no song at {path} - playing without music");
             return;
         }
 
         DateTime written = File.GetLastWriteTimeUtc(path);
-        if (Cache.TryGetValue(path, out (DateTime Written, AudioClip Clip) cached) && cached.Written == written && cached.Clip != null)
+        if (_cached is { } cached && string.Equals(cached.Path, path, StringComparison.OrdinalIgnoreCase) && cached.Written == written && cached.Clip != null)
         {
             _clip = cached.Clip;
             Progress = 1f;
             State = MusicState.Ready;
-            Mod.Note("Music.Loaded", $"{Path.GetFileName(path)}: already decoded", echo: false);
+            Logger.Debug($"[Music.Loaded] {Path.GetFileName(path)}: already decoded");
             return;
         }
 
@@ -108,7 +108,7 @@ internal sealed class Music
         _dspStart = AudioSettings.dspTime + ScheduleAheadSeconds;
         _source.PlayScheduled(_dspStart);
         _started = true;
-        Mod.Note("Music.Playing", $"{_clip.name} from {start:0.00}s at volume {_source.volume:0.00}", echo: false);
+        Logger.Debug($"[Music.Playing] {_clip.name} from {start:0.00}s at volume {_source.volume:0.00}");
     }
 
     /// <summary>Fades out; the clock keeps running until <see cref="Stop"/>.</summary>
@@ -191,7 +191,7 @@ internal sealed class Music
                 if (filled + frames > capacity) frames = (int)(capacity - filled);
                 if (frames <= 0) continue;
 
-                var data = frames * job.Channels == chunk.Length ? chunk : chunk.Take(frames * job.Channels).ToArray();
+                var data = frames * job.Channels == chunk.Length ? chunk : chunk[..(frames * job.Channels)];
                 try
                 {
                     clip.SetData(data, (int)filled);
@@ -215,8 +215,9 @@ internal sealed class Music
         _clip = clip;
         Progress = 1f;
         State = MusicState.Ready;
-        Cache[path] = (written, clip);
-        Mod.Note("Music.Loaded", $"{name}: {filled / (double)job.SampleRate:0.0}s, {job.Channels} ch, {job.SampleRate} Hz, decoded in {timer.Elapsed.TotalSeconds:0.0}s", echo: false);
+        if (_cached is { } previous && previous.Clip != null && previous.Clip != clip) UnityEngine.Object.Destroy(previous.Clip);
+        _cached = (path, written, clip);
+        Logger.Debug($"[Music.Loaded] {name}: {filled / (double)job.SampleRate:0.0}s, {job.Channels} ch, {job.SampleRate} Hz, decoded in {timer.Elapsed.TotalSeconds:0.0}s");
     }
 
     /// <summary>On a background thread, so no game calls: decodes a second at a time into the queue.</summary>
@@ -237,7 +238,21 @@ internal sealed class Music
             {
                 // A few seconds ahead of the main thread, not the whole song.
                 while (job.Chunks.Count > 30 && !job.Cancelled) Thread.Sleep(5);
-                job.Chunks.Enqueue(mono ? Downmix(block, read, source.Channels) : block.Take(read).ToArray());
+                if (!mono)
+                {
+                    job.Chunks.Enqueue(block[..read]);
+                    continue;
+                }
+
+                var downmixed = new float[read / source.Channels];
+                for (var f = 0; f < downmixed.Length; f++)
+                {
+                    var sum = 0f;
+                    for (var c = 0; c < source.Channels; c++) sum += block[(f * source.Channels) + c];
+                    downmixed[f] = sum / source.Channels;
+                }
+
+                job.Chunks.Enqueue(downmixed);
             }
         }
         catch (Exception e)
@@ -250,23 +265,10 @@ internal sealed class Music
         }
     }
 
-    private static float[] Downmix(float[] block, int count, int channels)
-    {
-        var mono = new float[count / channels];
-        for (var f = 0; f < mono.Length; f++)
-        {
-            var sum = 0f;
-            for (var c = 0; c < channels; c++) sum += block[(f * channels) + c];
-            mono[f] = sum / channels;
-        }
-
-        return mono;
-    }
-
     private void Failed(string name, string why)
     {
         State = MusicState.Failed;
-        Mod.Note("Music.Failed", $"{name}: {why} - playing without music");
+        Logger.Error($"[Music.Failed] {name}: {why} - playing without music");
     }
 
     private bool EnsureSource()
@@ -288,12 +290,12 @@ internal sealed class Music
             AudioMixerGroup? music = groups.FirstOrDefault(g => string.Equals(g.name, "Music", StringComparison.OrdinalIgnoreCase))
                                      ?? groups.FirstOrDefault(g => g.name.Contains("Music", StringComparison.OrdinalIgnoreCase));
             if (music != null) _source.outputAudioMixerGroup = music;
-            Mod.Note("Music.Output", $"{(music == null ? "straight to the output" : $"through mixer group {music.name}")}; groups: {string.Join(", ", groups.Select(g => g.name))}", echo: false);
+            Logger.Debug($"[Music.Output] {(music == null ? "straight to the output" : $"through mixer group {music.name}")}; groups: {string.Join(", ", groups.Select(g => g.name))}");
             return true;
         }
         catch (Exception e)
         {
-            Mod.Note("Music.Failed", $"no audio source: {e.Message}");
+            Logger.Error($"[Music.Failed] no audio source: {e.Message}");
             _source = null;
             return false;
         }

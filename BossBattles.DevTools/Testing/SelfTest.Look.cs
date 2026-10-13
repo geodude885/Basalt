@@ -1,7 +1,6 @@
 using System.Collections;
 using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
@@ -25,7 +24,7 @@ internal static partial class SelfTest
         var yours = you.Data.VisualData.ToPlayfabDataString();
         var plain = PlayerVisualData.Default.ToPlayfabDataString();
         List<string> stones = Shiftstones.EquippedBy(you.Controller);
-        Mod.Say($"[SelfTest] look: yours \"{yours}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
+        Logger.Info($"[SelfTest] look: yours \"{yours}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
 
         // 1. A chart made in game.
         var folder = _newChart?.Invoke();
@@ -52,7 +51,7 @@ internal static partial class SelfTest
 
         // 2. One part of the look changed, as someone editing the chart would.
         var edited = EditOnePart(yours, plain, out var change);
-        Mod.Say($"[SelfTest] look: changed {change}");
+        Logger.Info($"[SelfTest] look: changed {change}");
         if (edited == yours) problems.Add("could not find a part of your look to change");
 
         var text = File.ReadAllText(file);
@@ -72,7 +71,7 @@ internal static partial class SelfTest
         }
         catch (IOException e)
         {
-            Mod.Say($"[SelfTest] could not remove the test chart {folder}: {e.Message}");
+            Logger.Info($"[SelfTest] could not remove the test chart {folder}: {e.Message}");
         }
     }
 
@@ -82,43 +81,38 @@ internal static partial class SelfTest
         var mine = yours.Split(':');
         var theirs = plain.Split(':');
         const int Outfit = 2;
-        if (mine.Length > Outfit && theirs.Length > Outfit)
+        var outfit = mine.Length > Outfit ? mine[Outfit].Split(',') : [];
+        var plainOutfit = theirs.Length > Outfit ? theirs[Outfit].Split(',') : [];
+        var glove = Array.FindIndex(outfit, part => part.StartsWith('g'));
+        if (glove >= 0 && glove < plainOutfit.Length && outfit[glove] != plainOutfit[glove])
         {
-            var a = mine[Outfit].Split(',');
-            var b = theirs[Outfit].Split(',');
-            var g = Array.FindIndex(a, part => part.StartsWith('g'));
-            if (g >= 0 && g < b.Length && a[g] != b[g])
-            {
-                change = $"the gloves, {a[g]} -> {b[g]}";
-                a[g] = b[g];
-                mine[Outfit] = string.Join(",", a);
-                return string.Join(":", mine);
-            }
+            change = $"the gloves, {outfit[glove]} -> {plainOutfit[glove]}";
+            outfit[glove] = plainOutfit[glove];
+            mine[Outfit] = string.Join(",", outfit);
+            return string.Join(":", mine);
         }
 
-        for (var g = 1; g < Math.Min(mine.Length, theirs.Length); g++)
+        foreach (var g in Enumerable.Range(1, Math.Max(0, Math.Min(mine.Length, theirs.Length) - 1)))
         {
             var a = mine[g].Split(',');
             var b = theirs[g].Split(',');
-            for (var i = 0; i < Math.Min(a.Length, b.Length); i++)
-            {
-                if (a[i] == b[i]) continue;
+            var i = Enumerable.Range(0, Math.Min(a.Length, b.Length)).FirstOrDefault(i => a[i] != b[i], -1);
+            if (i < 0) continue;
 
-                change = $"part {g}.{i}: {a[i]} -> {b[i]}";
-                a[i] = b[i];
-                mine[g] = string.Join(",", a);
-                return string.Join(":", mine);
-            }
+            change = $"part {g}.{i}: {a[i]} -> {b[i]}";
+            a[i] = b[i];
+            mine[g] = string.Join(",", a);
+            return string.Join(":", mine);
         }
 
         change = "nothing";
         return yours;
     }
 
-    /// <summary>Plays a chart in the Ring until its actor is up, checks what it wears, and takes a close-up.</summary>
+    /// <summary>Plays a chart in the Ring until its actor is up, checks what it wears, and clips a close-up.</summary>
     private static IEnumerator PlayAndShoot(Chart chart, string folder, string expected, string shot, List<string> problems)
     {
-        Mod.Battle.KeepInvincible = true;
+        _keepYouAlive = true;
         var before = Mod.Actors.All.ToList();
         // No spot: the Ring lays the template's 12 m lane across its middle - from z = -4 it ran off the edge.
         Mod.Battle.Start(chart with { Arena = new ArenaSpec(ArenaKind.Ring) }, ArenaKind.Ring, folder);
@@ -136,13 +130,13 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(1f);
         var worn = actor.Player.Data.VisualData.ToPlayfabDataString();
         if (worn != expected) problems.Add($"{shot}: the boss wears \"{worn}\", not the chart's \"{expected}\"");
-        else Mod.Say($"[SelfTest] look {shot}: the boss wears the chart's look");
+        else Logger.Info($"[SelfTest] look {shot}: the boss wears the chart's look");
 
         // Framed on the drawn body: an actor's head and controller transforms are not where it is drawn.
         SkinnedMeshRenderer? mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
         Vector3 chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
-        Mod.Say($"[SelfTest] look {shot}: framing the body at {Describe.Vector(chest)}{(mesh == null ? " (no mesh found)" : "")}");
-        Vector3 towardYou = Mod.Battle.LaneOrigin is { } origin ? ActorRig.Flat(origin - chest) : Vector3.forward;
+        Logger.Info($"[SelfTest] look {shot}: framing the body at {StringHelpers.Vector(chest)}{(mesh == null ? " (no mesh found)" : "")}");
+        Vector3 towardYou = LaneOrigin is { } origin ? VectorHelpers.Flat(origin - chest) : Vector3.forward;
         _showCamera?.Invoke(chest + (towardYou * 1.8f) + (Vector3.up * 0.3f), chest);
         yield return new WaitForSeconds(0.3f);
 
@@ -151,7 +145,7 @@ internal static partial class SelfTest
         Shoot(shots, shot);
 
         Mod.Battle.Stop("look shot taken");
-        Mod.Battle.KeepInvincible = false;
+        _keepYouAlive = false;
         yield return new WaitForSeconds(1f);
     }
 }

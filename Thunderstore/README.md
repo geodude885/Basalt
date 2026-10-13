@@ -29,8 +29,8 @@ in the Gym* to have it always come to you.
   Every battle starts on a clear floor.
 - **Music** plays through the game's music volume, times the *Music volume* setting. The chart
   follows the song's clock, so it stays on the beat.
-- **Scoring.** Surviving is worth 1000; damage on the boss scores 10 a point and a knock-out 200,
-  times the section's multiplier; each point of damage you take costs 25. Rank: S untouched, A up to
+- **Scoring.** Surviving is worth 1000; damage on the boss scores 10 a point, times the section's
+  multiplier; each point of damage you take costs 25. Rank: S untouched, A up to
   3 damage, B up to 8, C any survival, D defeated. Best scores are kept per chart.
 
 ## Charts
@@ -54,12 +54,13 @@ Turn on **Chart editing** in the settings. The picker then gains:
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your
-look and stones), *Open chart editor*, *Export chart* (a `.bbchart` in `UserData/BossBattles/Exports`),
-*Where am I* (your spot as a chart's arena line) and *Record clip* (a clip for a chart's `clip` events).
+look and stones), *Open chart folder*, *Export chart* (a `.bbchart` in `UserData/BossBattles/Exports`)
+and *Where am I* (your spot as a chart's arena line).
 
-**The chart editor** opens in your browser: the song's waveform under a beat grid, projectiles on a
-top-down lane, phases, colours, shader looks, and a problems list that matches the mod's own
-checks. In Chrome or Edge it saves straight into the chart folder, and the game reloads it.
+**The chart editor** is a separate desktop app for Windows, macOS and Linux, the Boss Battles Chart
+Editor: the song's waveform under a beat grid, projectiles on a top-down lane, phases, colours, and a
+problems list that matches the mod's own checks. Open a chart's folder in it, save, and the game
+reloads the chart.
 
 **Sharing.** Drop a `.bbchart` (or `.zip`) into the chart folder to play it. Packages with paths
 outside themselves, over 512 files or over 256 MB are refused.

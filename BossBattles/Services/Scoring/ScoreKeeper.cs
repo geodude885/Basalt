@@ -8,7 +8,6 @@ public sealed record BattleResult(
     int DamageTaken,
     int HitsTaken,
     double ActorDamage,
-    int KnockOuts,
     int ProjectilesLaunched,
     int Score,
     string Rank);
@@ -19,8 +18,8 @@ public sealed record BattleResult(
 /// <item>Surviving to the end: <see cref="SurvivalPoints"/>. Falling short: a share of half of it,
 /// for the fraction of the battle lasted.</item>
 /// <item>Each point of damage on an actor: <see cref="ActorDamagePoints"/>, times the phase's
-/// score multiplier. Each knock-out: <see cref="KnockOutPoints"/>, times the multiplier.</item>
-/// <item>Each point of damage you take: minus <see cref="DamageTakenPoints"/>.</item>
+/// score multiplier.</item>
+/// <item>Each point of damage you clip: minus <see cref="DamageTakenPoints"/>.</item>
 /// </list>
 /// Rank is about staying clean: S untouched, A up to 3 damage, B up to 8, C any survival, D not.
 /// </summary>
@@ -28,14 +27,11 @@ public sealed class ScoreKeeper
 {
     public const int SurvivalPoints = 1000;
     public const int ActorDamagePoints = 10;
-    public const int KnockOutPoints = 200;
     public const int DamageTakenPoints = 25;
 
     private readonly string _chart;
     private int _hitsTaken;
     private double _actorDamage;
-    private double _knockOutScore;
-    private int _knockOuts;
     private int _launched;
 
     public ScoreKeeper(string chart)
@@ -57,19 +53,13 @@ public sealed class ScoreKeeper
         if (amount > 0) _actorDamage += amount * multiplier;
     }
 
-    public void ActorKnockedOut(double multiplier)
-    {
-        _knockOuts++;
-        _knockOutScore += KnockOutPoints * multiplier;
-    }
-
     public void ProjectileLaunched() => _launched++;
 
     public BattleResult Finish(bool survived, double seconds, double battleLength)
     {
         var lasted = battleLength <= 0 ? 1 : Math.Clamp(seconds / battleLength, 0, 1);
         var survival = survived ? SurvivalPoints : SurvivalPoints * 0.5 * lasted;
-        var score = survival + (_actorDamage * ActorDamagePoints) + _knockOutScore - (DamageTaken * DamageTakenPoints);
+        var score = survival + (_actorDamage * ActorDamagePoints) - (DamageTaken * DamageTakenPoints);
 
         return new BattleResult(
             _chart,
@@ -78,7 +68,6 @@ public sealed class ScoreKeeper
             DamageTaken,
             _hitsTaken,
             _actorDamage,
-            _knockOuts,
             _launched,
             (int)Math.Max(0, Math.Round(score)),
             Rank(survived, DamageTaken));

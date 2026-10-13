@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using BossBattles.DevTools.Flatscreen;
 using BossBattles.DevTools.Testing;
 using MelonLoader;
@@ -15,13 +14,13 @@ namespace BossBattles.DevTools;
 public sealed class DevToolsEntry : MelonMod
 {
     private const string Keys =
-        "Ctrl+F desktop camera | Ctrl+T test actor | Ctrl+9 test actor mirror/bot | Ctrl+P plant | Ctrl+Shift+P test actor plays the newest clip | " +
-        "Ctrl+K knockback | Ctrl+0 census. No headset: numpad 8/2/4/6 walk, 7/9 turn.";
+        "Ctrl+F desktop camera | Ctrl+T test actor | Ctrl+9 test actor mirror/bot | Ctrl+P plant | " +
+        "Ctrl+K knockback. Click presses picker buttons. No headset: numpad 8/2/4/6 walk, 7/9 turn.";
 
     /// <summary>Orbits the battle's first actor, the test actor, or you.</summary>
     private readonly DesktopCamera _camera = new(
-        () => Mod.Actors.First?.HeadPosition ?? Camera.main?.transform.position,
-        message => Mod.Note("DesktopCamera", message));
+        () => Mod.Actors.All.FirstOrDefault(a => a.Exists)?.HeadPosition ?? Camera.main?.transform.position,
+        message => Logger.Info($"[DesktopCamera] {message}"));
 
     public override void OnInitializeMelon()
     {
@@ -32,11 +31,10 @@ public sealed class DevToolsEntry : MelonMod
             return;
         }
 
-        FlatscreenControls.Log = message => Mod.Note("Flatscreen", message);
-        Mod.Note("Init", $"flatscreen controls: {FlatscreenControls.Apply(HarmonyInstance)} methods", echo: false);
-        Mod.ClickCamera = () => _camera.Camera;
-        SelfTest.Configure(boss.Clips, _camera.ShowFixed, _camera.CapturePng, boss.Picker, boss.NewChart);
-        Mod.Say($"BossBattles.DevTools loaded. {Keys}");
+        FlatscreenControls.Log = message => Logger.Info($"[Flatscreen] {message}");
+        Logger.Debug($"[Init] flatscreen controls: {FlatscreenControls.Apply(HarmonyInstance)} methods");
+        SelfTest.Configure(_camera.ShowFixed, _camera.CapturePng, boss.Picker, boss.NewChart);
+        Logger.Info($"BossBattles.DevTools loaded. {Keys}");
     }
 
     public override void OnUpdate()
@@ -44,13 +42,14 @@ public sealed class DevToolsEntry : MelonMod
         try
         {
             HandleKeys();
+            HandleClick();
             TestBench.Update();
             FlatscreenControls.Update();
             SelfTest.Update();
         }
         catch (Exception e)
         {
-            Mod.Note("DevTools.UpdateFailed", e.ToString());
+            Logger.Error($"[DevTools.UpdateFailed] {e}");
         }
     }
 
@@ -63,17 +62,31 @@ public sealed class DevToolsEntry : MelonMod
         SelfTest.OnSceneLoaded(sceneName);
     }
 
+    /// <summary>A mouse click presses the picker button under the cursor, through the desktop camera when it shows.</summary>
+    private void HandleClick()
+    {
+        if (!Input.GetMouseButtonDown(0) || ModEntry.Instance is not { } boss || (_camera.Camera ?? Camera.main) is not { } camera) return;
+
+        Ray ray = camera.ScreenPointToRay(Input.mousePosition);
+        var unitBox = new Bounds(Vector3.zero, Vector3.one);
+        var hit = boss.Picker.ShownButtons
+            .Select(b => (b.Id, Hit: unitBox.IntersectRay(new Ray(b.Face.InverseTransformPoint(ray.origin), b.Face.InverseTransformVector(ray.direction)), out var distance), Distance: distance))
+            .Where(b => b.Hit)
+            .OrderBy(b => b.Distance)
+            .Select(b => b.Id)
+            .FirstOrDefault();
+
+        if (hit != null) boss.Picker.Press(hit);
+    }
+
     private void HandleKeys()
     {
         if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) return;
-        var shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
         if (Input.GetKeyDown(KeyCode.F)) _camera.Toggle();
         else if (Input.GetKeyDown(KeyCode.T)) TestBench.ToggleActor();
         else if (Input.GetKeyDown(KeyCode.Alpha9)) TestBench.ToggleControl();
-        else if (Input.GetKeyDown(KeyCode.P) && shift) TestBench.PlayClip(ModEntry.Instance?.Clips.All.OrderBy(c => c.Name, StringComparer.Ordinal).LastOrDefault());
         else if (Input.GetKeyDown(KeyCode.P)) TestBench.TogglePlant();
         else if (Input.GetKeyDown(KeyCode.K)) TestBench.CycleKnockback();
-        else if (Input.GetKeyDown(KeyCode.Alpha0)) Mod.Report("on request");
     }
 }

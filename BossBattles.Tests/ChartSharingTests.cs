@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using BossBattles.DevTools.Testing;
 using BossBattles.Services.Audio;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
@@ -184,21 +185,6 @@ public sealed class ChartPackageTests : IDisposable
     }
 
     [Fact]
-    public void ClipsNotBesideTheChartArePackedFromYourRecordings()
-    {
-        Directory.CreateDirectory(Charts);
-        File.WriteAllText(Path.Combine(Charts, "loose.json"), /*lang=json,strict*/ """{ "name": "Loose", "events": [ { "t": 1, "clip": "mine" }, { "t": 2, "clip": "gone" } ] }""");
-        var library = new ChartLibrary(Charts, Cache);
-        library.Reload();
-
-        Clip mine = SyntheticClips.Sway("mine", 1f);
-        PackResult packed = ChartPackage.Pack(library.Entries[0], Path.Combine(_root, "loose.bbchart"), name => name == "mine" ? mine : null);
-
-        Assert.Contains("clips/mine.json", packed.Included);
-        Assert.Equal(new[] { "clip gone" }, packed.Missing);
-    }
-
-    [Fact]
     public void AZipIsAPackageToo()
     {
         WriteFolderChart("my-song");
@@ -301,10 +287,11 @@ public sealed class ChartPackageTests : IDisposable
               "name": "Folder Song",
               "music": { "file": "song.wav" },
               "cover": "cover.png",
-              "events": [ { "t": 1, "clip": "wave" } ]
+              "format": 2,
+              "tracks": [ { "clips": [ { "t": 1, "clip": "wave" } ] } ]
             }
             """);
-        File.WriteAllBytes(Path.Combine(folder, "song.wav"), WavFile.Write(WavFile.Metronome(120, 0.5)));
+        File.WriteAllBytes(Path.Combine(folder, "song.wav"), TestAudio.Write(TestAudio.Metronome(120, 0.5)));
         File.WriteAllBytes(Path.Combine(folder, "cover.png"), new byte[] { 0x89, 0x50, 0x4E, 0x47 });
         File.WriteAllText(Path.Combine(folder, ChartPackage.ClipsFolder, "wave.json"), ClipFile.Write(SyntheticClips.Sway("wave", 1f)));
         return folder;
@@ -356,7 +343,7 @@ public sealed class ScoreBookTests : IDisposable
         if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
     }
 
-    private static BattleResult Result(int score, string rank) => new("Song", true, 30, 0, 0, 0, 0, 10, score, rank);
+    private static BattleResult Result(int score, string rank) => new("Song", true, 30, 0, 0, 0, 10, score, rank);
 }
 
 public sealed class WavFileTests
@@ -364,12 +351,11 @@ public sealed class WavFileTests
     [Fact]
     public void WritesAndReadsBack()
     {
-        PcmAudio tone = WavFile.Metronome(120, 1.0, 8000);
+        PcmAudio tone = TestAudio.Metronome(120, 1.0, 8000);
 
-        (PcmAudio? read, var error) = WavFile.Read(WavFile.Write(tone));
+        PcmAudio read = Decode(TestAudio.Write(tone));
 
-        Assert.Null(error);
-        Assert.Equal(1, read!.Channels);
+        Assert.Equal(1, read.Channels);
         Assert.Equal(8000, read.SampleRate);
         Assert.Equal(tone.Samples.Length, read.Samples.Length);
         Assert.Equal(1.0, read.Seconds, 3);
@@ -377,7 +363,22 @@ public sealed class WavFileTests
     }
 
     [Fact]
-    public void RefusesWhatIsNotAWav() => Assert.NotNull(WavFile.Read("OggS not a wav at all"u8.ToArray()).Error);
+    public void RefusesWhatIsNotAWav() => Assert.Throws<InvalidDataException>(() => Decode("OggS not a wav at all"u8.ToArray()));
+
+    private static PcmAudio Decode(byte[] wav)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"bossbattles-{Guid.NewGuid():N}.wav");
+        File.WriteAllBytes(path, wav);
+        try
+        {
+            using IPcmSource source = AudioDecoder.Open(path);
+            return TestAudio.DecodeAll(source);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
 
 public sealed class SpotBookTests : IDisposable

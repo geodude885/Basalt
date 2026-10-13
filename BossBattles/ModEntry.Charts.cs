@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
@@ -23,13 +22,13 @@ public sealed partial class ModEntry
         ChartEntry? entry = Chosen();
         if (entry == null)
         {
-            Mod.Note("Battle.NoChart", $"no chart called \"{_settings.Chart.Value}\" in {_library.Folder}");
+            Logger.Warning($"[Battle.NoChart] no chart called \"{_settings.Chart.Value}\" in {_library.Folder}");
             return;
         }
 
         if (entry.Result.Chart == null)
         {
-            Mod.Say($"{entry.Name} does not load:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
+            Logger.Info($"{entry.Name} does not load:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
             return;
         }
 
@@ -62,25 +61,20 @@ public sealed partial class ModEntry
         var current = entries.IndexOf(Chosen()!);
         ChartEntry next = entries[(((current + step) % entries.Count) + entries.Count) % entries.Count];
         Choose(next);
-        Mod.Say($"chart: {next.Name}");
+        Logger.Info($"chart: {next.Name}");
     }
-
-    private IEnumerable<string> PlayableNames() => _library.Playable.Select(e => e.Name);
 
     private void ReloadCharts()
     {
-        Clips.Reload();
-        foreach (var error in Clips.Errors) Mod.Say($"clip {error}");
-
         var written = _library.Reload();
-        if (written > 0) Mod.Say($"wrote {written} starter chart(s) to {_library.Folder}");
+        if (written > 0) Logger.Info($"wrote {written} starter chart(s) to {_library.Folder}");
 
         foreach (ChartEntry entry in _library.Entries.Where(e => !e.Result.Ok))
-            Mod.Say($"chart {Path.GetFileName(entry.File)} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
+            Logger.Info($"chart {Path.GetFileName(entry.File)} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
 
-        _settings.UpdateChartChoices(PlayableNames());
+        _settings.UpdateChartChoices(_library.Playable.Select(e => e.Name));
         foreach (ChartEntry entry in _library.Entries.Where(e => e.Source == ChartSource.Package && e.Result.Ok))
-            Mod.Note("Charts.Package", $"{Path.GetFileName(entry.File)}: {entry.Name}", echo: false);
+            Logger.Debug($"[Charts.Package] {Path.GetFileName(entry.File)}: {entry.Name}");
     }
 
     /// <summary>Reloads charts and clips when their files change, checked each second between battles.</summary>
@@ -89,7 +83,7 @@ public sealed partial class ModEntry
         if (Time.unscaledTime < _nextChartsCheck || Mod.Battle.State is not (BattleState.Idle or BattleState.Finished)) return;
         _nextChartsCheck = Time.unscaledTime + 1f;
 
-        var fingerprint = FolderFingerprint.Of(_library.Folder, Clips.Folder);
+        var fingerprint = FolderFingerprint.Of(_library.Folder);
         if (fingerprint == _chartsFingerprint) return;
 
         var first = _chartsFingerprint == 0;
@@ -97,13 +91,13 @@ public sealed partial class ModEntry
         if (first) return;
 
         ReloadCharts();
-        Mod.Say($"[Charts] reloaded: {_library.Playable.Count()} of {_library.Entries.Count} load");
+        Logger.Info($"[Charts] reloaded: {_library.Playable.Count()} of {_library.Entries.Count} load");
     }
 
     private void IfEditing(Action action)
     {
         if (_settings.Editing.Value) action();
-        else Mod.Say("turn on Chart editing in the BossBattles settings to use the chart-making tools");
+        else Logger.Info("turn on Chart editing in the BossBattles settings to use the chart-making tools");
     }
 
     private void RecordChosen(bool mime = false)
@@ -111,7 +105,7 @@ public sealed partial class ModEntry
         ChartEntry? entry = Chosen();
         if (!Studio.CanEdit(entry))
         {
-            Mod.Say(entry?.Source == ChartSource.Package
+            Logger.Info(entry?.Source == ChartSource.Package
                 ? $"[Studio] {entry.Name} is a package - unzip it into a folder in the chart folder to record into it"
                 : "[Studio] choose a chart that loads to record into");
             return;
@@ -120,12 +114,6 @@ public sealed partial class ModEntry
         Mod.Studio.Record(entry!, _settings.ArenaOverride, mime);
     }
 
-    private void SaveSetup() => Saved(Mod.Studio.SaveSetup);
-
-    private void UndoChosen(ChartEntry entry) => Saved(() => Studio.Undo(entry));
-
-    private void KeepTake() => Saved(Mod.Studio.Keep);
-
     /// <summary>Runs a studio save, reloads the charts it changed, and says what happened.</summary>
     private void Saved(Func<string> save)
     {
@@ -133,12 +121,12 @@ public sealed partial class ModEntry
         {
             var what = save();
             ReloadCharts();
-            _chartsFingerprint = FolderFingerprint.Of(_library.Folder, Clips.Folder);
-            Mod.Say($"[Studio] {what}");
+            _chartsFingerprint = FolderFingerprint.Of(_library.Folder);
+            Logger.Info($"[Studio] {what}");
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException)
         {
-            Mod.Say($"[Studio] could not save: {e.Message}");
+            Logger.Info($"[Studio] could not save: {e.Message}");
         }
     }
 
@@ -147,66 +135,42 @@ public sealed partial class ModEntry
     {
         try
         {
-            var name = "My Chart";
-            for (var n = 2; _library.Entries.Any(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase)); n++) name = $"My Chart {n}";
+            var name = Enumerable.Range(1, int.MaxValue).Select(n => n == 1 ? "My Chart" : $"My Chart {n}")
+                .First(candidate => !_library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
             Player? you = PlayerManager.instance?.localPlayer;
             var look = you?.Data?.VisualData?.ToPlayfabDataString();
             List<string>? stones = you?.Controller == null ? null : Shiftstones.EquippedBy(you.Controller);
-            var folder = ChartTemplate.Create(_library.Folder, name, PlayerName(), look, stones);
+            var username = you?.Data?.GeneralData?.PublicUsername;
+            var author = string.IsNullOrWhiteSpace(username) ? null : Regex.Replace(username, "<[^>]*>", "").Trim();
+            var folder = ChartTemplate.Create(_library.Folder, name, author, look, stones);
             ReloadCharts();
             if (_library.Find(name) is { } made) Choose(made);
             else _settings.Chart.Value = name;
-            _chartsFingerprint = FolderFingerprint.Of(_library.Folder, Clips.Folder);
-            Mod.Say($"[Charts] new chart \"{name}\": edit {Path.Combine(folder, ChartLibrary.FolderChartFile)} - it reloads when you save");
+            _chartsFingerprint = FolderFingerprint.Of(_library.Folder);
+            Logger.Info($"[Charts] new chart \"{name}\": edit {Path.Combine(folder, ChartLibrary.FolderChartFile)} - it reloads when you save");
             return folder;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            Mod.Say($"[Charts] could not make a new chart: {e.Message}");
+            Logger.Info($"[Charts] could not make a new chart: {e.Message}");
             return null;
         }
     }
 
-    /// <summary>Your in-game name without its rich-text tags.</summary>
-    private static string? PlayerName()
+    /// <summary>Opens the chosen chart's folder (else the Charts folder), to open in the desktop chart editor.</summary>
+    private void OpenChartFolder()
     {
         try
         {
-            var name = PlayerManager.instance?.localPlayer?.Data?.GeneralData?.PublicUsername;
-            return string.IsNullOrWhiteSpace(name) ? null : Regex.Replace(name, "<[^>]*>", "").Trim();
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>Writes the bundled chart editor to UserData and opens it, with the chosen chart's folder beside it.</summary>
-    private void OpenEditor()
-    {
-        try
-        {
-            using Stream? resource = typeof(ModEntry).Assembly.GetManifestResourceStream("BossBattles.ChartEditor.html");
-            if (resource == null)
-            {
-                Mod.Say("[Editor] this build has no chart editor inside it");
-                return;
-            }
-
-            var page = Path.Combine(_folder, "Editor", "index.html");
-            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
-            using (FileStream file = File.Create(page)) resource.CopyTo(file);
-
-            Open(page);
             ChartEntry? entry = Chosen();
             var folder = entry != null && Studio.CanEdit(entry) ? entry.AssetFolder : _library.Folder;
             Open(folder);
-            Mod.Say($"[Editor] opened the chart editor; {entry?.Name ?? "the charts"} are in {folder} - open them in it, save, and the game reloads");
+            Logger.Info($"[Charts] {entry?.Name ?? "the charts"}: {folder} - open it in the Boss Battles Chart Editor, save, and the game reloads");
         }
         catch (Exception e)
         {
-            Mod.Say($"[Editor] could not open the chart editor: {e.Message}");
+            Logger.Info($"[Charts] could not open the chart folder: {e.Message}");
         }
     }
 
@@ -217,20 +181,20 @@ public sealed partial class ModEntry
         ChartEntry? entry = Chosen();
         if (entry == null)
         {
-            Mod.Say("[Export] no chart to export");
+            Logger.Info("[Export] no chart to export");
             return;
         }
 
         try
         {
             var output = Path.Combine(_folder, "Exports", ChartPackage.FileStem(entry.Name) + ChartPackage.Extension);
-            PackResult packed = ChartPackage.Pack(entry, output, Clips.Find);
-            Mod.Say($"[Export] {entry.Name} -> {packed.Path} ({string.Join(", ", packed.Included)})" +
+            PackResult packed = ChartPackage.Pack(entry, output);
+            Logger.Info($"[Export] {entry.Name} -> {packed.Path} ({string.Join(", ", packed.Included)})" +
                     (packed.Missing.Count > 0 ? $" - missing: {string.Join(", ", packed.Missing)}" : ""));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Mod.Say($"[Export] {entry.Name} failed: {e.Message}");
+            Logger.Info($"[Export] {entry.Name} failed: {e.Message}");
         }
     }
 
@@ -241,16 +205,16 @@ public sealed partial class ModEntry
         if (you == null) return;
 
         ArenaKind map = Arena.CurrentMap();
-        var rig = ActorRig.Of(you);
-        Vector3 at = rig.FloorPoint - (Arena.Anchor(map) ?? Vector3.zero);
+        var rig = ActorRig.From(you);
+        Vector3 at = rig.Feet - (Arena.Anchor(map) ?? Vector3.zero);
 
         static string F(float v)
         {
             return v.ToString("0.0#", CultureInfo.InvariantCulture);
         }
 
-        Mod.Say(map == ArenaKind.Here
+        Logger.Info(map == ArenaKind.Here
             ? $"[Where] {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} is not a chart map (gym, ring, pit)"
-            : $"[Where] \"arena\": {{ \"map\": \"{map.ToString().ToLowerInvariant()}\", \"at\": {{ \"x\": {F(at.x)}, \"z\": {F(at.z)} }}, \"facing\": {Arena.Bearing(rig.Facing).ToString("0", CultureInfo.InvariantCulture)} }}");
+            : $"[Where] \"arena\": {{ \"map\": \"{map.ToString().ToLowerInvariant()}\", \"at\": {{ \"x\": {F(at.x)}, \"z\": {F(at.z)} }}, \"facing\": {VectorHelpers.Bearing(rig.Facing).ToString("0", CultureInfo.InvariantCulture)} }}");
     }
 }

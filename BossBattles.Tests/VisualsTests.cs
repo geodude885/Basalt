@@ -272,39 +272,39 @@ public sealed class ProjectileReachTests
     }
 }
 
-public sealed class MimeTakeTests
+public sealed class MimeClipTests
 {
     [Fact]
-    public void AMimedTakeIsReadAndPlayedMimed()
+    public void AMimedClipIsReadAndPlayedMimed()
     {
         Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
-            { "format": 2, "tracks": [ { "takes": [ { "t": 0, "clip": "a" }, { "t": 5, "clip": "b", "mime": true } ] } ] }
+            { "format": 2, "tracks": [ { "clips": [ { "t": 0, "clip": "a" }, { "t": 5, "clip": "b", "mime": true } ] } ] }
             """).Chart!;
 
-        Assert.False(chart.Tracks[0].Takes[0].Mime);
-        Assert.True(chart.Tracks[0].Takes[1].Mime);
+        Assert.False(chart.Tracks[0].Clips[0].Mime);
+        Assert.True(chart.Tracks[0].Clips[1].Mime);
 
-        var plays = new ChartRunner(chart).Advance(10).OfType<PlayTake>().ToList();
+        var plays = new ChartRunner(chart).Advance(10).OfType<PlayClip>().ToList();
         Assert.False(plays[0].Mime);
         Assert.True(plays[1].Mime);
     }
 
     [Fact]
-    public void KeepingAMimedTakeWritesItMimed()
+    public void KeepingAMimedClipWritesItMimed()
     {
         Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""").Chart!;
         var pose = new Services.Clips.ClipPose(System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity);
         Services.Clips.ClipFrame Frame(float t)
         {
-            return new(t, pose, pose, pose, pose, System.Numerics.Vector2.Zero, System.Numerics.Vector2.Zero);
+            return new(t, pose, pose, pose);
         }
 
-        var take = new Services.Clips.Clip("boss-take-1", new[] { Frame(0), Frame(4) });
+        var clip = new Services.Clips.Clip("boss-clip-1", new[] { Frame(0), Frame(4) });
 
-        var whole = Takes.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", take, mime: true);
-        Assert.True(ChartLoader.Load(whole).Chart!.Tracks[0].Takes[0].Mime);
+        var whole = TrackEdits.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
+        Assert.True(ChartLoader.Load(whole).Chart!.Tracks[0].Clips[0].Mime);
 
-        IReadOnlyList<TakeSegment> punched = Takes.PunchIn(new[] { new TakeSegment(0, "old", 0) }, "new", 2, 3, mime: true);
+        IReadOnlyList<TrackClip> punched = TrackEdits.PunchIn(new[] { new TrackClip(0, "old", 0) }, "new", 2, 3, mime: true);
         Assert.False(punched[0].Mime);
         Assert.True(punched[1].Mime);
         Assert.False(punched[2].Mime);

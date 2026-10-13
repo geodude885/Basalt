@@ -80,14 +80,14 @@ public sealed record Rules(SpawnRule Spawn)
     public double CleanupSeconds { get; init; } = DefaultCleanupSeconds;
 }
 
-/// <summary>An actor's recorded performance: takes, each playing until the next starts or its own end.</summary>
-public sealed record Track(string ActorId, IReadOnlyList<TakeSegment> Takes);
+/// <summary>An actor's recorded performance: clips, each playing until the next starts or its own end.</summary>
+public sealed record Track(string ActorId, IReadOnlyList<TrackClip> Clips);
 
 /// <summary>
-/// Part of a take played from chart time <see cref="Time"/>: the clip from <see cref="From"/> to
-/// <see cref="To"/> or its end. Takes keep chart time, so a whole take is <c>{ t: 0, from: 0 }</c>.
+/// A clip on a track, played from chart time <see cref="Time"/>: the clip from <see cref="From"/> to
+/// <see cref="To"/> or its end. Clips keep chart time, so a whole clip is <c>{ t: 0, from: 0 }</c>.
 /// </summary>
-public sealed record TakeSegment(double Time, string Clip, double From = 0, double? To = null)
+public sealed record TrackClip(double Time, string Clip, double From = 0, double? To = null)
 {
     /// <summary>Mimed: the actor moves as recorded but runs none of its moves.</summary>
     public bool Mime { get; init; }
@@ -136,7 +136,13 @@ public sealed record ActorSpec(string Id, string Name, Spot At, string Look)
 {
     /// <summary>Up to two stones by name; null for the player's own.</summary>
     public IReadOnlyList<string>? Shiftstones { get; init; }
+
+    /// <summary>The body size of whoever recorded its clips, so their poses fit it; null for the player's own.</summary>
+    public BodySize? Measurement { get; init; }
 }
+
+/// <summary>A player's calibrated size in metres, as the game measures it.</summary>
+public readonly record struct BodySize(float Height, float ArmSpan);
 
 /// <summary>Where an actor stands; Facing is degrees from looking at you, positive to its right.</summary>
 public readonly record struct Spot(float X, float Z, float Facing = 0f);
@@ -183,9 +189,6 @@ public sealed record ProjectileEvent(
 
 /// <summary>An actor performs one of its moves by stack name, e.g. "Straight".</summary>
 public sealed record MoveEvent(double Time, int Order, string ActorId, string Stack) : ChartEvent(Time, Order);
-
-/// <summary>An actor plays a clip through its pose and stick input.</summary>
-public sealed record ClipEvent(double Time, int Order, string ActorId, string Clip) : ChartEvent(Time, Order);
 
 public sealed record PlaceEvent(double Time, int Order, string ActorId, Spot At) : ChartEvent(Time, Order);
 

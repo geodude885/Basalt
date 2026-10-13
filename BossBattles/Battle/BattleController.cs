@@ -1,5 +1,4 @@
 using BossBattles.Actors;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using BossBattles.Services.Scoring;
@@ -25,10 +24,10 @@ public enum BattleMode
     /// <summary>A battle: survive it.</summary>
     Play,
 
-    /// <summary>Recording a take in the actor's place: no actors, no projectiles, no end.</summary>
+    /// <summary>Recording a clip in the actor's place: no actors, no projectiles, no end.</summary>
     Record,
 
-    /// <summary>Watching a take just recorded, as a player would face it; not scored.</summary>
+    /// <summary>Watching a clip just recorded, as a player would face it; not scored.</summary>
     Review,
 }
 
@@ -58,7 +57,7 @@ internal sealed partial class BattleController
     private float _musicDeadline;
     private LaneFrame? _fixedFrame;
     private string? _recordActor;
-    private Clip? _pendingTake;
+    private Clip? _pendingClip;
     private System.Numerics.Vector2? _recordSpot;
     private LaneFrame _frame;
     private ChartRunner? _runner;
@@ -89,7 +88,7 @@ internal sealed partial class BattleController
 
     public bool ShowPhaseBanners { get; set; } = true;
 
-    /// <summary>Recording a mimed take: the chart's projectiles fly and your moves stay off.</summary>
+    /// <summary>Recording a mimed clip: the chart's projectiles fly and your moves stay off.</summary>
     public bool Miming { get; private set; }
 
     /// <summary>While true the match handler may not send you back to the Gym (see ArenaPatches).</summary>
@@ -102,14 +101,9 @@ internal sealed partial class BattleController
         set => _music.Volume = value;
     }
 
-    public MusicState MusicState => _music.State;
-
     public bool SongOver => Chart?.Music != null && _music.Ended;
 
     public ScoreBook? Scores { get; set; }
-
-    /// <summary>Where <c>clip</c> events find their clips, after the chart's own.</summary>
-    public ClipLibrary? Clips { get; set; }
 
     /// <summary>Seconds into the chart: the song's clock when there is one, else game time; -1 before GO.</summary>
     public double ChartTime => State is BattleState.Running or BattleState.Finished ? StartAt + (_music.Clock ?? (Time.time - _startedAt)) : -1;
@@ -119,33 +113,12 @@ internal sealed partial class BattleController
 
     public LaneFrame? Lane => LaidOut ? _frame : null;
 
-    public Lane? LaneSize => Chart?.Lane;
-
-    public float LaneMetres => Chart == null ? 0f : Chart.Lane.Length * _frame.DepthScale;
-
-    /// <summary>The centre of your end of the lane, once laid out.</summary>
-    public Vector3? LaneOrigin => LaidOut ? World(0f, 0f, 0f) : null;
-
-    /// <summary>Up behind you over the backstop, looking down the lane.</summary>
-    public (Vector3 Position, Vector3 LookAt)? Overview => LaidOut ? (World(1.5f, 3.6f, -0.4f), World(0f, 0.8f, Chart!.Lane.Length * 0.6f)) : null;
-
-    /// <summary>For a battle "here": the lane runs this way instead of the way you face. Used once.</summary>
-    public Vector3? HereFacing { get; set; }
-
     public IReadOnlyList<Actor> Actors => _actors;
-
-    public int ReadyActors => _actors.Count(a => a.Ready);
-
-    public (int Spawned, int Launched, int Failed) ProjectileCounts => (_projectiles.Spawned, _projectiles.Launched, _projectiles.Failed);
-
-    public int GroundedLaunched => _projectiles.GroundedLaunched;
-
-    public Rigidbody? LastGroundedBody => _projectiles.LastGroundedBody;
 
     private bool LaidOut => State is not (BattleState.Idle or BattleState.LoadingArena) && Chart != null;
 
     /// <summary>A world point in lane coordinates: x across, z along, in chart units.</summary>
-    public Vector3 ToLane(Vector3 world) => Describe.ToUnity(_frame.ToLane(Describe.ToNumerics(world)));
+    public Vector3 ToLane(Vector3 world) => StringHelpers.ToUnity(_frame.ToLane(StringHelpers.ToNumerics(world)));
 
     public void Banner(string text, float seconds) => _board.Show(text, seconds);
 
@@ -153,13 +126,13 @@ internal sealed partial class BattleController
     /// <param name="arenaOverride">An arena to play in instead of the chart's own.</param>
     /// <param name="assetFolder">Where its song and <c>clips/</c> are.</param>
     /// <param name="scoreKey">Files the result in <see cref="Scores"/>; null keeps no score.</param>
-    /// <param name="mode">Play, record a take as <paramref name="recordActor"/>, or review one.</param>
+    /// <param name="mode">Play, record a clip as <paramref name="recordActor"/>, or review one.</param>
     /// <param name="recordActor">The actor recorded; default the first.</param>
-    /// <param name="lane">A lane already laid out (a take's) instead of laying one now.</param>
-    /// <param name="pendingTake">A take not yet saved, found by name before the chart's clips.</param>
+    /// <param name="lane">A lane already laid out (a clip's) instead of laying one now.</param>
+    /// <param name="pendingClip">A clip not yet saved, found by name before the chart's clips.</param>
     /// <param name="startAt">Chart time to start from, for a section.</param>
     /// <param name="recordSpot">Recording: where in the lane to stand instead of the actor's spot.</param>
-    /// <param name="mime">Recording a mimed take.</param>
+    /// <param name="mime">Recording a mimed clip.</param>
     public void Start(
         Chart chart,
         ArenaKind? arenaOverride = null,
@@ -168,7 +141,7 @@ internal sealed partial class BattleController
         BattleMode mode = BattleMode.Play,
         string? recordActor = null,
         LaneFrame? lane = null,
-        Clip? pendingTake = null,
+        Clip? pendingClip = null,
         double startAt = 0,
         System.Numerics.Vector2? recordSpot = null,
         bool mime = false)
@@ -178,7 +151,7 @@ internal sealed partial class BattleController
         if (State != BattleState.Idle) Stop("a new battle was started");
         if (PlayerManager.instance?.localPlayer?.Controller == null)
         {
-            Mod.Note("Battle.NotStarted", "no local player yet");
+            Logger.Warning("[Battle.NotStarted] no local player yet");
             return;
         }
 
@@ -187,14 +160,13 @@ internal sealed partial class BattleController
         Mode = mode;
         _recordActor = recordActor ?? chart.DefaultActor.Id;
         _fixedFrame = lane;
-        _pendingTake = pendingTake;
+        _pendingClip = pendingClip;
         StartAt = Math.Max(0, startAt);
         _recordSpot = recordSpot;
         // An overridden arena keeps the chart's spot only on the chart's own map.
         _arenaSpec = arena == chart.Arena.Map ? chart.Arena : new ArenaSpec(arena);
         _scoreKey = scoreKey;
         _session++;
-        _projectiles.ResetCounts();
         LastResult = null;
         LastWasBest = false;
 
@@ -204,21 +176,18 @@ internal sealed partial class BattleController
         {
             _chartClips = new ClipLibrary(clipFolder);
             _chartClips.Reload();
-            foreach (var error in _chartClips.Errors) Mod.Note("Battle.BadClip", error);
+            foreach (var error in _chartClips.Errors) Logger.Warning($"[Battle.BadClip] {error}");
         }
 
         _music.Clear();
         if (chart.Music != null)
         {
             var song = assetFolder == null ? null : ChartPaths.Inside(assetFolder, chart.Music.File);
-            if (song == null) Mod.Note("Music.Missing", $"{chart.Name}: no folder to find {chart.Music.File} in - playing without music");
+            if (song == null) Logger.Warning($"[Music.Missing] {chart.Name}: no folder to find {chart.Music.File} in - playing without music");
             else _music.Load(song);
         }
 
-        foreach (var missing in chart.Events.OfType<ClipEvent>().Select(c => c.Clip).Distinct().Where(c => FindClip(c) == null))
-            Mod.Note("Battle.NoClip", $"{chart.Name} plays a clip called \"{missing}\" that is not in the clip folder - it will be skipped");
-
-        Mod.Say($"[Battle] {chart.Name} in {(arena == ArenaKind.Here ? "place" : $"the {arena}")}{(chart.Music != null ? $" to {chart.Music.File}" : "")}: {chart.Actors.Count} actor(s), {chart.Events.Count} events, {chart.End:0.#}s");
+        Logger.Info($"[Battle] {chart.Name} in {(arena == ArenaKind.Here ? "place" : $"the {arena}")}{(chart.Music != null ? $" to {chart.Music.File}" : "")}: {chart.Actors.Count} actor(s), {chart.Events.Count} events, {chart.End:0.#}s");
 
         // LoadingArena even when already there: actors are only placed while a battle is being set up.
         State = BattleState.LoadingArena;
@@ -230,7 +199,7 @@ internal sealed partial class BattleController
     {
         if (State == BattleState.Idle) return;
 
-        Mod.Note("Battle.Stopped", reason);
+        Logger.Info($"[Battle.Stopped] {reason}");
         RestoreInvincibility();
         if (State == BattleState.Running && Mode != BattleMode.Record) FullHealth();
         EndVisuals();
@@ -273,7 +242,7 @@ internal sealed partial class BattleController
 
         if (State != BattleState.Idle)
         {
-            Mod.Note("Battle.Abandoned", $"left for {scene} mid-battle");
+            Logger.Info($"[Battle.Abandoned] left for {scene} mid-battle");
             _runner = null;
             State = BattleState.Idle;
         }
@@ -324,7 +293,7 @@ internal sealed partial class BattleController
         if (State != BattleState.Running || Mode == BattleMode.Record) return;
 
         _score!.PlayerDamaged(amount);
-        Mod.Note("Battle.YouWereHit", $"-{amount}, {healthNow} left", echo: false);
+        Logger.Debug($"[Battle.YouWereHit] -{amount}, {healthNow} left");
         _reshade.Fire("hit", YourHead(), Mathf.Clamp01(amount / 5f), 0.6f);
         if (healthNow <= 0) Finish(survived: false, ChartTime);
     }
@@ -345,13 +314,7 @@ internal sealed partial class BattleController
     private void BeginCountdown()
     {
         var ready = _actors.Count(a => a.Ready);
-        if (ready < _actors.Count) Mod.Note("Battle.ActorsLate", $"{_actors.Count - ready} of {_actors.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
-
-        foreach (Actor actor in _actors.Where(a => a.Exists))
-        {
-            actor.SetControl(ActorControl.Bot);
-            actor.Input.FaceYou = false;
-        }
+        if (ready < _actors.Count) Logger.Warning($"[Battle.ActorsLate] {_actors.Count - ready} of {_actors.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
 
         _countdownEnds = Time.time + CountdownSeconds;
         _musicDeadline = _countdownEnds + MusicWaitSeconds;
@@ -376,17 +339,16 @@ internal sealed partial class BattleController
         _score = new ScoreKeeper(Chart!.Name);
         _phase = Chart.Phases[0];
         _startedAt = Time.time;
-        if (_music.State == MusicState.Loading) Mod.Note("Music.Late", $"still loading after {MusicWaitSeconds}s - playing without music");
+        if (_music.State == MusicState.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
         if (Chart.Music != null) _music.Play(Chart.Music.Start + StartAt, Chart.Music.Volume);
         _board.Show("<b>GO</b>", 1f);
         if (Mode != BattleMode.Record) FullHealth();
-        foreach (Actor actor in _actors) actor.FullHealth();
+        foreach (Actor actor in _actors) actor.FullHeal();
         _still.Clear();
-        CleanedUp = 0;
         KeepYouVulnerable();
         ReShade.Refresh();
         _lastBeat = -1;
-        if (Chart.Visuals.Count > 0) Mod.Note("Visuals.Chart", $"{Chart.Visuals.Count} look(s); installed: {ReShade.Describe()}", echo: false);
+        if (Chart.Visuals.Count > 0) Logger.Debug($"[Visuals.Chart] {Chart.Visuals.Count} look(s); installed: {ReShade.Describe()}");
         ReleaseYourMoves();
         State = BattleState.Running;
     }
@@ -400,7 +362,7 @@ internal sealed partial class BattleController
                 case EnterPhase enter:
                     _phase = enter.Phase;
                     if (enter.Time > 0 && ShowPhaseBanners) _board.Show($"<b>{enter.Phase.Name}</b>{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
-                    Mod.Note("Battle.Phase", $"{enter.Phase.Name} at {enter.Time:0.0}s", echo: false);
+                    Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
                     if (enter.Time > 0) _reshade.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
                     _lane.Recolour(Chart!.ColoursIn(enter.Phase), enter.Time > 0 && enter.Time > StartAt ? PhaseColourFadeSeconds : 0f);
                     break;
@@ -408,9 +370,9 @@ internal sealed partial class BattleController
                 case PlaceActor place:
                     if (Mode == BattleMode.Record) break;
 
-                    // A take holds its actor to the recorded path, so a move elsewhere would be dragged back.
+                    // A clip holds its actor to the recorded path, so a move elsewhere would be dragged back.
                     Actor? placed = ActorById(place.ActorId);
-                    if (placed is { PlayingTake: true }) Mod.Note("Battle.PlaceDuringTake", $"{place.ActorId} is playing a take at {place.Time:0.0}s - its \"at\" is skipped");
+                    if (placed is { PlayingClip: true }) Logger.Info($"[Battle.PlaceDuringClip] {place.ActorId} is playing a clip at {place.Time:0.0}s - its \"at\" is skipped");
                     else placed?.Place(World(place.At.X, 0f, place.At.Z), _frame.ActorYawDegrees(place.At.Facing));
                     break;
 
@@ -429,16 +391,10 @@ internal sealed partial class BattleController
                     ActorById(move.ActorId)?.RunMove(move.Stack);
                     break;
 
-                case PlayTake take:
-                    Clip? takeClip = FindClip(take.Clip);
-                    if (takeClip == null) Mod.Note("Battle.NoClip", $"no take called \"{take.Clip}\" in the chart's clips");
-                    else ActorById(take.ActorId)?.PlayTake(takeClip, take.From, take.Until, _frame, () => ChartTime, take.Mime);
-                    break;
-
                 case PlayClip play:
                     Clip? clip = FindClip(play.Clip);
-                    if (clip == null) Mod.Note("Battle.NoClip", $"no clip called \"{play.Clip}\" in {Clips?.Folder ?? "the clip folder"}");
-                    else ActorById(play.ActorId)?.PlayClip(clip);
+                    if (clip == null) Logger.Warning($"[Battle.NoClip] no clip called \"{play.Clip}\" in the chart's clips");
+                    else ActorById(play.ActorId)?.PlayClip(clip, play.From, play.To, _frame, () => ChartTime, play.Mime);
                     break;
 
                 case EndChart end:
@@ -448,7 +404,7 @@ internal sealed partial class BattleController
         }
         catch (Exception e)
         {
-            Mod.Note("Battle.CommandFailed", $"{command}: {e}");
+            Logger.Error($"[Battle.CommandFailed] {command}: {e}");
         }
     }
 
@@ -459,7 +415,7 @@ internal sealed partial class BattleController
         if (aim.AtPlayer)
         {
             PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
-            if (you != null) return ActorRig.Of(you).Head.position + (Vector3.down * 0.25f);
+            if (you != null) return ActorRig.From(you).Head.position + (Vector3.down * 0.25f);
         }
 
         return World(aim.X, aim.Y, 0f);
@@ -486,38 +442,31 @@ internal sealed partial class BattleController
         }
         catch (IOException e)
         {
-            Mod.Note("Scores.SaveFailed", e.Message);
+            Logger.Error($"[Scores.SaveFailed] {e.Message}");
         }
 
         _board.ShowResult(result, LastWasBest ? "NEW BEST" : previous == null ? null : $"best {previous.Rank} {previous.Score}");
-        Mod.Say(
+        Logger.Info(
             $"[Battle] {result.Chart}: {(result.Survived ? "survived" : "defeated")} - rank {result.Rank}, score {result.Score}; " +
-            $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, knock-outs {result.KnockOuts}, " +
+            $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 
         foreach (Actor actor in _actors) actor.Unplant();
         Finished?.Invoke(result);
     }
 
-    private void OnActorKnockedOut(Actor actor)
-    {
-        if (State != BattleState.Running || !_actors.Contains(actor)) return;
-        _score!.ActorKnockedOut(_phase?.ScoreMultiplier ?? 1);
-        _reshade.Fire("knockout", actor.Player?.Controller?.transform.position ?? World(0f, 0f, Chart!.Lane.Length), 1f, 1.5f);
-    }
-
-    /// <summary>A pending take, then the chart's own clips, then yours.</summary>
+    /// <summary>A pending clip, then the chart's own clips.</summary>
     private Clip? FindClip(string name) =>
-        _pendingTake != null && string.Equals(_pendingTake.Name, name, StringComparison.OrdinalIgnoreCase)
-            ? _pendingTake
-            : _chartClips?.Find(name) ?? Clips?.Find(name);
+        _pendingClip != null && string.Equals(_pendingClip.Name, name, StringComparison.OrdinalIgnoreCase)
+            ? _pendingClip
+            : _chartClips?.Find(name);
 
     private Actor? ActorById(string id)
     {
         Actor? actor = _actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
-        if (actor == null || !actor.Exists) Mod.Note("Battle.NoActor", $"\"{id}\" is not in play", echo: false);
+        if (actor == null || !actor.Exists) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
         return actor is { Exists: true } ? actor : null;
     }
 
-    private Vector3 World(float x, float y, float z) => Describe.ToUnity(_frame.ToWorld(new System.Numerics.Vector3(x, y, z)));
+    private Vector3 World(float x, float y, float z) => StringHelpers.ToUnity(_frame.ToWorld(new System.Numerics.Vector3(x, y, z)));
 }

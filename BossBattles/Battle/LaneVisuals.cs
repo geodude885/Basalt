@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
@@ -37,6 +36,7 @@ internal sealed class LaneVisuals
 
     private const float PaneThickness = 0.01f;
     private const float ReapplySeconds = 0.1f;
+    private const float FullReapplySeconds = 1f;
 
     private static readonly Color EdgeColour = new(1f, 0.45f, 0.1f);
     private static readonly Color EndColour = new(1f, 0.85f, 0.2f);
@@ -54,6 +54,7 @@ internal sealed class LaneVisuals
     private float _fadeStart;
     private float _fadeSeconds;
     private float _nextReapply;
+    private float _nextFullReapply;
 
     /// <summary>The parts a chart colours, so a phase can recolour them.</summary>
     private enum Role
@@ -64,8 +65,6 @@ internal sealed class LaneVisuals
         Frame,
         Pane,
     }
-
-    public Color? EdgeColourNow => _now.TryGetValue(Role.Edge, out Color c) ? c : null;
 
     /// <param name="frame">Where the lane is.</param>
     /// <param name="lane">Its size.</param>
@@ -84,12 +83,12 @@ internal sealed class LaneVisuals
 
         var length = lane.Length * frame.DepthScale;
         var halfWidth = lane.Width / 2f;
-        Vector3 forward = Describe.ToUnity(frame.Forward);
+        Vector3 forward = StringHelpers.ToUnity(frame.Anchor.Forward);
         var along = Quaternion.LookRotation(forward);
 
         Vector3 Point(float x, float z)
         {
-            return Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(x, LineHeight, z)));
+            return StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(x, LineHeight, z)));
         }
 
         Line(Point(-halfWidth, lane.Length / 2f), along, new Vector3(LineThickness, LineHeight, length), edgeColour, Role.Edge);
@@ -98,7 +97,7 @@ internal sealed class LaneVisuals
         Line(Point(0f, lane.Length), along, new Vector3(lane.Width, LineHeight, LineThickness), endColour, Role.End);
 
         // The backstop is solid to physics but only a frame to the eye.
-        Vector3 origin = Describe.ToUnity(frame.Origin);
+        Vector3 origin = StringHelpers.ToUnity(frame.Anchor.Position);
         Vector3 wallCentre = origin - (forward * BackstopGap) + (Vector3.up * (BackstopHeight / 2f));
         var wallWidth = lane.Width + 2f;
 
@@ -114,7 +113,7 @@ internal sealed class LaneVisuals
         if (showBackstop)
         {
             Color frameColour = _now[Role.Frame];
-            Vector3 right = Describe.ToUnity(frame.Right);
+            Vector3 right = StringHelpers.ToUnity(frame.Anchor.Right);
             Line(wallCentre + (Vector3.up * (BackstopHeight / 2f)), along, new Vector3(wallWidth, FrameThickness, FrameThickness), frameColour, Role.Frame);
             Line(wallCentre - (right * (wallWidth / 2f)), along, new Vector3(FrameThickness, BackstopHeight, FrameThickness), frameColour, Role.Frame);
             Line(wallCentre + (right * (wallWidth / 2f)), along, new Vector3(FrameThickness, BackstopHeight, FrameThickness), frameColour, Role.Frame);
@@ -122,7 +121,7 @@ internal sealed class LaneVisuals
 
         if (!walls)
         {
-            Mod.Note("Lane.Preview", $"{length:F1} m x {lane.Width:F1} m", echo: false);
+            Logger.Debug($"[Lane.Preview] {length:F1} m x {lane.Width:F1} m");
             return;
         }
 
@@ -130,8 +129,8 @@ internal sealed class LaneVisuals
         var sideX = halfWidth + SideGap + (WallThickness / 2f);
         Vector3 farCentre = Point(0f, lane.Length + ((EndGap + (WallThickness / 2f)) / frame.DepthScale)) + (Vector3.up * (WallHeight / 2f));
 
-        PlayerWall("BossBattles_WallLeft", Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(-sideX, 0f, 0f))), along, forward, runLength, backstop.layer);
-        PlayerWall("BossBattles_WallRight", Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(sideX, 0f, 0f))), along, forward, runLength, backstop.layer);
+        PlayerWall("BossBattles_WallLeft", StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(-sideX, 0f, 0f))), along, forward, runLength, backstop.layer);
+        PlayerWall("BossBattles_WallRight", StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(sideX, 0f, 0f))), along, forward, runLength, backstop.layer);
         GameObject end = Part(farCentre, along, new Vector3(wallWidth + (2f * WallThickness), WallHeight, WallThickness), BackstopColour, keepCollider: true);
         end.name = "BossBattles_WallFar";
         end.layer = backstop.layer;
@@ -141,17 +140,20 @@ internal sealed class LaneVisuals
         if (zone is { } yours) BuildZone(frame, lane, yours, along, forward, backstop.layer);
         if (panes || colours.ShowsWalls) BuildPanes(frame, lane, zone, along, _now[Role.Pane]);
 
-        Mod.Note("Lane.Built", $"{length:F1} m x {lane.Width:F1} m (depth scale {frame.DepthScale:F2}), backstop on layer {LayerMask.LayerToName(backstop.layer)}", echo: false);
+        Logger.Debug($"[Lane.Built] {length:F1} m x {lane.Width:F1} m (depth scale {frame.DepthScale:F2}), backstop on layer {LayerMask.LayerToName(backstop.layer)}");
     }
 
     /// <summary>
     /// Every live structure ignores the walls. Unity forgets an ignored pair when a collider is
-    /// deactivated and structures are pooled, so this is reapplied every <see cref="ReapplySeconds"/>.
+    /// deactivated and structures are pooled, so it is applied whenever a structure becomes active,
+    /// and to all of them every <see cref="FullReapplySeconds"/> in case of anything else.
     /// </summary>
     public void LetStructuresThrough()
     {
         if (_playerOnlyWalls.Count == 0 || Time.time < _nextReapply) return;
         _nextReapply = Time.time + ReapplySeconds;
+        var everything = Time.time >= _nextFullReapply;
+        if (everything) _nextFullReapply = Time.time + FullReapplySeconds;
 
         CombatManager? combat = CombatManager.instance;
         if (combat == null) return;
@@ -164,7 +166,7 @@ internal sealed class LaneVisuals
             if (!_seen.TryGetValue(structure.Pointer, out (bool Active, Collider[] Colliders) known) || known.Colliders.Length == 0)
                 known = (false, structure.GetComponentsInChildren<Collider>(true).ToArray());
 
-            if (active)
+            if (active && (everything || !known.Active))
             {
                 foreach (Collider collider in known.Colliders)
                 {
@@ -185,17 +187,17 @@ internal sealed class LaneVisuals
     {
         if (zone.Length < lane.Length - 0.01f)
         {
-            Vector3 line = Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, LineHeight, zone.Length)));
+            Vector3 line = StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, LineHeight, zone.Length)));
             Line(line, along, new Vector3(lane.Width, LineHeight, LineThickness), _now[Role.Zone], Role.Zone);
 
-            Vector3 wallFoot = Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, 0f, zone.Length)));
+            Vector3 wallFoot = StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, 0f, zone.Length)));
             GameObject wall = Part(wallFoot + (forward * (ZoneGap + (WallThickness / 2f))) + (Vector3.up * (WallHeight / 2f)), along,
                 new Vector3(lane.Width + (2f * (SideGap + WallThickness)), WallHeight, WallThickness), BackstopColour, keepCollider: true);
             ZoneWall(wall, "BossBattles_ZoneEnd", layer);
         }
 
         var depth = (zone.Length * frame.DepthScale) + EndGap + BackstopThickness + ZoneGap + WallThickness;
-        Vector3 under = Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, zone.Height, 0f)));
+        Vector3 under = StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, zone.Height, 0f)));
         Vector3 centre = under + (forward * ((depth / 2f) - EndGap - BackstopThickness)) + (Vector3.up * (WallThickness / 2f));
         GameObject ceiling = Part(centre, along, new Vector3(lane.Width + (2f * (SideGap + WallThickness)), WallThickness, depth), BackstopColour, keepCollider: true);
         ZoneWall(ceiling, "BossBattles_ZoneCeiling", layer);
@@ -215,7 +217,7 @@ internal sealed class LaneVisuals
 
         Vector3 At(float x, float y, float z)
         {
-            return Describe.ToUnity(frame.ToWorld(new System.Numerics.Vector3(x, y, z)));
+            return StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(x, y, z)));
         }
 
         var run = (far - near) * scale;
@@ -285,7 +287,7 @@ internal sealed class LaneVisuals
             [Role.End] = Pick(colours.Ends, EndColour),
             [Role.Zone] = Pick(colours.Zone, ZoneColour),
             [Role.Frame] = Pick(colours.Backstop, edge),
-            [Role.Pane] = colours.Walls is { } walls ? ToColour(walls) : new Color(0f, 0f, 0f, 0f),
+            [Role.Pane] = Pick(colours.Walls, new Color(0f, 0f, 0f, 0f)),
         };
     }
 
@@ -298,9 +300,7 @@ internal sealed class LaneVisuals
         if (role == Role.Pane && _now[Role.Pane].a <= 0.004f) renderer.enabled = false;
     }
 
-    private static Color Pick(Rgba? chart, Color fallback) => chart is { } c ? ToColour(c) : fallback;
-
-    private static Color ToColour(Rgba c) => new(c.R, c.G, c.B, c.A);
+    private static Color Pick(Rgba? chart, Color fallback) => chart is { } c ? new Color(c.R, c.G, c.B, c.A) : fallback;
 
     private void ZoneWall(GameObject part, string name, int layer)
     {

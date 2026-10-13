@@ -2,7 +2,7 @@ using Il2CppRUMBLE.Combat.ShiftStones;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 
-namespace BossBattles.Actors;
+namespace BossBattles.DevTools.Flatscreen;
 
 /// <summary>
 /// Feeds stick values to a player in place of <c>PlayerMovement.ProcessInput</c>, which reads the VR

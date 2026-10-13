@@ -1,14 +1,13 @@
 using System.Collections;
+using System.Text.RegularExpressions;
 using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.DevTools.Flatscreen;
-using BossBattles.Services.Audio;
 using BossBattles.Services.Charts;
-using BossBattles.Services.Clips;
 using BossBattles.Services.Scoring;
 using BossBattles.UI;
 using Il2CppRUMBLE.Managers;
+using Il2CppRUMBLE.Players;
 using MelonLoader;
 using MelonLoader.Utils;
 using UnityEngine;
@@ -34,53 +33,10 @@ internal static partial class SelfTest
     /// <summary>Dropped into the self-test folder by hand, one of these is played instead of the tone - to check a format.</summary>
     private static readonly string[] SongFiles = { "selftest-song.mp3", "selftest-song.ogg", "selftest-song.wav" };
 
-    private static readonly string[] FailureCounters =
-    {
-        "Patches.Disabled",
-        "Patches.PatchFailed",
-        "Patches.PatchedNothing",
-        "Actor.SpawnFailed",
-        "Actor.VisualsFailed",
-        "Actor.PresentationFailed",
-        "Actor.ControllerTypeRestored",
-        "Battle.PrepareFailed",
-        "Battle.CommandFailed",
-        "Battle.ActorsLate",
-        "Battle.NoActor",
-        "Projectile.NoPool",
-        "Projectile.Stalled",
-        "Battle.NoClip",
-        "Actor.PlacementOff",
-        "Arena.NoFloor",
-        "Arena.NoMatchSpots",
-        "Arena.LoadFailed",
-        "Arena.SpotOffFloor",
-        "Music.Missing",
-        "Music.Failed",
-        "Music.Late",
-        "Picker.Failed",
-        "GameButtons.Failed",
-        "Cover.Failed",
-        "Effects.Failed",
-        "Projectile.OffTheFloor",
-        "Battle.VulnerableFailed",
-        "Projectile.StateFailed",
-        "Battle.CleanupFailed",
-        "Actor.UnknownStone",
-        "Actor.StoneCatalogFailed",
-        "Visuals.Failed",
-        "Visuals.FireFailed",
-        "Visuals.RestoreFailed",
-        "Visuals.PreloadFailed",
-        "Battle.MovesNotHeld",
-        "Battle.SpawnsNotReturned",
-        "Battle.ClearFailed",
-        "Battle.MovesNotReleased",
-        "Board.Failed",
-    };
+    /// <summary>Every line the mod logged; a run fails on any warning or error.</summary>
+    private static readonly List<(LogLevel Level, string Line)> Lines = [];
     private static bool _started;
     private static ArenaKind _arena = ArenaKind.Here;
-    private static ClipLibrary? _clips;
     private static bool _sawSimulatedActor;
     private static bool _shots;
     private static Action<Vector3, Vector3>? _showCamera;
@@ -92,7 +48,7 @@ internal static partial class SelfTest
 
     public static bool Enabled { get; private set; }
 
-    public static void Configure(ClipLibrary clips, Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture, ChartPicker picker, Func<string?> newChart)
+    public static void Configure(Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture, ChartPicker picker, Func<string?> newChart)
     {
         _newChart = newChart;
         _picker = picker;
@@ -105,7 +61,7 @@ internal static partial class SelfTest
         if (argument == null) return;
 
         Enabled = true;
-        _clips = clips;
+        Logger.Written += (level, line) => Lines.Add((level, line));
         if (argument.EndsWith("=ring", StringComparison.OrdinalIgnoreCase)) _arena = ArenaKind.Ring;
         if (argument.EndsWith("=pit", StringComparison.OrdinalIgnoreCase)) _arena = ArenaKind.Pit;
         _recordTest = argument.EndsWith("=record", StringComparison.OrdinalIgnoreCase);
@@ -114,7 +70,7 @@ internal static partial class SelfTest
         var chartAt = argument.IndexOf(ChartPrefix, StringComparison.OrdinalIgnoreCase);
         if (chartAt >= 0) _playbackChart = argument[(chartAt + ChartPrefix.Length)..].Trim('"');
 
-        Mod.Say($"[SelfTest] armed: will play \"{SelfTestChart.Name}\" in {_arena} once the Gym loads{(_shots ? ", with screenshots" : "")}");
+        Logger.Info($"[SelfTest] armed: will play \"{SelfTestChart.Name}\" in {_arena} once the Gym loads{(_shots ? ", with screenshots" : "")}");
     }
 
     public static void OnSceneLoaded(string scene)
@@ -129,6 +85,7 @@ internal static partial class SelfTest
     public static void Update()
     {
         if (Enabled && !_sawSimulatedActor && Mod.Actors.All.Any(a => a.Ready && a.Exists)) _sawSimulatedActor = true;
+        KeepYouAlive();
     }
 
     private static IEnumerator Run()
@@ -148,7 +105,7 @@ internal static partial class SelfTest
 
         // What a chart made in game stores as its boss's look.
         var look = PlayerManager.instance.localPlayer.Data.VisualData.ToPlayfabDataString();
-        Mod.Say($"[SelfTest] your look string: {look.Length} chars, \"{look[..Math.Min(look.Length, 120)]}\"");
+        Logger.Info($"[SelfTest] your look string: {look.Length} chars, \"{look[..Math.Min(look.Length, 120)]}\"");
 
         if (_measureTest)
         {
@@ -193,13 +150,12 @@ internal static partial class SelfTest
             yield break;
         }
 
-        _clips?.Put(SyntheticClips.Sway(SelfTestChart.Clip, 1.5f));
 
         // A song beside the chart, as a chart folder would have one: a metronome written here, or
         // a song dropped in by hand to check a format Unity has to decode.
         var assets = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles", "SelfTest");
         Directory.CreateDirectory(assets);
-        File.WriteAllBytes(Path.Combine(assets, ToneFile), WavFile.Write(WavFile.Metronome(120, chart.End + 2)));
+        File.WriteAllBytes(Path.Combine(assets, ToneFile), TestAudio.Write(TestAudio.Metronome(120, chart.End + 2)));
         _song = SongFiles.FirstOrDefault(f => File.Exists(Path.Combine(assets, f))) ?? ToneFile;
 
         // The Ring is played from a spot the chart names; the Pit is laid out automatically.
@@ -214,10 +170,11 @@ internal static partial class SelfTest
         if (_arena == ArenaKind.Here)
         {
             // The flatscreen spawn faces a wall of scenery; lay the lane where there is room.
-            var yours = ActorRig.Of(PlayerManager.instance.localPlayer.Controller);
-            (Vector3 direction, var clear) = Arena.OpenestDirection(yours.FloorPoint);
-            Mod.Battle.HereFacing = direction;
-            Mod.Say($"[SelfTest] laying the lane towards {Describe.Vector(direction)}: {clear:0.0} m clear");
+            PlayerController you = PlayerManager.instance.localPlayer.Controller;
+            var yours = ActorRig.From(you);
+            (Vector3 direction, var clear) = OpenestDirection(yours.Feet);
+            you.PlayerMovement.Rotate(Vector3.SignedAngle(yours.Facing, direction, Vector3.up), false);
+            Logger.Info($"[SelfTest] laying the lane towards {StringHelpers.Vector(direction)}: {clear:0.0} m clear");
         }
 
         Mod.Battle.Finished += OnFinished;
@@ -225,12 +182,12 @@ internal static partial class SelfTest
         Perform(PlayerManager.instance.localPlayer.Controller, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
-        Mod.Battle.Start(WithLook(chart), null, assets);
+        Mod.Battle.Start(WithLook(chart), null, assets, pendingClip: SyntheticClips.Sway(SelfTestChart.Clip, 1.5f));
         MelonCoroutines.Start(CheckRules());
         if (_arena != ArenaKind.Here) MelonCoroutines.Start(CheckActorHitbox());
         MelonCoroutines.Start(CheckSlides());
         if (_shots) MelonCoroutines.Start(TakeShots());
-        MelonCoroutines.Start(CheckYouOnTheLane());
+        MelonCoroutines.Start(CheckPlacement());
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (result == null && Time.realtimeSinceStartup < deadline) yield return null;
@@ -270,18 +227,11 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
         var after = _picker.CardText;
 
-        if (_shots && _picker.Root is { } card)
-        {
-            var folder = ShotFolder();
-            Vector3 eye = card.position - (card.forward * 1.1f) + (card.right * 0.35f) + (Vector3.up * 0.15f);
-            _showCamera?.Invoke(eye, card.position + (Vector3.up * 0.05f));
-            yield return null;
-            Shoot(folder, "0-picker");
-        }
+        if (_shots && _picker.Root is { } card) ShootPanel(card, "0-picker");
 
         _picker.Press("prev");
         if (string.IsNullOrWhiteSpace(before) || before == after) _pickerProblem = $"pressing next did not change the picker's card (\"{before}\")";
-        Mod.Say($"[SelfTest] picker ({(gameButton ? "the game's NEXT button" : "the mod's own buttons")}): {Flatten(before)} -> {Flatten(after)}");
+        Logger.Info($"[SelfTest] picker ({(gameButton ? "the game's NEXT button" : "the mod's own buttons")}): {Regex.Replace(before, "<[^>]+>", "").Replace('\n', ' ')} -> {Regex.Replace(after, "<[^>]+>", "").Replace('\n', ' ')}");
     }
 
     /// <summary>A cover image drawn here shows on the picker's card.</summary>
@@ -291,9 +241,10 @@ internal static partial class SelfTest
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         var image = new Texture2D(64, 64, TextureFormat.RGBA32, false);
-        for (var y = 0; y < 64; y++)
+        foreach (var pixel in Enumerable.Range(0, 64 * 64))
         {
-            for (var x = 0; x < 64; x++) image.SetPixel(x, y, ((x / 16) + (y / 16)) % 2 == 0 ? new Color(1f, 0.45f, 0.1f) : new Color(0.1f, 0.1f, 0.15f));
+            (var y, var x) = Math.DivRem(pixel, 64);
+            image.SetPixel(x, y, ((x / 16) + (y / 16)) % 2 == 0 ? new Color(1f, 0.45f, 0.1f) : new Color(0.1f, 0.1f, 0.15f));
         }
 
         image.Apply();
@@ -304,13 +255,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
         if (!_picker.ShowingCover) _pickerProblem = "a chart's cover image did not show on the picker";
 
-        if (_shots && _picker.Root is { } card)
-        {
-            Vector3 eye = card.position - (card.forward * 1.1f) + (card.right * 0.35f) + (Vector3.up * 0.15f);
-            _showCamera?.Invoke(eye, card.position + (Vector3.up * 0.05f));
-            yield return null;
-            Shoot(ShotFolder(), "0-cover");
-        }
+        if (_shots && _picker.Root is { } card) ShootPanel(card, "0-cover");
 
         _picker.Override = null;
         yield return new WaitForSeconds(0.4f);
@@ -324,44 +269,59 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.3f);
 
         // Only in place: loading the Ring or Pit takes the Gym's structures with it anyway.
-        if (_arena == ArenaKind.Here && BattleController.LastCleared < 1) _rulesProblem = "the cube spawned before the battle was not cleared off the map";
-        if (!Mod.Battle.Withholds("SpawnCube") || Mod.Battle.Withholds("Disc"))
+        if (_arena == ArenaKind.Here && LastCleared < 1) _rulesProblem = "the cube spawned before the battle was not cleared off the map";
+        if (Available("SpawnCube") || !Available("Disc"))
             _rulesProblem = "a discs-only chart did not take the other spawn moves away (and leave the disc)";
 
         // The gestures themselves - what a VR player actually uses - not just the move list.
-        var hadGestures = BattleController.HasGesture("Disc");
-        if (!hadGestures) Mod.Say("[SelfTest] rules: no gesture handles on this player (flatscreen?) - gesture check skipped");
-        else if (BattleController.HasGesture("SpawnCube") || Mod.Battle.WithheldGesturesLeft > 0)
+        var hadGestures = HasGesture("Disc");
+        if (!hadGestures) Logger.Info("[SelfTest] rules: no gesture handles on this player (flatscreen?) - gesture check skipped");
+        else if (HasGesture("SpawnCube"))
             _rulesProblem = "a discs-only chart left the cube's spawn gesture working";
 
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.3f);
-        if (Mod.Battle.Withholds("SpawnCube")) _rulesProblem = "the spawn moves were not given back after the battle";
-        if (hadGestures && !BattleController.HasGesture("SpawnCube")) _rulesProblem = "the cube's spawn gesture was not given back after the battle";
-        Mod.Say($"[SelfTest] rules: cleared {BattleController.LastCleared} structure(s), spawns {(_rulesProblem == null ? "withheld and returned" : "wrong")}");
+        if (!Available("SpawnCube")) _rulesProblem = "the spawn moves were not given back after the battle";
+        if (hadGestures && !HasGesture("SpawnCube")) _rulesProblem = "the cube's spawn gesture was not given back after the battle";
+        Logger.Info($"[SelfTest] rules: cleared {LastCleared} structure(s), spawns {(_rulesProblem == null ? "withheld and returned" : "wrong")}");
     }
 
     private static string? _rulesProblem;
 
     /// <summary>Once the countdown starts you should be standing at the lane's near end.</summary>
-    private static IEnumerator CheckYouOnTheLane()
+    /// <summary>In the countdown you stand at the lane's start, and each actor on its chart spot, not through the floor.</summary>
+    private static IEnumerator CheckPlacement()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.5f);
 
-        if (Mod.Battle.LaneOrigin is not { } origin || PlayerManager.instance?.localPlayer?.Controller is not { } you) yield break;
+        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || PlayerManager.instance?.localPlayer?.Controller is not { } you) yield break;
 
-        Vector3 feet = ActorRig.Of(you).FloorPoint;
+        Vector3 feet = ActorRig.From(you).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
-        Mod.Say($"[SelfTest] you are {off:0.00} m from the lane's start {Describe.Vector(origin)}");
+        Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {StringHelpers.Vector(origin)}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
+
+        foreach (Actor actor in Mod.Battle.Actors.Where(a => a.Exists))
+        {
+            ActorSpec? spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
+            if (spec == null) continue;
+
+            // Across and along the lane only: on uneven ground an actor settles on the real floor.
+            Vector3 floor = ActorRig.From(actor.Player!.Controller).Feet;
+            Vector3 lane = Mod.Battle.ToLane(floor);
+            var away = new Vector2(lane.x - spec.At.X, lane.z - spec.At.Z).magnitude;
+            var sunk = origin.y - floor.y;
+            Logger.Info($"[SelfTest] {actor} is {away:0.00} m from its spot, {floor.y - origin.y:+0.00;-0.00} m from the lane's height");
+            if (away > 0.5f || sunk > 2f) _laneProblem = (_laneProblem == null ? "" : _laneProblem + "; ") + $"{actor} stood {away:0.0} m from its spot and {sunk:0.0} m under the lane";
+        }
     }
 
     /// <summary>After the battle, walking and dashing into each wall must leave you inside the lane.</summary>
     private static IEnumerator CheckWalls()
     {
-        if (!FlatscreenControls.IsFlatscreen || Mod.Battle.LaneSize is not { } lane) yield break;
+        if (!FlatscreenControls.IsFlatscreen || Mod.Battle.Chart?.Lane is not { } lane) yield break;
 
         var problems = new List<string>();
         (string Name, Vector2 Stick, float Seconds, Func<Vector3, bool> Inside)[] walks =
@@ -388,16 +348,14 @@ internal static partial class SelfTest
             yield return new WaitForSeconds(0.3f);
 
             if (PlayerManager.instance?.localPlayer?.Controller is not { } you) break;
-            Vector3 at = Mod.Battle.ToLane(ActorRig.Of(you).FloorPoint);
-            Mod.Say($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, z {at.z:0.00}");
+            Vector3 at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");
         }
 
         FlatscreenControls.ScriptedWalk = null;
         if (problems.Count > 0) _laneProblem = string.Join("; ", problems);
     }
-
-    private static string Flatten(string text) => System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", "").Replace('\n', ' ');
 
     private static string ShotFolder()
     {
@@ -416,17 +374,17 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
 
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
-        if (Mod.Battle.Overview is { } view) _showCamera?.Invoke(view.Position, view.LookAt);
+        ShowOverview();
         yield return new WaitForSeconds(0.4f);
         Shoot(folder, "1-lane");
 
         // The first projectile hovering at its origin - the telegraph - is where it is easiest to see.
-        while (Mod.Battle.ProjectileCounts.Spawned < 1 && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Logged("Projectile.Spawned") < 1 && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.12f);
         Shoot(folder, "2-telegraph");
 
         // Mid-flight: at 0.1 s the disc had barely left its origin and looked like the telegraph.
-        while (Mod.Battle.ProjectileCounts.Launched < 1 && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Logged("Projectile.Launched") < 1 && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.4f);
         Shoot(folder, "3-flight");
 
@@ -442,17 +400,17 @@ internal static partial class SelfTest
             var png = _capture?.Invoke(ShotWidth, ShotHeight);
             if (png == null)
             {
-                Mod.Say($"[SelfTest] screenshot {name}: the overview camera is not on");
+                Logger.Info($"[SelfTest] screenshot {name}: the overview camera is not on");
                 return;
             }
 
             var path = Path.Combine(folder, $"{name}.png");
             File.WriteAllBytes(path, png);
-            Mod.Say($"[SelfTest] screenshot {name} -> {path}");
+            Logger.Info($"[SelfTest] screenshot {name} -> {path}");
         }
         catch (Exception e)
         {
-            Mod.Say($"[SelfTest] screenshot {name} failed: {e}");
+            Logger.Info($"[SelfTest] screenshot {name} failed: {e}");
         }
     }
 
@@ -461,41 +419,44 @@ internal static partial class SelfTest
         var problems = new List<string>();
 
         if (result == null) problems.Add($"the battle did not finish within {TimeoutSeconds}s (state {Mod.Battle.State})");
-        if (Mod.Battle.ReadyActors < chart.Actors.Count) problems.Add($"{Mod.Battle.ReadyActors} of {chart.Actors.Count} actor(s) came up ready");
+        var ready = Mod.Battle.Actors.Count(a => a.Ready);
+        if (ready < chart.Actors.Count) problems.Add($"{ready} of {chart.Actors.Count} actor(s) came up ready");
         if (!_sawSimulatedActor) problems.Add("no actor was ever seen as a ready, simulated player");
 
-        if (Mod.Census["Actor.Clip"] == 0) problems.Add("no actor played the chart's clip");
-        if (Mod.Battle.LaneMetres < 2f) problems.Add($"the lane was {Mod.Battle.LaneMetres:0.0} m long");
+        if (Logged("Actor.Clip") == 0) problems.Add("no actor played the chart's clip");
+        if (LaneMetres < 2f) problems.Add($"the lane was {LaneMetres:0.0} m long");
         if (_pickerProblem != null) problems.Add(_pickerProblem);
-        if (Mod.Census["Battle.MovesHeld"] == 0) problems.Add("your moves were not held through the countdown");
+        if (Logged("Battle.MovesHeld") == 0) problems.Add("your moves were not held through the countdown");
         if (_laneProblem != null) problems.Add(_laneProblem);
         if (_rulesProblem != null) problems.Add(_rulesProblem);
         if (_visualsProblem != null) problems.Add(_visualsProblem);
         if (_hitboxProblem != null) problems.Add(_hitboxProblem);
         if (_slideProblem != null) problems.Add(_slideProblem);
-        if (Mod.Battle.GroundedLaunched == 0) problems.Add("no grounded projectile was thrown along the floor (the chart's cube is grounded by default)");
-        if (Mod.Census["Battle.CleanedUp"] == 0) problems.Add("nothing was cleaned up - the cube that slid past you should have broken after sitting still for 2 s");
-        if (Mod.Census["Actor.StoneCatalog"] == 0) problems.Add("the shiftstone catalog was never read - a chart's named stones were not looked up");
+        if (GroundedLaunches == 0) problems.Add("no grounded projectile was thrown along the floor (the chart's cube is grounded by default)");
+        if (Logged("Battle.CleanedUp") == 0) problems.Add("nothing was cleaned up - the cube that slid past you should have broken after sitting still for 2 s");
+        if (Logged("Actor.StoneCatalog") == 0) problems.Add("the shiftstone catalog was never read - a chart's named stones were not looked up");
         // The second phase turns the edges orange (#ffaa00) - still so on the results.
-        if (Mod.Battle.LaneEdgeColour is not { } edge || Mathf.Abs(edge.r - 1f) > 0.02f || Mathf.Abs(edge.g - (170f / 255f)) > 0.02f || edge.b > 0.02f)
-            problems.Add($"the second phase's lane colour was not applied (edges {Mod.Battle.LaneEdgeColour})");
-        if (Mod.Census["Music.Loaded"] == 0) problems.Add($"the song {_song} never loaded");
-        if (Mod.Census["Music.Playing"] == 0) problems.Add("the song never played");
+        if (!LaneShows(new Color(1f, 170f / 255f, 0f))) problems.Add("the second phase's lane colour was not applied");
+        if (Logged("Music.Loaded") == 0) problems.Add($"the song {_song} never loaded");
+        if (Logged("Music.Playing") == 0) problems.Add("the song never played");
         if (chart.Events.OfType<ProjectileEvent>().Any(p => p.To.AtPlayer) && result is { DamageTaken: 0 })
             problems.Add("a projectile was aimed at you, but the game took no health from you");
 
         var projectiles = chart.Events.OfType<ProjectileEvent>().Count();
-        (var spawned, var launched, var failed) = Mod.Battle.ProjectileCounts;
+        (var spawned, var launched, var failed) = (Logged("Projectile.Spawned"), Logged("Projectile.Launched"), Logged("Projectile.NoPool"));
         if (spawned != projectiles || launched != projectiles || failed != 0)
             problems.Add($"projectiles: {spawned} spawned, {launched} launched, {failed} failed of {projectiles} in the chart");
 
-        foreach (var counter in FailureCounters)
-        {
-            if (Mod.Census[counter] > 0) problems.Add($"{counter} x{Mod.Census[counter]}");
-        }
+        problems.AddRange(Lines
+            .Where(l => l.Level >= LogLevel.Warning)
+            .GroupBy(l => l.Line.Split(' ')[0])
+            .Select(g => $"{g.Key} x{g.Count()}: {g.First().Line}"));
 
         return problems;
     }
+
+    /// <summary>How many lines carried this tag.</summary>
+    private static int Logged(string tag) => Lines.Count(l => l.Line.StartsWith($"[{tag}]", StringComparison.Ordinal));
 
     private static void Finish(IReadOnlyList<string> problems)
     {
@@ -503,17 +464,16 @@ internal static partial class SelfTest
             ? "SELFTEST PASS"
             : $"SELFTEST FAIL{Environment.NewLine}{string.Join(Environment.NewLine, problems.Select(p => $"  - {p}"))}";
 
-        Mod.Say($"[SelfTest] {verdict}");
-        Mod.Report("self-test");
+        Logger.Info($"[SelfTest] {verdict}");
 
         try
         {
             var path = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles", "selftest.txt");
-            File.WriteAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {_arena}, song {_song}{Environment.NewLine}{verdict}{Environment.NewLine}{Environment.NewLine}census: {Mod.Census.Report()}{Environment.NewLine}");
+            File.WriteAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {_arena}, song {_song}{Environment.NewLine}{verdict}{Environment.NewLine}");
         }
         catch (IOException e)
         {
-            Mod.Say($"[SelfTest] could not write selftest.txt: {e.Message}");
+            Logger.Info($"[SelfTest] could not write selftest.txt: {e.Message}");
         }
 
         MelonCoroutines.Start(QuitSoon());

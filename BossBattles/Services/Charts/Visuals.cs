@@ -24,12 +24,9 @@ public static class LookTimeline
             var values = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             var on = false;
 
-            for (var i = 0; i < mine.Count; i++)
+            // Each cue fades from the look so far, frozen where the next cue cut in.
+            foreach ((VisualCue cue, var cueEnd) in mine.Zip(mine.Skip(1).Select(c => c.Time).Append(time)))
             {
-                VisualCue cue = mine[i];
-
-                // Where this cue fades from: the look so far, frozen where the next cue cut in.
-                var cueEnd = i + 1 < mine.Count ? mine[i + 1].Time : time;
                 var k = cue.Fade <= 0 ? 1 : Math.Clamp((cueEnd - cue.Time) / cue.Fade, 0, 1);
 
                 Dictionary<string, float> targets = cue.Off

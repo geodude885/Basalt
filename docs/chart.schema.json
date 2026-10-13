@@ -153,8 +153,26 @@
           "shiftstones": {
             "description": "\"you\" for whoever plays's stones, or up to two names.",
             "oneOf": [
-              { "const": "you" },
-              { "type": "array", "maxItems": 2, "items": { "type": "string", "examples": [ "Adamant", "Charge", "Flow", "Guard", "Stubborn", "Surge", "Vigor", "Volatile" ] } }
+              {
+                "const": "you"
+              },
+              {
+                "type": "array",
+                "maxItems": 2,
+                "items": {
+                  "type": "string",
+                  "examples": [
+                    "Adamant",
+                    "Charge",
+                    "Flow",
+                    "Guard",
+                    "Stubborn",
+                    "Surge",
+                    "Vigor",
+                    "Volatile"
+                  ]
+                }
+              }
             ]
           },
           "look": {
@@ -165,6 +183,26 @@
               "defaultMale",
               "defaultFemale"
             ]
+          },
+          "measurement": {
+            "description": "The body's size in metres; keeping a clip stores the recorder's.",
+            "type": "object",
+            "required": [
+              "height",
+              "armSpan"
+            ],
+            "properties": {
+              "height": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 3
+              },
+              "armSpan": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 3
+              }
+            }
           }
         }
       }
@@ -189,11 +227,21 @@
             "type": "object",
             "description": "The lane's colours from this phase on, over the chart's.",
             "properties": {
-              "edges": { "$ref": "#/$defs/colour" },
-              "ends": { "$ref": "#/$defs/colour" },
-              "zone": { "$ref": "#/$defs/colour" },
-              "backstop": { "$ref": "#/$defs/colour" },
-              "walls": { "$ref": "#/$defs/colour" }
+              "edges": {
+                "$ref": "#/$defs/colour"
+              },
+              "ends": {
+                "$ref": "#/$defs/colour"
+              },
+              "zone": {
+                "$ref": "#/$defs/colour"
+              },
+              "backstop": {
+                "$ref": "#/$defs/colour"
+              },
+              "walls": {
+                "$ref": "#/$defs/colour"
+              }
             }
           },
           "scoreMultiplier": {
@@ -328,9 +376,6 @@
               "HoldRight"
             ]
           },
-          "clip": {
-            "type": "string"
-          },
           "at": {
             "$ref": "#/$defs/spot"
           }
@@ -344,11 +389,6 @@
           {
             "required": [
               "move"
-            ]
-          },
-          {
-            "required": [
-              "clip"
             ]
           },
           {
@@ -372,7 +412,7 @@
           "actor": {
             "type": "string"
           },
-          "takes": {
+          "clips": {
             "type": "array",
             "items": {
               "type": "object",
@@ -394,6 +434,9 @@
                 },
                 "to": {
                   "type": "number"
+                },
+                "mime": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -423,11 +466,22 @@
       "type": "object",
       "description": "The lane's colours, as #RRGGBB or #RRGGBBAA.",
       "properties": {
-        "edges": { "$ref": "#/$defs/colour" },
-        "ends": { "$ref": "#/$defs/colour" },
-        "zone": { "$ref": "#/$defs/colour" },
-        "backstop": { "$ref": "#/$defs/colour" },
-        "walls": { "$ref": "#/$defs/colour", "description": "Shows the invisible walls as see-through panes; give an opacity, e.g. #66ccff33." }
+        "edges": {
+          "$ref": "#/$defs/colour"
+        },
+        "ends": {
+          "$ref": "#/$defs/colour"
+        },
+        "zone": {
+          "$ref": "#/$defs/colour"
+        },
+        "backstop": {
+          "$ref": "#/$defs/colour"
+        },
+        "walls": {
+          "$ref": "#/$defs/colour",
+          "description": "Shows the invisible walls as see-through panes; give an opacity, e.g. #66ccff33."
+        }
       }
     },
     "visuals": {
@@ -436,15 +490,40 @@
       "items": {
         "type": "object",
         "properties": {
-          "t": { "type": "number", "minimum": 0 },
-          "beat": { "type": "number", "minimum": 0 },
-          "pack": { "type": "string", "description": "An installed RumbleReShaded pack's name, e.g. UltraShade." },
-          "set": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Slider values by label or property." },
-          "on": { "type": "boolean" },
-          "off": { "type": "boolean" },
-          "fade": { "type": "number", "minimum": 0, "default": 0 }
+          "t": {
+            "type": "number",
+            "minimum": 0
+          },
+          "beat": {
+            "type": "number",
+            "minimum": 0
+          },
+          "pack": {
+            "type": "string",
+            "description": "An installed RumbleReShaded pack's name, e.g. UltraShade."
+          },
+          "set": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Slider values by label or property."
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "off": {
+            "type": "boolean"
+          },
+          "fade": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          }
         },
-        "required": [ "pack" ]
+        "required": [
+          "pack"
+        ]
       }
     },
     "rules": {

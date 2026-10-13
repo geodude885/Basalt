@@ -115,10 +115,10 @@ public sealed class ChartLoaderTests
         Assert.Contains("events[0].projectile.structure is required", all, StringComparison.Ordinal);
         Assert.Contains("events[0].projectile.from.z (30) must be in front of you and within the lane", all, StringComparison.Ordinal);
         Assert.Contains("events[0].projectile.speed must be over 0", all, StringComparison.Ordinal);
-        Assert.Contains("events[1] needs exactly one of projectile, move, clip or at (has 0)", all, StringComparison.Ordinal);
+        Assert.Contains("events[1] needs exactly one of projectile, move or at (has 0)", all, StringComparison.Ordinal);
         Assert.Contains("events[2].beat needs the chart's bpm", all, StringComparison.Ordinal);
         Assert.Contains("events[3].projectile would appear before the battle starts", all, StringComparison.Ordinal);
-        Assert.Contains("events[4] needs exactly one of projectile, move, clip or at (has 2)", all, StringComparison.Ordinal);
+        Assert.Contains("events[4] needs exactly one of projectile, move or at (has 2)", all, StringComparison.Ordinal);
         Assert.Contains("events[5].actor \"ghost\" is not one of the chart's actors", all, StringComparison.Ordinal);
         Assert.Contains("events[6].projectile.to must be \"player\" or", all, StringComparison.Ordinal);
     }
@@ -157,5 +157,20 @@ public sealed class ChartLoaderTests
     {
         ChartLoadResult result = ChartLoader.Load(SelfTestChart.Json);
         Assert.True(result.Ok, string.Join("; ", result.Errors));
+    }
+
+    [Fact]
+    public void AnActorKeepsItsRecordersMeasurementThroughASave()
+    {
+        const string Text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss", "measurement": { "height": 1.72, "armSpan": 1.68 } } ] }""";
+        Chart chart = ChartLoader.Load(Text).Chart!;
+        Assert.Equal(new BodySize(1.72f, 1.68f), chart.Actors[0].Measurement);
+
+        Chart saved = ChartLoader.Load(ChartSetup.WriteActors(Text, chart.Actors)).Chart!;
+        Assert.Equal(chart.Actors[0].Measurement, saved.Actors[0].Measurement);
+
+        Assert.Null(ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""").Chart!.Actors[0].Measurement);
+        Assert.Contains(ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "measurement": { "height": 9 } } ] }""").Errors,
+            e => e.StartsWith("actors[0].measurement", StringComparison.Ordinal));
     }
 }

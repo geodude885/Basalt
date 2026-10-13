@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using Il2CppRUMBLE.Audio;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
@@ -80,7 +79,7 @@ internal static class MoveEffects
         }
         catch (Exception e)
         {
-            Mod.Note("Effects.Failed", $"{effects.Move}: {e.Message}");
+            Logger.Error($"[Effects.Failed] {effects.Move}: {e.Message}");
         }
     }
 
@@ -125,7 +124,7 @@ internal static class MoveEffects
 
                 if (spawned == null && KnownSpawns.TryGetValue(stack.CachedName, out var known)) spawned = known;
                 if (KnownSpawns.ContainsKey(stack.CachedName))
-                    Mod.Note("Effects.Move", $"{stack.CachedName}: spawns {spawned ?? "?"}, steps {string.Join(", ", kinds)}", echo: false);
+                    Logger.Debug($"[Effects.Move] {stack.CachedName}: spawns {spawned ?? "?"}, steps {string.Join(", ", kinds)}");
 
                 var effects = new Effects(stack.CachedName, sounds, visuals);
                 if (spawned != null) spawns.TryAdd(spawned, effects);
@@ -134,15 +133,14 @@ internal static class MoveEffects
             }
 
             _spawns = spawns;
-            Mod.Note("Effects.Found",
-                $"spawns: {string.Join(", ", spawns.Select(s => $"{s.Key} ({s.Value.Move}: {s.Value.Sounds.Count} sound, {string.Join("/", s.Value.Visuals)}{(_grounded.Contains(s.Key) ? ", grounded" : "")})"))}; " +
-                $"punch: {(_punch == null ? "none" : $"{_punch.Sounds.Count} sound, {string.Join("/", _punch.Visuals)}")}", echo: false);
+            Logger.Debug($"[Effects.Found] spawns: {string.Join(", ", spawns.Select(s => $"{s.Key} ({s.Value.Move}: {s.Value.Sounds.Count} sound, {string.Join("/", s.Value.Visuals)}{(_grounded.Contains(s.Key) ? ", grounded" : "")})"))}; " +
+                $"punch: {(_punch == null ? "none" : $"{_punch.Sounds.Count} sound, {string.Join("/", _punch.Visuals)}")}");
             return true;
         }
         catch (Exception e)
         {
             _spawns = [];
-            Mod.Note("Effects.Failed", $"could not read the moves' effects: {e.Message}");
+            Logger.Error($"[Effects.Failed] could not read the moves' effects: {e.Message}");
             return false;
         }
     }

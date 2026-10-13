@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using Il2CppRUMBLE.Players;
 
 namespace BossBattles.Patches;
@@ -38,7 +37,7 @@ internal static class ActorSoundScope
     {
         if (_depth == 0) return;
 
-        Mod.Note("Actor.SoundScopeReset", $"depth {_depth} left open at the end of a frame");
+        Logger.Warning($"[Actor.SoundScopeReset] depth {_depth} left open at the end of a frame");
         _depth = 0;
     }
 }

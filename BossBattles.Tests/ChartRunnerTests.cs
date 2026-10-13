@@ -97,21 +97,8 @@ public sealed class ChartRunnerTests
                 Assert.Equal(new Spot(1, 9), place.At);
             });
 
-        Assert.Equal("Open", runner.PhaseAt(15).Name);
-        Assert.Equal("Phase 1", runner.PhaseAt(9.99).Name);
-    }
-
-    [Fact]
-    public void AClipEventPlaysOnItsActor()
-    {
-        var runner = new ChartRunner(Load(/*lang=json,strict*/ """
-            { "actors": [ { "id": "a" }, { "id": "b" } ], "events": [ { "t": 2, "actor": "b", "clip": "uppercut-combo" } ] }
-            """));
-
-        PlayClip play = Assert.IsType<PlayClip>(Assert.Single(runner.Advance(2).OfType<PlayClip>()));
-
-        Assert.Equal("b", play.ActorId);
-        Assert.Equal("uppercut-combo", play.Clip);
+        Assert.Equal("Open", runner.Chart.Phases.Last(p => p.Start <= 15).Name);
+        Assert.Equal("Phase 1", runner.Chart.Phases.Last(p => p.Start <= 9.99).Name);
     }
 
     [Fact]

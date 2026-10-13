@@ -12,8 +12,7 @@ public static class ChartTemplate
     public static string Create(string chartsFolder, string name, string? author, string? look = null, IReadOnlyList<string>? stones = null)
     {
         var stem = ChartPackage.FileStem(name).ToLowerInvariant();
-        var folder = Path.Combine(chartsFolder, stem);
-        for (var n = 2; Directory.Exists(folder); n++) folder = Path.Combine(chartsFolder, $"{stem}-{n}");
+        var folder = Enumerable.Range(1, int.MaxValue).Select(n => Path.Combine(chartsFolder, n == 1 ? stem : $"{stem}-{n}")).First(f => !Directory.Exists(f));
 
         Directory.CreateDirectory(Path.Combine(folder, ChartPackage.ClipsFolder));
         File.WriteAllText(Path.Combine(folder, ChartLibrary.FolderChartFile), Json(name, author, look, stones));
@@ -65,11 +64,9 @@ public static class ChartTemplate
             // The boss does one of its own moves...
             { "beat": 16, "move": "Straight" },
 
-            // ...walks to another spot...
+            // ...or walks to another spot. To record the boss's whole performance instead, turn on
+            // Chart editing and press RECORD on the picker.
             { "beat": 18, "at": { "x": -1, "z": 11 } },
-
-            // ...or plays a recording of you: Record clip in the settings records one, and its name goes here.
-            // { "beat": 20, "clip": "my-recording" },
 
             { "beat": 22, "projectile": { "structure": "Disc", "from": { "x": -1, "y": 1.4, "z": 10 }, "to": "player", "speed": 10, "telegraph": 0.8, "by": "boss" } }
           ],

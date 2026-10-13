@@ -1,6 +1,5 @@
 using System.Collections;
 using BossBattles.Actors;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
@@ -27,11 +26,9 @@ internal sealed partial class BattleController
         try
         {
             PlayerController you = PlayerManager.instance.localPlayer.Controller;
-            var yours = ActorRig.Of(you);
+            var yours = ActorRig.From(you);
 
-            Vector3 facing = HereFacing ?? yours.Facing;
-            HereFacing = null;
-            LaneFrame? frame = _fixedFrame ?? Arena.Frame(CurrentArena, _arenaSpec, Chart!.Lane, yours.FloorPoint, facing);
+            LaneFrame? frame = _fixedFrame ?? Arena.Frame(CurrentArena, _arenaSpec, Chart!.Lane, yours.Feet, yours.Facing);
             if (frame == null)
             {
                 Stop("no lane could be laid out");
@@ -53,7 +50,7 @@ internal sealed partial class BattleController
             }
             else if (Arena.IsMatchMap(CurrentArena) || _arenaSpec.HasSpot || _fixedFrame != null)
             {
-                PlaceYou(you, Describe.ToUnity(_frame.Origin), Quaternion.LookRotation(Describe.ToUnity(_frame.Forward)), eyeHeight);
+                PlaceYou(you, StringHelpers.ToUnity(_frame.Anchor.Position), Quaternion.LookRotation(StringHelpers.ToUnity(_frame.Anchor.Forward)), eyeHeight);
             }
 
             _lane.Build(_frame, Chart.Lane, ShowBackstop, walls: true, zone: Mode == BattleMode.Record ? null : Chart.Zone,
@@ -65,21 +62,20 @@ internal sealed partial class BattleController
             }
             else
             {
-                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), Describe.ToUnity(_frame.Origin));
-                _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "take review" : "get ready")}");
+                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), StringHelpers.ToUnity(_frame.Anchor.Position));
+                _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
             foreach (ActorSpec spec in Mode == BattleMode.Record ? Enumerable.Empty<ActorSpec>() : Chart.Actors)
             {
-                var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { KnockbackTaken = 0f };
-                actor.WasKnockedOut += OnActorKnockedOut;
+                var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { SelfKnockbackMultiplier = 0f, Measurement = spec.Measurement };
                 _actors.Add(actor);
                 Vector3 spot = World(spec.At.X, 0f, spec.At.Z);
                 var yaw = _frame.ActorYawDegrees(spec.At.Facing);
 
                 // Spawning puts the head on the floor, so the body falls until placed properly.
                 var session = _session;
-                actor.BecameReady += ready => MelonCoroutines.Start(PlaceWhenSettled(ready, spot, yaw, session));
+                actor.OnReady += ready => MelonCoroutines.Start(PlaceWhenSettled(ready, spot, yaw, session));
                 actor.Spawn(spot, Quaternion.Euler(0f, yaw, 0f));
             }
 
@@ -88,7 +84,7 @@ internal sealed partial class BattleController
         }
         catch (Exception e)
         {
-            Mod.Note("Battle.PrepareFailed", e.ToString());
+            Logger.Error($"[Battle.PrepareFailed] {e}");
             Stop("preparing failed");
         }
     }
@@ -109,7 +105,7 @@ internal sealed partial class BattleController
         yield return null;
         if (session != _session || you == null) yield break;
 
-        Vector3 feet = ActorRig.Of(you).FloorPoint;
+        Vector3 feet = ActorRig.From(you).Feet;
         var off = new Vector3(floor.x - feet.x, 0f, floor.z - feet.z);
         if (off.magnitude > 0.15f)
         {
@@ -117,11 +113,11 @@ internal sealed partial class BattleController
             yield return null;
             yield return null;
             if (session != _session || you == null) yield break;
-            feet = ActorRig.Of(you).FloorPoint;
+            feet = ActorRig.From(you).Feet;
         }
 
         var left = new Vector2(floor.x - feet.x, floor.z - feet.z).magnitude;
-        Mod.Note(left > 0.3f ? "Battle.YouPlacedOff" : "Battle.YouPlaced", $"{Describe.Vector(feet)}, {left:0.00} m from {Describe.Vector(floor)} (first try {off.magnitude:0.00} m off)", echo: left > 0.3f);
+        Logger.Write(left > 0.3f ? LogLevel.Warning : LogLevel.Debug, $"[{(left > 0.3f ? "Battle.YouPlacedOff" : "Battle.YouPlaced")}] {StringHelpers.Vector(feet)}, {left:0.00} m from {StringHelpers.Vector(floor)} (first try {off.magnitude:0.00} m off)");
     }
 
     private IEnumerator PlaceWhenSettled(Actor actor, Vector3 spot, float yaw, int session)

@@ -1,5 +1,4 @@
 using BossBattles.Services.Charts;
-using BossBattles.Services.Logging;
 using BossBattles.Services.Scoring;
 using Xunit;
 
@@ -19,21 +18,19 @@ public sealed class ScoreKeeperTests
     }
 
     [Fact]
-    public void ActorDamageAndKnockOutsAreBonusesScaledByThePhase()
+    public void ActorDamageIsABonusScaledByThePhase()
     {
         var score = new ScoreKeeper("Crossfire");
 
         score.ActorDamaged(3, multiplier: 1);
         score.ActorDamaged(2, multiplier: 2);
-        score.ActorKnockedOut(multiplier: 2);
         score.PlayerDamaged(2);
 
         BattleResult result = score.Finish(survived: true, seconds: 33, battleLength: 33);
 
         Assert.Equal(7, result.ActorDamage, 6);
-        Assert.Equal(1, result.KnockOuts);
         Assert.Equal(
-            ScoreKeeper.SurvivalPoints + (7 * ScoreKeeper.ActorDamagePoints) + (2 * ScoreKeeper.KnockOutPoints) - (2 * ScoreKeeper.DamageTakenPoints),
+            ScoreKeeper.SurvivalPoints + (7 * ScoreKeeper.ActorDamagePoints) - (2 * ScoreKeeper.DamageTakenPoints),
             result.Score);
         Assert.Equal("A", result.Rank);
     }
@@ -129,30 +126,5 @@ public sealed class ChartLibraryTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_folder)) Directory.Delete(_folder, recursive: true);
-    }
-}
-
-public sealed class ModLogTests
-{
-    [Fact]
-    public void LinesAreReadableWhileTheLogIsStillOpen()
-    {
-        var folder = Path.Combine(Path.GetTempPath(), $"BossBattles-{Guid.NewGuid():N}");
-        var path = Path.Combine(folder, "battles.log");
-
-        using (var log = new ModLog(path))
-        {
-            log.Line("first");
-            log.Line("second");
-
-            // Read while the writer is still open: the crash case, where Dispose never runs.
-            using var reader = new StreamReader(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
-            var lines = reader.ReadToEnd().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-
-            Assert.Equal(2, lines.Length);
-            Assert.EndsWith(" second", lines[1], StringComparison.Ordinal);
-        }
-
-        Directory.Delete(folder, recursive: true);
     }
 }

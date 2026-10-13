@@ -15,14 +15,13 @@ public sealed class TempoMap
         if (changes.Count == 0 || changes[0].Beat != 0) throw new ArgumentException("a tempo map starts at beat 0", nameof(changes));
 
         _changes = changes.ToArray();
-        _startSeconds = new double[_changes.Length];
-        for (var i = 1; i < _changes.Length; i++)
-            _startSeconds[i] = _startSeconds[i - 1] + ((_changes[i].Beat - _changes[i - 1].Beat) * 60.0 / _changes[i - 1].Bpm);
+        var starts = new List<double> { 0 };
+        foreach ((TempoChange before, TempoChange after) in _changes.Zip(_changes.Skip(1)))
+            starts.Add(starts[^1] + ((after.Beat - before.Beat) * 60.0 / before.Bpm));
+        _startSeconds = starts.ToArray();
     }
 
     public static TempoMap Constant(double bpm) => new(new[] { new TempoChange(0, bpm) });
-
-    public IReadOnlyList<TempoChange> Changes => _changes;
 
     /// <summary>Seconds from the start to <paramref name="beat"/>.</summary>
     public double Seconds(double beat)

@@ -1,10 +1,6 @@
-using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.Patches;
 using BossBattles.Services.Charts;
-using BossBattles.Services.Clips;
-using BossBattles.Services.Logging;
 using BossBattles.Services.Placement;
 using BossBattles.Services.Scoring;
 using BossBattles.UI;
@@ -24,14 +20,11 @@ namespace BossBattles;
 public sealed partial class ModEntry : MelonMod
 {
     private readonly Settings _settings = new();
-    private readonly ClipRecorder _recorder = new();
     private ChartLibrary _library = null!;
     private ScoreBook _scores = null!;
     private string _folder = "";
 
     internal static ModEntry? Instance { get; private set; }
-
-    internal ClipLibrary Clips { get; private set; } = null!;
 
     internal ChartPicker Picker { get; private set; } = null!;
 
@@ -39,27 +32,24 @@ public sealed partial class ModEntry : MelonMod
     {
         Instance = this;
         _folder = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles");
-        Mod.Melon = LoggerInstance;
-        Mod.Log = new ModLog(Path.Combine(_folder, "battles.log"));
+        Logger.Melon = LoggerInstance;
 
-        Clips = new ClipLibrary(Path.Combine(_folder, "Clips"));
-        Mod.Battle.Clips = Clips;
         _library = new ChartLibrary(Path.Combine(_folder, "Charts"));
         _scores = new ScoreBook(Path.Combine(_folder, "scores.json"));
         _scores.Load();
-        if (_scores.LoadError != null) Mod.Say($"scores.json could not be read ({_scores.LoadError}) - starting a fresh book");
+        if (_scores.LoadError != null) Logger.Info($"scores.json could not be read ({_scores.LoadError}) - starting a fresh book");
         Mod.Battle.Scores = _scores;
         var places = new SpotBook(Path.Combine(_folder, "places.json"));
         places.Load();
         Picker = new ChartPicker(DescribePanel, PanelButtons, PanelWanted, places);
         ReloadCharts();
 
-        _settings.Create(PlayableNames());
+        _settings.Create(_library.Playable.Select(e => e.Name));
         ApplySettings();
         _settings.Changed += ApplySettings;
 
-        Mod.Note("Init", $"actor patches: {ActorPatches.Apply(HarmonyInstance)} methods", echo: false);
-        Mod.Note("Init", $"arena patches: {ArenaPatches.Apply(HarmonyInstance)} methods", echo: false);
+        Logger.Debug($"[Init] actor patches: {ActorPatches.Apply(HarmonyInstance)} methods");
+        Logger.Debug($"[Init] arena patches: {ArenaPatches.Apply(HarmonyInstance)} methods");
 
         foreach ((var text, var name, var description, Action handler) in new (string, string, string, Action)[]
         {
@@ -68,11 +58,10 @@ public sealed partial class ModEntry : MelonMod
             ("Reload", "Reload charts", "Read UserData/BossBattles/Charts again.", ReloadCharts),
             ("Picker", "Chart picker here", "Bring the chart picker in front of you - in the Gym, this sets its fixed spot.", Picker.Summon),
             ("New", "New chart", "Chart editing: make a new chart folder from a template, and pick it.", () => IfEditing(() => NewChart())),
-            ("Editor", "Open chart editor", "Chart editing: open the chart editor in your browser.", () => IfEditing(OpenEditor)),
+            ("Folder", "Open chart folder", "Chart editing: open the chosen chart's folder, to edit it in the Boss Battles Chart Editor.", () => IfEditing(OpenChartFolder)),
             ("Record", "Record actor", "Chart editing: record the chosen chart's actor - you stand in its place and perform.", () => IfEditing(() => RecordChosen())),
             ("Export", "Export chart", "Chart editing: pack the chosen chart, its song and clips into UserData/BossBattles/Exports/<name>.bbchart.", () => IfEditing(ExportChosen)),
-            ("Where", "Where am I", "Chart editing: print your spot as a chart's arena line, in the log.", () => IfEditing(WhereAmI)),
-            ("Clip", "Record clip", "Start or stop recording yourself as a clip for a chart's clip events.", ToggleRecording),
+            ("Where", "Where am I", "Chart editing: print your spot as a chart's arena line, in the Logger.", () => IfEditing(WhereAmI)),
             ("Gym", "Back to the Gym", "Leave the Ring or Pit.", Mod.Battle.ReturnToGym),
         })
         {
@@ -80,7 +69,7 @@ public sealed partial class ModEntry : MelonMod
         }
 
         UIFramework.UI.RegisterMelon(this, _settings.Category);
-        Mod.Say($"BossBattles loaded: {_library.Playable.Count()} chart(s)");
+        Logger.Info($"BossBattles loaded: {_library.Playable.Count()} chart(s)");
     }
 
     // A throw escaping a MelonLoader callback repeats every frame.
@@ -89,7 +78,6 @@ public sealed partial class ModEntry : MelonMod
         try
         {
             ReloadChartsWhenChanged();
-            _recorder.Update();
             Mod.Actors.Update();
             Mod.Battle.Update();
             Mod.Studio.Update();
@@ -99,7 +87,7 @@ public sealed partial class ModEntry : MelonMod
         }
         catch (Exception e)
         {
-            Mod.Note("UpdateFailed", e.ToString());
+            Logger.Error($"[UpdateFailed] {e}");
         }
     }
 
@@ -112,7 +100,7 @@ public sealed partial class ModEntry : MelonMod
         }
         catch (Exception e)
         {
-            Mod.Note("LateUpdateFailed", e.ToString());
+            Logger.Error($"[LateUpdateFailed] {e}");
         }
     }
 
@@ -122,18 +110,13 @@ public sealed partial class ModEntry : MelonMod
         Mod.Battle.OnSceneLoaded(sceneName);
         Mod.Studio.OnSceneLoaded();
         Picker.Forget();
-        Mod.Report($"entered {sceneName}");
     }
 
-    public override void OnApplicationQuit()
-    {
-        Mod.Battle.RestoreVisuals();
-        Mod.Report("quit");
-        Mod.Log?.Dispose();
-    }
+    public override void OnApplicationQuit() => Mod.Battle.RestoreVisuals();
 
     private void ApplySettings()
     {
+        Logger.Level = _settings.LogLevel.Value;
         Mod.Battle.CountdownSeconds = Math.Max(0f, _settings.Countdown.Value);
         Mod.Battle.ShowBackstop = _settings.ShowBackstop.Value;
         Mod.Battle.ShowPhaseBanners = _settings.ShowPhaseBanners.Value;
@@ -144,20 +127,5 @@ public sealed partial class ModEntry : MelonMod
         Picker.Height = Math.Clamp(_settings.PickerHeight.Value, -1f, 0.5f);
         Picker.Side = Math.Clamp(_settings.PickerSide.Value, -1f, 1f);
         Picker.FixedInGym = _settings.PickerFixedInGym.Value;
-    }
-
-    private void ToggleRecording()
-    {
-        if (!_recorder.Recording)
-        {
-            _recorder.Start();
-            return;
-        }
-
-        Clip? clip = _recorder.Stop();
-        if (clip == null) return;
-
-        var path = Clips.Save(clip);
-        Mod.Say($"[Clips] saved {clip.Name}: {clip.Duration:0.0}s, {clip.Frames.Count} frames -> {path}");
     }
 }

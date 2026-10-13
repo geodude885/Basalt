@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
@@ -11,10 +10,6 @@ internal sealed partial class BattleController
 
     private readonly Dictionary<IntPtr, (Vector3 At, float Since)> _still = [];
     private float _nextCleanup;
-
-    public static int LastCleared { get; private set; }
-
-    public int CleanedUp { get; private set; }
 
     /// <summary>Breaks every structure a player spawned (scenery stays) with the game's own <c>Structure.Kill</c>.</summary>
     private static void ClearStructures()
@@ -37,12 +32,11 @@ internal sealed partial class BattleController
             }
             catch (Exception e)
             {
-                Mod.Note("Battle.ClearFailed", $"{name}: {e.Message}");
+                Logger.Error($"[Battle.ClearFailed] {name}: {e.Message}");
             }
         }
 
-        LastCleared = cleared;
-        Mod.Note("Battle.Cleared", $"{cleared} structure(s) cleared off the map", echo: false);
+        Logger.Debug($"[Battle.Cleared] {cleared} structure(s) cleared off the map");
     }
 
     /// <summary>
@@ -78,12 +72,11 @@ internal sealed partial class BattleController
             try
             {
                 structure.Kill(at, true, true, false);
-                CleanedUp++;
-                Mod.Note("Battle.CleanedUp", $"{structure.gameObject.name} still for {after:0.#}s - broken", echo: false);
+                Logger.Debug($"[Battle.CleanedUp] {structure.gameObject.name} still for {after:0.#}s - broken");
             }
             catch (Exception e)
             {
-                Mod.Note("Battle.CleanupFailed", $"{structure.gameObject.name}: {e.Message}");
+                Logger.Error($"[Battle.CleanupFailed] {structure.gameObject.name}: {e.Message}");
             }
 
             _still.Remove(structure.Pointer);

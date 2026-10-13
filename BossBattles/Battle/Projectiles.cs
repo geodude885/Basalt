@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Environment;
 using Il2CppRUMBLE.Managers;
@@ -28,24 +27,17 @@ internal sealed partial class Projectiles
     private readonly Dictionary<int, Projectile> _live = [];
     private readonly List<FlightCheck> _checks = [];
 
-    public int Spawned { get; private set; }
-
-    public int Launched { get; private set; }
-
-    public int Failed { get; private set; }
-
     public void Spawn(int id, ProjectileEvent projectile, LaneFrame frame)
     {
-        Vector3 origin = Describe.ToUnity(frame.ToWorld(projectile.From));
-        Vector3 towardYou = -Describe.ToUnity(frame.Forward);
+        Vector3 origin = StringHelpers.ToUnity(frame.ToWorld(projectile.From));
+        Vector3 towardYou = -StringHelpers.ToUnity(frame.Anchor.Forward);
 
         // The floor before the pool fetch, which stands the structure at its origin in the ray's way.
         var floor = Arena.TryFloorHeight(origin, out var ground) ? ground : origin.y - 1f;
         PooledMonoBehaviour pooled = PoolManager.instance.GetPooledObject(projectile.Structure, origin, Quaternion.LookRotation(towardYou));
         if (pooled == null)
         {
-            Failed++;
-            Mod.Note("Projectile.NoPool", $"#{id}: no pool called \"{projectile.Structure}\" - check the chart's structure names (Disc, Ball, Pillar, Wall, RockCube, BoulderBall, SmallRock, LargeRock)");
+            Logger.Warning($"[Projectile.NoPool] #{id}: no pool called \"{projectile.Structure}\" - check the chart's structure names (Disc, Ball, Pillar, Wall, RockCube, BoulderBall, SmallRock, LargeRock)");
             return;
         }
 
@@ -69,9 +61,9 @@ internal sealed partial class Projectiles
         {
             origin.y += floor + FloorClearance - LowestPoint(pooled.transform, origin, facing);
 
-            var laneFloor = Describe.ToUnity(frame.Origin).y;
-            if (floor - laneFloor > 1f) Mod.Note("Projectile.OffTheFloor", $"#{id} {projectile.Structure}: floor found {floor - laneFloor:0.00} m above the lane's");
-            else if (laneFloor - floor > 1f) Mod.Note("Projectile.BelowTheLane", $"#{id} {projectile.Structure}: the ground there is {laneFloor - floor:0.00} m below your end of the lane - it may hit the slope", echo: false);
+            var laneFloor = StringHelpers.ToUnity(frame.Anchor.Position).y;
+            if (floor - laneFloor > 1f) Logger.Warning($"[Projectile.OffTheFloor] #{id} {projectile.Structure}: floor found {floor - laneFloor:0.00} m above the lane's");
+            else if (laneFloor - floor > 1f) Logger.Debug($"[Projectile.BelowTheLane] #{id} {projectile.Structure}: the ground there is {laneFloor - floor:0.00} m below your end of the lane - it may hit the slope");
         }
 
         Vector3 below = new(origin.x, Math.Min(origin.y, floor) - height, origin.z);
@@ -81,11 +73,10 @@ internal sealed partial class Projectiles
         // The game removes structures outside the scene's structure boundary the moment they move.
         SceneBoundary bounds = SceneBoundary.CurrentActiveStructuresSceneBoundary;
         if (bounds != null && !bounds.Contains(origin))
-            Mod.Note("Projectile.OutOfBounds", $"#{id} {projectile.Structure} at {Describe.Vector(origin)} is outside the scene's structure boundary - the game will remove it");
+            Logger.Info($"[Projectile.OutOfBounds] #{id} {projectile.Structure} at {StringHelpers.Vector(origin)} is outside the scene's structure boundary - the game will remove it");
 
         _live[id] = new Projectile(structure, body, origin, facing) { From = below, RiseStart = Time.time, Rise = rise, Grounded = projectile.IsGrounded };
-        Spawned++;
-        Mod.Note("Projectile.Spawned", $"#{id} {projectile.Structure} at {Describe.Vector(origin)}, launching in {projectile.Telegraph:F2}s, state {structure?.currentPhysicsState}", echo: false);
+        Logger.Debug($"[Projectile.Spawned] #{id} {projectile.Structure} at {StringHelpers.Vector(origin)}, launching in {projectile.Telegraph:F2}s, state {structure?.currentPhysicsState}");
     }
 
     public void Launch(int id, ProjectileEvent projectile, Vector3 target)
@@ -99,8 +90,8 @@ internal sealed partial class Projectiles
             return;
         }
 
-        Vector3 velocity = Describe.ToUnity(Ballistics.LaunchVelocity(
-            Describe.ToNumerics(from), Describe.ToNumerics(target), projectile.Speed, -Physics.gravity.y));
+        Vector3 velocity = StringHelpers.ToUnity(Ballistics.LaunchVelocity(
+            StringHelpers.ToNumerics(from), StringHelpers.ToNumerics(target), projectile.Speed, -Physics.gravity.y));
 
         live.Body.transform.position = from;
         live.Body.isKinematic = false;
@@ -110,9 +101,8 @@ internal sealed partial class Projectiles
         // Turned along its path, unless it rests on the floor: its edge would tip into it.
         if (velocity.sqrMagnitude > 0f && !MoveEffects.IsGrounded(projectile.Structure)) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
 
-        Launched++;
         _checks.Add(new FlightCheck(id, projectile.Structure, live.Body.transform, from, Time.time, projectile.Speed));
-        Mod.Note("Projectile.Launched", $"#{id} {projectile.Structure} -> {Describe.Vector(target)} at {velocity.magnitude:F1} m/s, state {live.Structure?.currentPhysicsState}", echo: false);
+        Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} -> {StringHelpers.Vector(target)} at {velocity.magnitude:F1} m/s, state {live.Structure?.currentPhysicsState}");
     }
 
     /// <summary>Brings each waiting projectile up out of the floor, then holds it at its origin.</summary>
@@ -163,14 +153,6 @@ internal sealed partial class Projectiles
         _sliding.Clear();
     }
 
-    public void ResetCounts()
-    {
-        Spawned = 0;
-        Launched = 0;
-        Failed = 0;
-        GroundedLaunched = 0;
-    }
-
     /// <summary>The lowest point of a structure's solid colliders posed at <paramref name="at"/>; the pivot is not always the centre.</summary>
     private static float LowestPoint(Transform structure, Vector3 at, Quaternion facing)
     {
@@ -196,7 +178,7 @@ internal sealed partial class Projectiles
         }
         catch (Exception e)
         {
-            Mod.Note("Projectile.StateFailed", $"{state}: {e.Message}");
+            Logger.Error($"[Projectile.StateFailed] {state}: {e.Message}");
         }
     }
 
@@ -206,19 +188,17 @@ internal sealed partial class Projectiles
     /// </summary>
     private void CheckFlights()
     {
-        for (var i = _checks.Count - 1; i >= 0; i--)
-        {
-            FlightCheck check = _checks[i];
-            var age = Time.time - check.LaunchedAt;
-            if (age < FlightCheckSeconds) continue;
+        if (_checks.Count == 0) return;
 
-            _checks.RemoveAt(i);
+        foreach (FlightCheck check in _checks.Where(c => Time.time - c.LaunchedAt >= FlightCheckSeconds).ToList())
+        {
+            _checks.Remove(check);
             if (check.Transform == null) continue;
 
+            var age = Time.time - check.LaunchedAt;
             var travelled = Vector3.Distance(check.Transform.position, check.From);
             var flying = travelled >= check.Speed * age * 0.5f;
-            Mod.Note(flying ? "Projectile.Flying" : "Projectile.Stalled",
-                $"#{check.Id} {check.Structure}: {travelled:F2} m in {age:F2}s (speed {check.Speed:F1})", echo: !flying);
+            Logger.Write(flying ? LogLevel.Debug : LogLevel.Warning, $"[{(flying ? "Projectile.Flying" : "Projectile.Stalled")}] #{check.Id} {check.Structure}: {travelled:F2} m in {age:F2}s (speed {check.Speed:F1})");
         }
     }
 

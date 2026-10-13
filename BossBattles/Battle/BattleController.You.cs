@@ -1,5 +1,4 @@
 using BossBattles.Actors;
-using BossBattles.Core;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
@@ -7,14 +6,11 @@ using UnityEngine;
 
 namespace BossBattles.Battle;
 
-/// <summary>You in a battle: kept in the lane, able to take damage, on full health at either end.</summary>
+/// <summary>You in a battle: kept in the lane, able to clip damage, on full health at either end.</summary>
 internal sealed partial class BattleController
 {
     private PlayerHealth? _invincibleBefore;
     private float _nextLaneCheck;
-
-    /// <summary>Leaves your invincibility as the arena has it, so a test run lasts the whole chart.</summary>
-    public bool KeepInvincible { get; set; }
 
     /// <summary>
     /// The walls' safety net: past one anyway, you are pushed back inside the lane - both bodies
@@ -28,17 +24,17 @@ internal sealed partial class BattleController
         PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
         if (you == null) return;
 
-        var rig = ActorRig.Of(you);
-        Vector3 at = ToLane(rig.FloorPoint);
+        var rig = ActorRig.From(you);
+        Vector3 at = ToLane(rig.Feet);
         var zoned = Mode != BattleMode.Record;
         float side = (Chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
         var far = zoned ? Chart.Zone.Length + (0.3f / _frame.DepthScale) : Chart.Lane.Length + (0.75f / _frame.DepthScale);
-        var above = rig.Vr.position.y - Describe.ToUnity(_frame.Origin).y;
+        var above = rig.Vr.position.y - StringHelpers.ToUnity(_frame.Anchor.Position).y;
         var tooHigh = zoned && above > Chart.Zone.Height + 0.8f;
         if (!tooHigh && Math.Abs(at.x) <= side + 0.3f && at.z >= back - 0.3f && at.z <= far + 0.3f) return;
 
         Vector3 inside = World(Math.Clamp(at.x, -side + 0.2f, side - 0.2f), 0f, Math.Clamp(at.z, back + 0.2f, far - 0.2f));
-        Vector3 floor = rig.FloorPoint;
+        Vector3 floor = rig.Feet;
         var shift = new Vector3(inside.x - floor.x, 0f, inside.z - floor.z);
         if (tooHigh) shift.y = -(above - Chart.Zone.Height);
         PlayerPhysics physics = you.PlayerPhysics;
@@ -52,7 +48,7 @@ internal sealed partial class BattleController
             if (away > 0f) body.linearVelocity = v - (outward * away);
         }
 
-        Mod.Note("Battle.YouLeftTheLane", $"at lane x {at.x:0.0}, z {at.z:0.0}{(tooHigh ? $", {above:0.0} m up" : "")} - put back", echo: false);
+        Logger.Debug($"[Battle.YouLeftTheLane] at lane x {at.x:0.0}, z {at.z:0.0}{(tooHigh ? $", {above:0.0} m up" : "")} - put back");
     }
 
     /// <summary>
@@ -61,7 +57,7 @@ internal sealed partial class BattleController
     /// </summary>
     private void KeepYouVulnerable()
     {
-        if (Mode == BattleMode.Record || KeepInvincible) return;
+        if (Mode == BattleMode.Record) return;
 
         PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
         if (you == null) return;
@@ -73,19 +69,19 @@ internal sealed partial class BattleController
             {
                 _invincibleBefore ??= health;
                 health.IsInvincible = false;
-                Mod.Note("Battle.InvincibilityLifted", "you were invincible here - lifted for the run", echo: false);
+                Logger.Debug("[Battle.InvincibilityLifted] you were invincible here - lifted for the run");
             }
 
             if (health.currentHealthResetRoutine != null)
             {
                 health.StopCoroutine(health.currentHealthResetRoutine);
                 health.currentHealthResetRoutine = null;
-                Mod.Note("Battle.RegenHeld", "the game's health regeneration stopped for the run", echo: false);
+                Logger.Debug("[Battle.RegenHeld] the game's health regeneration stopped for the run");
             }
         }
         catch (Exception e)
         {
-            Mod.Note("Battle.VulnerableFailed", e.ToString());
+            Logger.Error($"[Battle.VulnerableFailed] {e}");
         }
     }
 
@@ -99,7 +95,7 @@ internal sealed partial class BattleController
         }
         catch (Exception e)
         {
-            Mod.Note("Battle.VulnerableFailed", e.Message);
+            Logger.Error($"[Battle.VulnerableFailed] {e.Message}");
         }
 
         _invincibleBefore = null;
@@ -112,12 +108,12 @@ internal sealed partial class BattleController
 
         var hp = you.Data.HealthPoints;
         if (hp < PlayerHealth.MAX_PLAYER_HEALTH) you.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, hp, false);
-        Mod.Note("Battle.FullHealth", $"{hp} -> {PlayerHealth.MAX_PLAYER_HEALTH}", echo: false);
+        Logger.Debug($"[Battle.FullHealth] {hp} -> {PlayerHealth.MAX_PLAYER_HEALTH}");
     }
 
     private static Vector3 YourHead()
     {
         PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
-        return you == null ? Vector3.zero : ActorRig.Of(you).Head.position;
+        return you == null ? Vector3.zero : ActorRig.From(you).Head.position;
     }
 }

@@ -1,5 +1,4 @@
 using BossBattles.Battle;
-using BossBattles.Core;
 using UnityEngine;
 
 namespace BossBattles.UI;
@@ -30,7 +29,7 @@ internal static class Covers
             }
 
             texture.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            Mod.Note("Cover.Loaded", $"{file.Name}: {texture.width}x{texture.height}", echo: false);
+            Logger.Debug($"[Cover.Loaded] {file.Name}: {texture.width}x{texture.height}");
             return Remember(path, file.LastWriteTimeUtc, texture, null);
         }
         catch (Exception e)
@@ -56,7 +55,7 @@ internal static class Covers
         if (Cache.TryGetValue(path, out (DateTime Written, Texture2D? Texture) old) && old.Texture != null && old.Texture != texture) UnityEngine.Object.Destroy(old.Texture);
 
         Cache[path] = (written, texture);
-        if (problem != null && !known) Mod.Note("Cover.Failed", problem);
+        if (problem != null && !known) Logger.Error($"[Cover.Failed] {problem}");
         return texture;
     }
 }

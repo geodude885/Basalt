@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Globalization;
 using System.Text;
-using BossBattles.Core;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Pools;
 using MelonLoader.Utils;
@@ -64,7 +63,7 @@ internal static partial class SelfTest
             // Looking down -z: x is across the lane, y up, z along it.
             lines.Add(string.Create(CultureInfo.InvariantCulture,
                 $"  \"{name}\": {{ \"across\": {size.size.x:0.###}, \"up\": {size.size.y:0.###}, \"along\": {size.size.z:0.###}, \"pivotUp\": {spot.y - size.min.y:0.###} }}"));
-            Mod.Say($"[SelfTest] measure {name}: {size.size.x:0.00} across, {size.size.y:0.00} up, {size.size.z:0.00} along");
+            Logger.Info($"[SelfTest] measure {name}: {size.size.x:0.00} across, {size.size.y:0.00} up, {size.size.z:0.00} along");
 
             body?.isKinematic = false;
             pooled.gameObject.SetActive(false);

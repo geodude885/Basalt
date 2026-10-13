@@ -1,91 +1,74 @@
 using System.Collections;
-using BossBattles.Core;
+using BossBattles.Services.Charts;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppPhoton.Pun;
 using Il2CppRUMBLE.Combat.ShiftStones;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
+using Il2CppRUMBLE.Players.Scaling;
 using Il2CppRUMBLE.Players.Subsystems;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.InputSystem.XR;
-using PlayerData = Il2CppRUMBLE.Players.PlayerData;
 
 namespace BossBattles.Actors;
 
 /// <summary>
-/// A game-simulated player that is not you: what a battle puts in the lane. Created as a Local
-/// player, so the game runs its movement, physics, moves and shiftstones; drawn as a Remote one, so
-/// it has a body and its sounds play in the world. See CLAUDE.md, "Extra players".
+/// A simulated player. Created as a Local player, drawn as a Remote one, so it has a body and its sounds play in the world.
 /// </summary>
 internal sealed partial class Actor
 {
+    public string Id { get; }
+    public string Name { get; }
+    public string PlayerCustomisation { get; }
+    public IReadOnlyList<string>? Stones { get; }
+
+    /// <summary>The body size to build; null for yours.</summary>
+    public BodySize? Measurement { get; init; }
+
+    public bool Exists => _player != null && _player.Controller != null;
+    public bool Ready { get => Exists && field; private set; }
+
+    public Player? Player => Exists ? _player : null;
+    public Vector3? HeadPosition => Exists && _rig != null ? _rig.Head.position : null;
+
+    public event Action<Actor>? OnReady;
+
+    public bool Owns(Player player) => _player != null && _player.Pointer == player.Pointer;
+
+    public override string ToString() => $"{Name} [{Id}]";
     private const float SpawnTimeoutSeconds = 5f;
     private const float VisualsTimeoutSeconds = 10f;
-    private const float FacingCheckInterval = 0.25f;
-    private const float FacingTolerance = 15f;
+
+    private static readonly string[] PlayerUiPaths = { "NameTag", "UI/LocalUI", "UI/RemoteUI" };
 
     private Player? _player;
     private ActorRig? _rig;
     private ActorPose? _pose;
     private bool _spawning;
-    private Transform? _remoteUi;
-    private Transform? _nameTag;
-    private Transform? _localUi;
-    private float _nextFacingCheck;
+    private Transform[] _playerUi = [];
 
-    public Actor(string id, string name, string look, IReadOnlyList<string>? stones = null)
+    public Actor(string id, string name, string customisationString, IReadOnlyList<string>? stones = null)
     {
         Id = id;
         Name = name;
-        Look = look;
+        PlayerCustomisation = customisationString;
         Stones = stones;
     }
 
-    /// <summary>The stones it wears, by name; null for the ones you have equipped.</summary>
-    public IReadOnlyList<string>? Stones { get; }
 
-    public string Id { get; }
-
-    public string Name { get; }
-
-    /// <summary>"you", "default", "defaultFemale", "defaultMale", or a look string as the game stores it.</summary>
-    public string Look { get; }
-
-    public bool Exists => _player != null && _player.Controller != null;
-
-    /// <summary>Spawned, with its body baked and on show.</summary>
-    public bool Ready { get => Exists && field; private set; }
-
-    public Player? Player => Exists ? _player : null;
-
-    public Vector3? HeadPosition => Exists && _rig != null ? _rig.Head.position : null;
-
-    public ActorControl Control { get; private set; } = ActorControl.Bot;
-
-    public ActorInput Input { get; } = new();
-
-    /// <summary>The actor's sticks come from <see cref="Input"/>, not your controllers.</summary>
-    public bool IsBotControlled => Exists && Control == ActorControl.Bot;
-
-    public event Action<Actor>? BecameReady;
-
-    public bool Owns(Player player) => _player != null && _player.Pointer == player.Pointer;
-
-    public override string ToString() => $"{Name} [{Id}]";
-
-    /// <summary>Creates the body; asynchronous, see <see cref="BecameReady"/>.</summary>
+    /// <summary>Creates the body asynchronously, see <see cref="OnReady"/>.</summary>
     public void Spawn(Vector3 floorPosition, Quaternion facing)
     {
         if (_spawning || Exists)
         {
-            Mod.Note("Actor.SpawnSkipped", $"{this}: {(_spawning ? "already spawning" : "already exists")}");
+            Logger.Info($"[Actor.SpawnSkipped] {this}: {(_spawning ? "already spawning" : "already exists")}");
             return;
         }
 
         if (PlayerManager.instance?.localPlayer?.Controller == null)
         {
-            Mod.Note("Actor.SpawnSkipped", $"{this}: no local player to model it on");
+            Logger.Info($"[Actor.SpawnSkipped] {this}: no local player to model it on");
             return;
         }
 
@@ -99,24 +82,16 @@ internal sealed partial class Actor
         {
             PlayerManager.instance?.AllPlayers?.Remove(_player);
             if (_player.Controller != null) UnityEngine.Object.Destroy(_player.Controller.gameObject);
-            Mod.Note("Actor.Despawned", $"{this}: {Describe.Player(_player)}");
+            Logger.Info($"[Actor.Despawned] {this}: {StringHelpers.Player(_player)}");
         }
 
         Forget();
     }
 
-    /// <summary>For a scene change: the body went with the scene, but the player list entry did not.</summary>
     public void ForgetSceneObjects()
     {
         if (_player != null) PlayerManager.instance?.AllPlayers?.Remove(_player);
         Forget();
-    }
-
-    public void SetControl(ActorControl control)
-    {
-        Control = control;
-        Input.Clear();
-        Mod.Note("Actor.Control", $"{this}: {control}");
     }
 
     public void Update()
@@ -128,66 +103,24 @@ internal sealed partial class Actor
         if (controller.controllerType != ControllerType.Local)
         {
             controller.controllerType = ControllerType.Local;
-            Mod.Note("Actor.ControllerTypeRestored", $"{this}: found Remote outside a guarded call - set back to Local");
+            Logger.Warning($"[Actor.ControllerTypeRestored] {this}: found Remote outside a guarded call - set back to Local");
         }
 
         if (_planted) KeepPlanted();
-        if (_knockedOut) return;
 
-        if (Control == ActorControl.Mirror)
-        {
-            PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
-            if (you == null) return;
-
-            var yours = ActorRig.Of(you);
-            ActorRig.CopyLocal(yours.Offset, _rig.Offset);
-            ActorRig.CopyLocal(yours.Head, _rig.Head);
-            ActorRig.CopyLocal(yours.LeftHand, _rig.LeftHand);
-            ActorRig.CopyLocal(yours.RightHand, _rig.RightHand);
-            return;
-        }
-
-        if (_take != null) PlayTakeFrame();
-        else if (_clip != null) PlayClipFrame();
+        if (_clip != null) PlayClipFrame();
         else _pose?.ApplyTo(_rig);
-
-        if (Input.FaceYou && Time.time >= _nextFacingCheck)
-        {
-            _nextFacingCheck = Time.time + FacingCheckInterval;
-            TurnTowards(PlayerManager.instance?.localPlayer?.Controller);
-        }
     }
 
-    /// <summary>
-    /// Hides the nameplate and health bars the game hangs over a player: a battle scores damage over
-    /// the run, so they only clutter. By scale, not deactivation - NameBending throws on an inactive plate.
-    /// </summary>
     public void LateUpdate()
     {
         if (!Exists || _rig == null) return;
 
-        HideByScale(_nameTag);
-        HideByScale(_localUi);
-        HideByScale(_remoteUi);
-    }
-
-    private static void HideByScale(Transform? part)
-    {
-        if (part != null && part.localScale != Vector3.zero) part.localScale = Vector3.zero;
-    }
-
-    private void TurnTowards(PlayerController? target)
-    {
-        if (target == null || _rig == null) return;
-
-        Vector3 toTarget = ActorRig.Of(target).Head.position - _rig.Head.position;
-        toTarget.y = 0f;
-        if (toTarget.sqrMagnitude < 0.01f) return;
-
-        var angle = Vector3.SignedAngle(_rig.Facing, toTarget.normalized, Vector3.up);
-        if (Mathf.Abs(angle) < FacingTolerance) return;
-
-        _player!.Controller.PlayerMovement.Rotate(angle, false);
+        foreach (Transform part in _playerUi)
+        {
+            // Hides the nameplate and health bars by scale, not deactivation. NameBending can throw on an inactive plate.
+            if (part != null && part.localScale != Vector3.zero) part.localScale = Vector3.zero;
+        }
     }
 
     private IEnumerator SpawnRoutine(Vector3 floorPosition, Quaternion facing)
@@ -199,7 +132,7 @@ internal sealed partial class Actor
         }
         catch (Exception e)
         {
-            Mod.Note("Actor.SpawnFailed", $"{this}: {e}");
+            Logger.Error($"[Actor.SpawnFailed] {this}: {e}");
         }
 
         if (player == null)
@@ -213,12 +146,12 @@ internal sealed partial class Actor
 
         try
         {
-            if (player.Controller == null) Mod.Note("Actor.SpawnFailed", $"{this}: no controller after {SpawnTimeoutSeconds}s");
+            if (player.Controller == null) Logger.Error($"[Actor.SpawnFailed] {this}: no controller after {SpawnTimeoutSeconds}s");
             else Setup(player, floorPosition);
         }
         catch (Exception e)
         {
-            Mod.Note("Actor.SpawnFailed", $"{this}: {e}");
+            Logger.Error($"[Actor.SpawnFailed] {this}: {e}");
         }
 
         _spawning = false;
@@ -233,23 +166,20 @@ internal sealed partial class Actor
         shiftstones[0] = -1;
         shiftstones[1] = -1;
 
-        // Your look, whatever the actor's: a Local player's PlayerVisuals.Initialize caches its look as
-        // the local look, so any other would turn you into it. The actor's is applied as Remote later.
         var data = new PlayerData(
             new GeneralData
             {
-                // Unique per actor: baked looks are cached by this id.
                 PlayFabMasterId = $"BossBattles-{Id}-{Guid.NewGuid():N}",
                 PlayFabTitleId = Guid.NewGuid().ToString(),
-                BattlePoints = 0,
+                BattlePoints = local.Data.GeneralData?.BattlePoints ?? 0,
                 PublicUsername = Name,
             },
             local.Data.RedeemedMoves,
             local.Data.EconomyData,
             shiftstones,
-            CopyOf(local.Data.VisualData))
+            PlayerVisualData.FromPlayfabDataString(local.Data.VisualData.ToPlayfabDataString()))
         {
-            PlayerMeasurement = local.Data.PlayerMeasurement,
+            PlayerMeasurement = Measurement is { } size ? new PlayerMeasurement { Length = size.Height, ArmSpan = size.ArmSpan } : local.Data.PlayerMeasurement,
         };
 
         var player = Player.CreateRemotePlayer(data);
@@ -267,29 +197,30 @@ internal sealed partial class Actor
         GameObject body = controller.gameObject;
         body.name = $"BossBattles_Actor_{Id}";
 
-        // Resets or kills falling players, and a Local one listens for XR recentering meant for you.
         DisableAll<PlayerResetSystem>(body);
-        DisableYourExtras(body);
+        DisableAll<PlayerHaptics>(body);
+        DisableAll<PlayerLIV>(body);
+        DisableAll<PlayerCollisionFade>(body);
+        foreach (Camera camera in body.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
+        foreach (AudioListener listener in body.GetComponentsInChildren<AudioListener>(true)) listener.enabled = false;
+        foreach (TrackedPoseDriver driver in body.GetComponentsInChildren<TrackedPoseDriver>(true)) driver.enabled = false;
+        foreach (AudioSource source in body.GetComponentsInChildren<AudioSource>(true)) source.spatialBlend = 1f;
 
         _player = player;
         Mod.Actors.Add(this);
 
-        // The body is baked only while listed in AllPlayers, but a second listed player stops
-        // structure-on-structure collisions registering in the Gym: listed until FinishWhenVisible.
+        // Only add to player list until visible to avoid stucture physics issues
         SetInPlayerList(true);
         player.Data.VisualData = ResolveLook();
-
         PresentAsRemote(controller);
+
         CopyShiftstones(controller, PlayerManager.instance.localPlayer.Controller);
-        _remoteUi = body.transform.Find("UI/RemoteUI");
-        _nameTag = body.transform.Find("NameTag");
-        _localUi = body.transform.Find("UI/LocalUI");
+        _playerUi = PlayerUiPaths.Select(path => body.transform.Find(path)).Where(part => part != null).ToArray();
 
-        _rig = ActorRig.Of(controller);
-        _pose = ActorPose.Guard(ActorRig.Of(PlayerManager.instance.localPlayer.Controller));
+        _rig = ActorRig.From(controller);
+        _pose = ActorPose.DefaultPose(ActorRig.From(PlayerManager.instance.localPlayer.Controller));
 
-        Mod.Note("Actor.Spawned",
-            $"{this}: type {controller.ControllerType}, look \"{Look}\", at {Describe.Vector(floorPosition)}; " +
+        Logger.Info($"[Actor.Spawned] {this}: type {controller.ControllerType}, look \"{PlayerCustomisation}\", at {StringHelpers.Vector(floorPosition)}; " +
             $"moves: {string.Join(", ", controller.PlayerProcessor.availableStacks.ToArray().Select(s => s.CachedName))}");
     }
 
@@ -306,20 +237,19 @@ internal sealed partial class Actor
 
         try
         {
-            // Your own body renderer is disabled - you are not meant to see yourself.
             SkinnedMeshRenderer bodyRenderer = player.Controller.PlayerVisuals.Renderer;
             if (bodyRenderer != null && !bodyRenderer.enabled) bodyRenderer.enabled = true;
 
             var baked = player.Controller.PlayerVisuals.VisualsAreReadyAndApplied;
-            Mod.Note("Actor.Visuals", $"{this}: {(baked ? "baked" : "NOT baked")} after {Time.realtimeSinceStartup - start:F2}s", echo: !baked);
+            Logger.Write(baked ? LogLevel.Debug : LogLevel.Warning, $"[Actor.Visuals] {this}: {(baked ? "baked" : "NOT baked")} after {Time.realtimeSinceStartup - start:F2}s");
             SetInPlayerList(false);
 
             Ready = true;
-            BecameReady?.Invoke(this);
+            OnReady?.Invoke(this);
         }
         catch (Exception e)
         {
-            Mod.Note("Actor.VisualsFailed", $"{this}: {e}");
+            Logger.Error($"[Actor.VisualsFailed] {this}: {e}");
         }
     }
 
@@ -333,9 +263,9 @@ internal sealed partial class Actor
 
     private PlayerVisualData ResolveLook()
     {
-        PlayerVisualData yours = CopyOf(PlayerManager.instance.localPlayer.Data.VisualData);
+        var yours = PlayerVisualData.FromPlayfabDataString(PlayerManager.instance.localPlayer.Data.VisualData.ToPlayfabDataString());
 
-        switch (Look.Trim().ToLowerInvariant())
+        switch (PlayerCustomisation.Trim().ToLowerInvariant())
         {
             case "":
             case "you":
@@ -352,37 +282,15 @@ internal sealed partial class Actor
 
         try
         {
-            return PlayerVisualData.FromPlayfabDataString(Look);
+            return PlayerVisualData.FromPlayfabDataString(PlayerCustomisation);
         }
         catch (Exception e)
         {
-            Mod.Note("Actor.LookInvalid", $"{this}: \"{Look}\" is not a look the game can read ({e.Message}) - using yours");
+            Logger.Warning($"[Actor.LookInvalid] {this}: \"{PlayerCustomisation}\" is not a look the game can read ({e.Message}) - using yours");
             return yours;
         }
     }
 
-    private static PlayerVisualData CopyOf(PlayerVisualData look) => PlayerVisualData.FromPlayfabDataString(look.ToPlayfabDataString());
-
-    /// <summary>
-    /// Turns off a Local player's extras that would act on you - camera, audio listener, haptics, LIV,
-    /// screen fade, pose drivers reading your headset - and makes its 2D sounds positional.
-    /// </summary>
-    private static void DisableYourExtras(GameObject body)
-    {
-        foreach (Camera camera in body.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
-        foreach (AudioListener listener in body.GetComponentsInChildren<AudioListener>(true)) listener.enabled = false;
-        foreach (TrackedPoseDriver driver in body.GetComponentsInChildren<TrackedPoseDriver>(true)) driver.enabled = false;
-        foreach (AudioSource source in body.GetComponentsInChildren<AudioSource>(true)) source.spatialBlend = 1f;
-
-        DisableAll<PlayerHaptics>(body);
-        DisableAll<PlayerLIV>(body);
-        DisableAll<PlayerCollisionFade>(body);
-    }
-
-    /// <summary>
-    /// PlayerVisuals, PlayerNameTag and PlayerUI each decide from <c>controllerType</c> in their
-    /// Initialize whether this is you: re-run them as Remote, then flip back.
-    /// </summary>
     private void PresentAsRemote(PlayerController controller)
     {
         ControllerType simulatedAs = controller.controllerType;
@@ -396,7 +304,7 @@ internal sealed partial class Actor
         }
         catch (Exception e)
         {
-            Mod.Note("Actor.PresentationFailed", $"{this}: {e}");
+            Logger.Error($"[Actor.PresentationFailed] {this}: {e}");
         }
         finally
         {
@@ -404,24 +312,22 @@ internal sealed partial class Actor
         }
     }
 
-    /// <summary>
-    /// Attaches the chart's stones, or yours, fresh from their pools. The flags keep it out of your
-    /// save and off the network; run as Remote so the stones are not put on a first-person layer.
-    /// </summary>
-    private void CopyShiftstones(PlayerController actor, PlayerController you)
+    private void CopyShiftstones(PlayerController to, PlayerController from)
     {
         var report = new List<string>();
-        ControllerType simulatedAs = actor.controllerType;
-        actor.controllerType = ControllerType.Remote;
+        ControllerType simulatedAs = to.controllerType;
+        to.controllerType = ControllerType.Remote;
 
         try
         {
-            List<string?> pools = Stones?.Select(name => Shiftstones.Pool(name) ?? Unknown(name)).ToList()
-                                  ?? Shiftstones.EquippedBy(you).Select(p => (string?)p).ToList();
-            for (var slot = 0; slot < pools.Count; slot++)
+            List<string?> pools = Stones?.Select(Shiftstones.Pool).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
+            foreach ((var pool, var slot) in pools.Select((p, slot) => (p, slot)))
             {
-                var pool = pools[slot];
-                if (pool == null) continue;
+                if (pool == null)
+                {
+                    Logger.Warning($"[Actor.UnknownStone] {this}: no shiftstone called \"{Stones![slot]}\" - there are {string.Join(", ", Shiftstones.Catalog().Select(s => s.Pool))}");
+                    continue;
+                }
 
                 ShiftStone? copy = PoolManager.instance.GetPooledObject(pool)?.GetComponent<ShiftStone>();
                 if (copy == null)
@@ -430,7 +336,7 @@ internal sealed partial class Actor
                     continue;
                 }
 
-                actor.PlayerShiftstones.AttachShiftStone(copy, slot, false, false);
+                to.PlayerShiftstones.AttachShiftStone(copy, slot, false, false);
                 report.Add($"{slot}: {pool}");
             }
         }
@@ -440,16 +346,10 @@ internal sealed partial class Actor
         }
         finally
         {
-            actor.controllerType = simulatedAs;
+            to.controllerType = simulatedAs;
         }
 
-        Mod.Note("Actor.Shiftstones", $"{this}: {(report.Count == 0 ? "none equipped" : string.Join(", ", report))}", echo: false);
-    }
-
-    private string? Unknown(string name)
-    {
-        Mod.Note("Actor.UnknownStone", $"{this}: no shiftstone called \"{name}\" - there are {string.Join(", ", Shiftstones.Catalog().Select(s => s.Pool))}");
-        return null;
+        Logger.Debug($"[Actor.Shiftstones] {this}: {(report.Count == 0 ? "none equipped" : string.Join(", ", report))}");
     }
 
     private static void DisableAll<T>(GameObject body)
@@ -465,14 +365,10 @@ internal sealed partial class Actor
         _rig = null;
         _pose = null;
         Ready = false;
-        _remoteUi = null;
-        _nameTag = null;
-        _localUi = null;
-        _ownColliders = null;
+        _playerUi = [];
+        _colliders = null;
         _planted = false;
-        _knockedOut = false;
         _clip = null;
-        _take = null;
-        Input.Clear();
+        _fingers = null;
     }
 }

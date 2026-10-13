@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using UnityEngine;
 
@@ -46,15 +45,15 @@ internal sealed partial class Studio
         if (You() is not { } rig) return;
 
         ArenaKind map = Arena.CurrentMap();
-        _setupFrom = (rig.FloorPoint, rig.Facing);
+        _setupFrom = (rig.Feet, rig.Facing);
         if (map == ArenaKind.Here)
         {
             _setupArena = ArenaSpec.Here;
         }
         else
         {
-            Vector3 at = rig.FloorPoint - (Arena.Anchor(map) ?? Vector3.zero);
-            _setupArena = new ArenaSpec(map, MathF.Round(at.x, 2), MathF.Round(at.z, 2), MathF.Round(Arena.Bearing(rig.Facing)));
+            Vector3 at = rig.Feet - (Arena.Anchor(map) ?? Vector3.zero);
+            _setupArena = new ArenaSpec(map, MathF.Round(at.x, 2), MathF.Round(at.z, 2), MathF.Round(VectorHelpers.Bearing(rig.Facing)));
         }
 
         _setupDirty = true;
@@ -65,7 +64,7 @@ internal sealed partial class Studio
     {
         if (You() is not { } rig || _setupFrame is not { } frame || _setupActors.Count == 0) return;
 
-        System.Numerics.Vector3 at = frame.ToLane(Describe.ToNumerics(rig.FloorPoint));
+        System.Numerics.Vector3 at = frame.ToLane(StringHelpers.ToNumerics(rig.Feet));
         var z = Math.Max(0.5f, at.Z);
         if (z > _setupLane.Length) _setupLane = new Lane(Math.Min(ChartSetup.MaxLength, MathF.Ceiling(z)), _setupLane.Width);
 
@@ -94,9 +93,12 @@ internal sealed partial class Studio
         var factor = Chart!.Lane.Length > 0 ? _setupLane.Length / Chart.Lane.Length : 1f;
         var written = ChartSetup.ScaleDepth(ChartSetup.Write(text, _setupArena, _setupLane, _setupActors), factor, _setupLane.Length);
         Save(text, written);
-        var what = $"saved {Entry.Name}'s lane: {Summarise(_setupArena)}, {_setupLane.Length:0.#} x {_setupLane.Width:0.#} m";
+        var where = _setupArena.Map == ArenaKind.Here ? "here"
+            : _setupArena.HasSpot ? $"{_setupArena.Map} at {_setupArena.X:0.#}, {_setupArena.Z:0.#} facing {_setupArena.Facing:0}"
+            : _setupArena.Map.ToString();
+        var what = $"saved {Entry.Name}'s lane: {where}, {_setupLane.Length:0.#} x {_setupLane.Width:0.#} m";
         EndSetup();
-        Mod.Note("Studio.SetupSaved", what, echo: false);
+        Logger.Debug($"[Studio.SetupSaved] {what}");
         return what;
     }
 
@@ -119,7 +121,7 @@ internal sealed partial class Studio
         if (You() is not { } rig) return;
         if (_setupArena.Map != ArenaKind.Here && !Arena.InScene(_setupArena.Map)) return;
 
-        _setupFrom ??= (rig.FloorPoint, rig.Facing);
+        _setupFrom ??= (rig.Feet, rig.Facing);
         LaneFrame? frame = Arena.Frame(_setupArena.Map, _setupArena, _setupLane, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
         if (frame == null) return;
 
@@ -133,11 +135,7 @@ internal sealed partial class Studio
         }
 
         _markers.Clear();
-        foreach (ActorSpec actor in _setupActors)
-        {
-            Vector3 foot = Describe.ToUnity(frame.Value.ToWorld(new System.Numerics.Vector3(actor.At.X, 0f, actor.At.Z)));
-            _markers.Add(Marker(foot));
-        }
+        _markers.AddRange(_setupActors.Select(actor => Marker(StringHelpers.ToUnity(frame.Value.ToWorld(new System.Numerics.Vector3(actor.At.X, 0f, actor.At.Z))))));
     }
 
     /// <summary>A post where an actor will stand.</summary>
@@ -155,9 +153,4 @@ internal sealed partial class Studio
         if (renderer != null && material != null) renderer.material = material;
         return post;
     }
-
-    private static string Summarise(ArenaSpec arena) =>
-        arena.Map == ArenaKind.Here ? "here"
-        : arena.HasSpot ? $"{arena.Map} at {arena.X:0.#}, {arena.Z:0.#} facing {arena.Facing:0}"
-        : arena.Map.ToString();
 }

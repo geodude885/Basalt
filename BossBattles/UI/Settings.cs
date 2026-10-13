@@ -54,6 +54,8 @@ internal sealed class Settings
 
     public MelonPreferences_Entry<bool> ShowPhaseBanners { get; private set; } = null!;
 
+    public MelonPreferences_Entry<LogLevel> LogLevel { get; private set; } = null!;
+
     public void Create(IEnumerable<string> charts)
     {
         var folder = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles");
@@ -92,6 +94,8 @@ internal sealed class Settings
         ChartVisuals = Applied(Category.CreateEntry("ChartVisuals", 1f, "Chart visuals",
             "With RumbleReShaded: how strongly a chart's shader looks and battle effects apply. 0 turns them off; your own pack settings come back after each battle.",
             false, false, Slider(0f, 1f, 2)));
+        LogLevel = Applied(Category.CreateEntry("LogLevel", BossBattles.LogLevel.Info, "Log level",
+            "How much the mod writes to the MelonLoader console and log: Debug is everything, Error only failures."));
     }
 
     public void UpdateChartChoices(IEnumerable<string> charts) => _chartDropdown?.SetDropdownItems(Items(charts));

@@ -1,3 +1,4 @@
+using BossBattles.DevTools.Testing;
 using BossBattles.Services.Audio;
 using Xunit;
 
@@ -12,7 +13,7 @@ public sealed class AudioDecoderTests
     public void DecodesASecondOfStereoTone(string file)
     {
         using IPcmSource source = AudioDecoder.Open(Fixture(file));
-        PcmAudio audio = AudioDecoder.DecodeAll(source);
+        PcmAudio audio = TestAudio.DecodeAll(source);
 
         Assert.Equal(2, audio.Channels);
         Assert.Equal(44100, audio.SampleRate);

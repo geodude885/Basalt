@@ -25,8 +25,4 @@ public static class Ballistics
         // offset = v t - (g t^2 / 2) up   =>   v = offset / t + (g t / 2) up
         return (offset / time) + (Vector3.UnitY * (gravity * time * 0.5f));
     }
-
-    /// <summary>Where a body launched at <paramref name="velocity"/> is after <paramref name="time"/> seconds.</summary>
-    public static Vector3 PositionAt(Vector3 from, Vector3 velocity, float gravity, float time) =>
-        from + (velocity * time) - (Vector3.UnitY * (0.5f * gravity * time * time));
 }

@@ -64,7 +64,10 @@ public sealed class ChartLibrary
     {
         Directory.CreateDirectory(Folder);
 
-        var written = HasAnyChart() ? UpdateStarters() : WriteStarters();
+        var hasCharts = Directory.EnumerateFiles(Folder, "*.json").Any()
+                        || Packages().Any()
+                        || Directory.EnumerateDirectories(Folder).Any(d => File.Exists(Path.Combine(d, FolderChartFile)));
+        var written = hasCharts ? UpdateStarters() : WriteStarters();
 
         var entries = new List<ChartEntry>();
 
@@ -149,11 +152,6 @@ public sealed class ChartLibrary
 
     private static string Hash(string text) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text.Replace("\r\n", "\n"))))[..16];
-
-    private bool HasAnyChart() =>
-        Directory.EnumerateFiles(Folder, "*.json").Any()
-        || Packages().Any()
-        || Directory.EnumerateDirectories(Folder).Any(d => File.Exists(Path.Combine(d, FolderChartFile)));
 
     /// <summary>Packages: <c>.bbchart</c>, or <c>.zip</c> as the hosted editor saves them.</summary>
     private IEnumerable<string> Packages() =>

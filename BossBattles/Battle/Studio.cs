@@ -1,5 +1,4 @@
 using BossBattles.Actors;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Managers;
@@ -22,13 +21,13 @@ internal enum StudioState
     /// <summary>Playing a section as it is, from a little before it.</summary>
     PreviewingSection,
 
-    /// <summary>You stand in the actor's place; the take (or section) is being recorded.</summary>
+    /// <summary>You stand in the actor's place; the clip (or section) is being recorded.</summary>
     Recording,
 
-    /// <summary>The actor performs the take at you, as a player will see it.</summary>
+    /// <summary>The actor performs the clip at you, as a player will see it.</summary>
     Reviewing,
 
-    /// <summary>The take waits for keep, again, replay or discard.</summary>
+    /// <summary>The clip waits for keep, again, replay or discard.</summary>
     Deciding,
 }
 
@@ -48,7 +47,9 @@ internal sealed partial class Studio
 
     private const string BackupExtension = ".bak";
 
-    private readonly TakeRecorder _recorder = new();
+    private readonly ClipRecorder _recorder = new();
+    /// <summary>Chart time the recording began: the clip's time 0.</summary>
+    private double _recordedAt;
     private readonly LaneVisuals _preview = new();
     private readonly List<GameObject> _markers = [];
     private ArenaKind? _arenaOverride;
@@ -61,7 +62,7 @@ internal sealed partial class Studio
 
     public StudioState State { get; private set; } = StudioState.Off;
 
-    public Clip? Take { get; private set; }
+    public Clip? NewClip { get; private set; }
 
     public ChartEntry? Entry { get; private set; }
 
@@ -79,13 +80,13 @@ internal sealed partial class Studio
     public static bool CanEdit(ChartEntry? entry) => entry?.Result.Chart != null && entry.Source != ChartSource.Package;
 
     public static bool HasTrack(ChartEntry? entry) =>
-        CanEdit(entry) && entry!.Result.Chart!.Tracks.Any(t => t.ActorId == entry.Result.Chart.DefaultActor.Id && t.Takes.Count > 0);
+        CanEdit(entry) && entry!.Result.Chart!.Tracks.Any(t => t.ActorId == entry.Result.Chart.DefaultActor.Id && t.Clips.Count > 0);
 
     public static bool CanUndo(ChartEntry? entry) => CanEdit(entry) && File.Exists(entry!.File + BackupExtension);
 
     /// <summary>
     /// Starts recording the chart's first actor. Mimed, the chart's projectiles fly as you perform,
-    /// nothing you do spawns, and the kept take runs no moves.
+    /// nothing you do spawns, and the kept clip runs no moves.
     /// </summary>
     public void Record(ChartEntry entry, ArenaKind? arenaOverride, bool mime = false)
     {
@@ -95,83 +96,94 @@ internal sealed partial class Studio
         Mime = mime;
         Mod.Battle.Start(Chart!, arenaOverride, entry.AssetFolder, scoreKey: null, BattleMode.Record, _actorId, mime: mime);
         State = Mod.Battle.State == BattleState.Idle ? StudioState.Off : StudioState.Recording;
-        Mod.Say($"[Studio] {(mime ? "miming" : "recording")} {ActorName} for {Chart!.Name} - STOP when done");
+        Logger.Info($"[Studio] {(mime ? "miming" : "recording")} {ActorName} for {Chart!.Name} - STOP when done");
     }
 
     public bool Mime { get; private set; }
 
-    /// <summary>Stops recording and reviews the take.</summary>
+    /// <summary>Stops recording and reviews the clip.</summary>
     public void Stop()
     {
         if (State != StudioState.Recording) return;
 
-        var name = Takes.NextName(ClipsFolder(), _actorId);
-        Take = _recorder.Stop(name);
+        var name = TrackEdits.NextName(ClipsFolder(), _actorId);
+        NewClip = _recorder.Stop(name);
         _lane = Mod.Battle.Lane ?? _lane;
         Mod.Battle.Stop("recording stopped");
 
-        if (Take == null)
+        if (NewClip == null)
         {
             State = _section != null ? StudioState.ChoosingSection : StudioState.Off;
-            Mod.Say("[Studio] nothing was recorded");
+            Logger.Info("[Studio] nothing was recorded");
             return;
         }
 
-        if (_section is { } section) _section = (section.From, Math.Min(section.To, Take.Duration));
+        if (_section is { } section) _section = (section.From, Math.Min(section.To, _recordedAt + NewClip.Duration));
         Review();
     }
 
-    /// <summary>The actor performs the take at you, with the rest of the chart.</summary>
+    /// <summary>The actor performs the clip at you, with the rest of the chart.</summary>
     public void Review()
     {
-        if (Take == null || Chart == null || Entry == null) return;
+        if (NewClip == null || Chart == null || Entry == null) return;
 
         if (_section is { } section)
         {
-            Chart spliced = Spliced(Take, section.From, section.To);
+            IReadOnlyList<TrackClip> before = Chart.Tracks.FirstOrDefault(t => t.ActorId == _actorId)?.Clips ?? Array.Empty<TrackClip>();
+            var spliceTracks = Chart.Tracks.Where(t => t.ActorId != _actorId).ToList();
+            spliceTracks.Add(new Track(_actorId, TrackEdits.PunchIn(before, NewClip.Name, section.From, section.To, Mime)));
+            Chart spliced = Chart with { Tracks = spliceTracks };
             Mod.Battle.Start(spliced with { End = Math.Min(spliced.End, section.To + PrerollSeconds) }, _arenaOverride, Entry.AssetFolder,
-                scoreKey: null, BattleMode.Review, _actorId, pendingTake: Take, startAt: Math.Max(0, section.From - PrerollSeconds));
+                scoreKey: null, BattleMode.Review, _actorId, pendingClip: NewClip, startAt: Math.Max(0, section.From - PrerollSeconds));
         }
         else
         {
             var tracks = Chart.Tracks.Where(t => t.ActorId != _actorId).ToList();
-            tracks.Add(new Track(_actorId, new[] { new TakeSegment(Take.Start, Take.Name, Take.Start) { Mime = Mime } }));
-            Chart chart = Chart with { Tracks = tracks, End = Math.Max(Chart.End, Take.Duration + Takes.EndPadding) };
-            Mod.Battle.Start(chart, _arenaOverride, Entry.AssetFolder, scoreKey: null, BattleMode.Review, _actorId, _lane, Take);
+            tracks.Add(new Track(_actorId, new[] { new TrackClip(_recordedAt, NewClip.Name, 0) { Mime = Mime } }));
+            Chart chart = Chart with { Tracks = tracks, End = Math.Max(Chart.End, _recordedAt + NewClip.Duration + TrackEdits.EndPadding) };
+            Mod.Battle.Start(chart, _arenaOverride, Entry.AssetFolder, scoreKey: null, BattleMode.Review, _actorId, _lane, NewClip);
         }
 
         State = StudioState.Reviewing;
     }
 
-    /// <summary>Saves the take into the chart; returns what happened.</summary>
+    /// <summary>Saves the clip into the chart; returns what happened.</summary>
     public string Keep()
     {
-        if (Take == null || Chart == null || Entry == null) return "no take to keep";
+        if (NewClip == null || Chart == null || Entry == null) return "no clip to keep";
 
-        Clip take = Take;
+        Clip clip = NewClip;
         Directory.CreateDirectory(ClipsFolder());
-        File.WriteAllText(Path.Combine(ClipsFolder(), $"{take.Name}.json"), ClipFile.Write(take));
+        File.WriteAllText(Path.Combine(ClipsFolder(), $"{clip.Name}.json"), ClipFile.Write(clip));
 
         var chartText = File.ReadAllText(Entry.File);
         var kept = _section is { } section
-            ? Takes.KeepSection(chartText, Chart, _actorId, take, section.From, section.To, Mime)
-            : Takes.KeepWhole(chartText, Chart, _actorId, take, Mime);
+            ? TrackEdits.KeepSection(chartText, Chart, _actorId, clip, section.From, section.To, Mime)
+            : TrackEdits.KeepWhole(chartText, Chart, _actorId, clip, _recordedAt, Mime);
+
+        // The actor takes the recorder's body size, so the poses fit it on anyone's machine.
+        if (PlayerManager.instance?.localPlayer?.Data?.PlayerMeasurement is { Length: > 0f } yours)
+        {
+            var size = new BodySize(yours.Length, yours.ArmSpan);
+            kept = ChartSetup.WriteActors(kept, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
+        }
+
         Save(chartText, kept);
 
-        Mod.Battle.Stop("take kept");
+        Mod.Battle.Stop("clip kept");
         var what = _section is { } s
-            ? $"kept {take.Name} over {s.From:0.0}-{s.To:0.0}s ({take.Moves.Count} moves) in {Entry.Name}"
-            : $"kept {take.Name} ({take.Duration - take.Start:0.0}s, {take.Moves.Count} moves) in {Entry.Name}";
+            ? $"kept {clip.Name} over {s.From:0.0}-{s.To:0.0}s ({clip.Moves.Count} moves) in {Entry.Name}"
+            : $"kept {clip.Name} ({clip.Duration - clip.Start:0.0}s, {clip.Moves.Count} moves) in {Entry.Name}";
         Off();
-        Mod.Note("Studio.Kept", what, echo: false);
+        Logger.Debug($"[Studio.Kept] {what}");
         return what;
     }
 
-    /// <summary>Throws the take away; back to choosing, for a section.</summary>
+    /// <summary>Throws the clip away; back to choosing, for a section.</summary>
     public void Discard()
     {
-        Mod.Battle.Stop("take discarded");
-        Take = null;
+        Mod.Battle.Stop("clip discarded");
+        NewClip = null;
         if (_section != null) State = StudioState.ChoosingSection;
         else Off();
     }
@@ -223,12 +235,12 @@ internal sealed partial class Studio
         if (Chart == null || Entry == null) return;
 
         _section = Section;
-        Take = null;
+        NewClip = null;
         Mime = mime;
         Mod.Battle.Start(Chart, _arenaOverride, Entry.AssetFolder, scoreKey: null, BattleMode.Record, _actorId,
             startAt: Math.Max(0, Section.From - PrerollSeconds), recordSpot: SpotAt(Section.From), mime: mime);
         State = Mod.Battle.State == BattleState.Idle ? StudioState.ChoosingSection : StudioState.Recording;
-        Mod.Say($"[Studio] recording {ActorName} from {Section.From:0.0}s to {Section.To:0.0}s - it stops by itself");
+        Logger.Info($"[Studio] recording {ActorName} from {Section.From:0.0}s to {Section.To:0.0}s - it stops by itself");
     }
 
     public void Back()
@@ -297,22 +309,23 @@ internal sealed partial class Studio
         if (Mod.Battle.State != BattleState.Running) return;
         var now = Mod.Battle.ChartTime;
 
+        var from = _section?.From ?? 0;
+        if (!_recorder.Recording && now < from)
+        {
+            Mod.Battle.Banner($"<b>{Math.Ceiling(from - now):0}</b>", 0.2f);
+            return;
+        }
+
         if (!_recorder.Recording)
         {
-            var from = _section?.From ?? 0;
-            if (now < from)
-            {
-                Mod.Battle.Banner($"<b>{Math.Ceiling(from - now):0}</b>", 0.2f);
-                return;
-            }
-
             if (PlayerManager.instance?.localPlayer?.Controller is not { } you || Mod.Battle.Lane is not { } lane) return;
             _lane = lane;
-            _recorder.Start(you, lane, () => Mod.Battle.ChartTime);
+            _recorder.Start(you, lane);
+            _recordedAt = now;
             if (_section != null) Mod.Battle.Banner("<b>GO</b>", 0.8f);
         }
 
-        _recorder.Update();
+        _recorder.Update(now);
         var sectionOver = _section is { } section && now >= section.To;
         if (sectionOver || Mod.Battle.SongOver || _recorder.Length > MaxSeconds) Stop();
     }
@@ -328,36 +341,28 @@ internal sealed partial class Studio
         _actorId = Chart.DefaultActor.Id;
         _lane = null;
         _section = null;
-        Take = null;
+        NewClip = null;
         return true;
     }
 
     private void Off()
     {
         State = StudioState.Off;
-        Take = null;
+        NewClip = null;
         _section = null;
     }
 
-    /// <summary>Where the actor stood at chart time <paramref name="time"/>, from the take playing then.</summary>
+    /// <summary>Where the actor stood at chart time <paramref name="time"/>, from the clip playing then.</summary>
     private System.Numerics.Vector2? SpotAt(double time)
     {
         if (Chart == null || Entry == null) return null;
 
-        PlayTake? playing = new ChartRunner(Chart, time).Schedule.OfType<PlayTake>().FirstOrDefault(t => t.ActorId == _actorId && t.Time <= time);
+        PlayClip? playing = new ChartRunner(Chart, time).Schedule.OfType<PlayClip>().FirstOrDefault(t => t.ActorId == _actorId && t.Time <= time);
         if (playing == null) return null;
 
         var clips = new ClipLibrary(ClipsFolder());
         clips.Reload();
-        return clips.Find(playing.Clip)?.Sample((float)playing.From).Lane;
-    }
-
-    private Chart Spliced(Clip take, double from, double to)
-    {
-        IReadOnlyList<TakeSegment> before = Chart!.Tracks.FirstOrDefault(t => t.ActorId == _actorId)?.Takes ?? Array.Empty<TakeSegment>();
-        var tracks = Chart.Tracks.Where(t => t.ActorId != _actorId).ToList();
-        tracks.Add(new Track(_actorId, Takes.PunchIn(before, take.Name, from, to, Mime)));
-        return Chart with { Tracks = tracks };
+        return clips.Find(playing.Clip)?.Sample((float)playing.From).Offset;
     }
 
     private void Save(string before, string after)
@@ -374,7 +379,7 @@ internal sealed partial class Studio
         : Math.Round(Math.Round(seconds / 0.5) * 0.5, 3);
 
     private static ActorRig? You() =>
-        PlayerManager.instance?.localPlayer?.Controller is PlayerController you ? ActorRig.Of(you) : null;
+        PlayerManager.instance?.localPlayer?.Controller is PlayerController you ? ActorRig.From(you) : null;
 
     private string ClipsFolder() => Path.Combine(Entry!.AssetFolder, ChartPackage.ClipsFolder);
 }

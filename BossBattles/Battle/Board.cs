@@ -1,14 +1,10 @@
-using BossBattles.Core;
 using BossBattles.Services.Scoring;
 using Il2CppTMPro;
 using UnityEngine;
 
 namespace BossBattles.Battle;
 
-/// <summary>
-/// Floating text over the lane: the countdown, phase names and results. Uses whatever TextMeshPro
-/// font the game has loaded, since a built game may carry no default.
-/// </summary>
+/// <summary>Floating text over the lane: the countdown, phase names and results.</summary>
 internal sealed class Board
 {
     private const float FontSize = 1.6f;
@@ -43,7 +39,7 @@ internal sealed class Board
             $"{outcome}   rank <b>{result.Rank}</b>\n" +
             $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +
             $"<size=70%>damage taken {result.DamageTaken} ({result.HitsTaken} hits)  |  " +
-            $"boss damage {result.ActorDamage:0.#}  |  knock-outs {result.KnockOuts}  |  {result.Seconds:0.0}s</size>");
+            $"boss damage {result.ActorDamage:0.#}  |  {result.Seconds:0.0}s</size>");
     }
 
     public void Hide()
@@ -78,18 +74,13 @@ internal sealed class Board
             _text.enableWordWrapping = false;
             _text.color = Color.white;
 
-            if (_text.font == null)
-            {
-                TMP_FontAsset? font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
-                if (font != null) _text.font = font;
-                Mod.Note("Board.Font", font == null ? "no TextMeshPro font loaded - the board will be blank" : $"using {font.name}", echo: font == null);
-            }
+            Paint.GiveFont(_text);
 
             return true;
         }
         catch (Exception e)
         {
-            Mod.Note("Board.Failed", e.ToString());
+            Logger.Error($"[Board.Failed] {e}");
             _holder = null;
             _text = null;
             return false;

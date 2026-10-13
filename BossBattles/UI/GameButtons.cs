@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using UnityEngine;
 
@@ -36,7 +35,7 @@ internal static class GameButtons
         }
         catch (Exception e)
         {
-            Mod.Note("GameButtons.Failed", e.ToString());
+            Logger.Error($"[GameButtons.Failed] {e}");
             return null;
         }
     }
@@ -56,7 +55,7 @@ internal static class GameButtons
                                                                   && PathOf(b.transform).Contains("tutorial", StringComparison.OrdinalIgnoreCase));
             if (next == null)
             {
-                if (!_reported) Mod.Note("GameButtons.NoTemplate", $"no tutorial button in this scene ({buttons.Count} other buttons) - using the mod's own", echo: false);
+                if (!_reported) Logger.Debug($"[GameButtons.NoTemplate] no tutorial button in this scene ({buttons.Count} other buttons) - using the mod's own");
                 _reported = true;
                 return false;
             }
@@ -65,12 +64,12 @@ internal static class GameButtons
             _template.name = "BossBattles_ButtonTemplate";
             _template.SetActive(false);
             UnityEngine.Object.DontDestroyOnLoad(_template);
-            Mod.Note("GameButtons.Template", $"copied {PathOf(next.transform.parent)} (scale {Describe.Vector(next.transform.parent.lossyScale)})", echo: false);
+            Logger.Debug($"[GameButtons.Template] copied {PathOf(next.transform.parent)} (scale {StringHelpers.Vector(next.transform.parent.lossyScale)})");
             return true;
         }
         catch (Exception e)
         {
-            if (!_reported) Mod.Note("GameButtons.Failed", e.ToString());
+            if (!_reported) Logger.Error($"[GameButtons.Failed] {e}");
             _reported = true;
             return false;
         }

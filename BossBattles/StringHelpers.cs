@@ -1,10 +1,9 @@
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
-namespace BossBattles.Core;
+namespace BossBattles;
 
-/// <summary>One-line descriptions of game objects for the log.</summary>
-internal static class Describe
+internal static class StringHelpers
 {
     public static string Player(Player? player)
     {
@@ -19,4 +18,7 @@ internal static class Describe
     public static System.Numerics.Vector3 ToNumerics(Vector3 v) => new(v.x, v.y, v.z);
 
     public static Vector3 ToUnity(System.Numerics.Vector3 v) => new(v.X, v.Y, v.Z);
+
+    /// <summary>A name as lowercase letters and digits, so "Vigor Stone" matches "vigorstone".</summary>
+    public static string Squash(string s) => new(s.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
 }

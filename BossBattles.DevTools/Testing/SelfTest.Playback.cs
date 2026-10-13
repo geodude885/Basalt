@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text;
 using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.MoveSystem;
@@ -14,7 +13,7 @@ namespace BossBattles.DevTools.Testing;
 
 /// <summary>
 /// <c>--bossbattles-selftest=chart:&lt;name&gt;</c>: plays one of your charts, invincible, and measures
-/// its takes on the actor: moves fired, path and facing error, and structure speeds after slingshots.
+/// its clips on the actor: moves fired, and structure speeds after slingshots.
 /// Per-frame numbers go to <c>SelfTest/playback-&lt;name&gt;.csv</c>.
 /// </summary>
 internal static partial class SelfTest
@@ -47,27 +46,25 @@ internal static partial class SelfTest
         var recorded = new List<(double Time, string Move)>();
         foreach (Track track in chart.Tracks)
         {
-            for (var i = 0; i < track.Takes.Count; i++)
+            IEnumerable<double> nextStarts = track.Clips.Skip(1).Select(t => t.Time).Append(double.MaxValue);
+            foreach ((TrackClip placed, var until) in track.Clips.Zip(nextStarts))
             {
-                TakeSegment take = track.Takes[i];
-                Clip? clip = clips.Find(take.Clip);
+                Clip? clip = clips.Find(placed.Clip);
                 if (clip == null)
                 {
-                    problems.Add($"take \"{take.Clip}\" is not in {entry.AssetFolder}/clips");
+                    problems.Add($"clip \"{placed.Clip}\" is not in {entry.AssetFolder}/clips");
                     continue;
                 }
 
-                var until = i + 1 < track.Takes.Count ? track.Takes[i + 1].Time : double.MaxValue;
-                foreach (ClipMove move in clip.Moves)
-                {
-                    var at = take.Time + (move.Time - take.From);
-                    if (move.Time >= take.From && (take.To == null || move.Time <= take.To) && at < until && at <= chart.End) recorded.Add((at, move.Move));
-                }
+                recorded.AddRange(clip.Moves
+                    .Where(move => move.Time >= placed.From && (placed.To == null || move.Time <= placed.To))
+                    .Select(move => (Time: placed.Time + (move.Time - placed.From), move.Move))
+                    .Where(r => r.Time < until && r.Time <= chart.End));
             }
         }
 
-        Mod.Say($"[SelfTest] playing \"{chart.Name}\" ({entry.Stem}): {recorded.Count} recorded move(s) over {chart.End:0.0}s");
-        Mod.Battle.KeepInvincible = true;
+        Logger.Info($"[SelfTest] playing \"{chart.Name}\" ({entry.Stem}): {recorded.Count} recorded move(s) over {chart.End:0.0}s");
+        _keepYouAlive = true;
         Mod.Battle.Start(chart, null, entry.AssetFolder);
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
@@ -86,28 +83,28 @@ internal static partial class SelfTest
             ? new[] { 2.0, chart.End * 0.35, chart.End * 0.7 }
             : shotsAt[(shotsAt.IndexOf('=') + 1)..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).OrderBy(t => t).ToArray();
         var shotTimes = new Queue<double>(times);
-        if (_shots && Mod.Battle.Overview is { } view) _showCamera?.Invoke(view.Position, view.LookAt);
+        if (_shots) ShowOverview();
 
-        var samples = new List<(double T, float Error, float Speed)>();
+        var samples = new List<(double T, float Speed)>();
         var structureSpeeds = new Dictionary<IntPtr, float>();
         deadline = Time.realtimeSinceStartup + (float)chart.End + 60f;
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
             var t = Mod.Battle.ChartTime;
-            Actor? actor = Mod.Actors.All.FirstOrDefault(a => a.PlayingTake);
-            if (actor != null) samples.Add((t, actor.LastTakePathError, FastestStructureOf(actor)));
+            Actor? actor = Mod.Actors.All.FirstOrDefault(a => a.PlayingClip);
+            if (actor != null) samples.Add((t, FastestStructureOf(actor)));
 
             if (_shots && shotTimes.Count > 0 && t >= shotTimes.Peek())
             {
                 shotTimes.Dequeue();
-                if (Mod.Battle.Overview is { } now) _showCamera?.Invoke(now.Position, now.LookAt);
+                ShowOverview();
                 Shoot(shots, $"{samples.Count:00000}-t{t:0.0}");
             }
 
             yield return null;
         }
 
-        Mod.Battle.KeepInvincible = false;
+        _keepYouAlive = false;
         Report(entry.Stem, chart, recorded, samples, problems);
     }
 
@@ -129,25 +126,16 @@ internal static partial class SelfTest
         return fastest;
     }
 
-    private static void Report(string stem, Chart chart, List<(double Time, string Move)> recorded, List<(double T, float Error, float Speed)> samples, List<string> problems)
+    private static void Report(string stem, Chart chart, List<(double Time, string Move)> recorded, List<(double T, float Speed)> samples, List<string> problems)
     {
-        var fired = Mod.Census["Actor.Move"];
+        var fired = Logged("Actor.Move");
         if (fired < recorded.Count) problems.Add($"{fired} of {recorded.Count} recorded moves fired");
-        if (Mod.Census["Actor.UnknownMove"] > 0) problems.Add($"Actor.UnknownMove x{Mod.Census["Actor.UnknownMove"]}");
-
-        var following = samples.Where(s => s.T > 0.5).Select(s => s.Error).OrderBy(e => e).ToList();
-        var errors = following.Count == 0 ? "no samples"
-            : $"median {following[following.Count / 2]:0.000} m, 95% {following[(int)(following.Count * 0.95)]:0.000} m, worst {following[^1]:0.000} m, " +
-              $"{following.Count(e => e > 0.15f)} of {following.Count} frames over 0.15 m";
 
         // Each Straight / Uppercut: its structure's top speed just after, slung (a Hold just before) or not.
         var slung = new List<float>();
         var plain = new List<float>();
-        for (var i = 0; i < recorded.Count; i++)
+        foreach (((var at, var move), var i) in recorded.Select((r, i) => (r, i)).Where(r => r.r.Move is "Straight" or "Uppercut"))
         {
-            (var at, var move) = recorded[i];
-            if (move is not ("Straight" or "Uppercut")) continue;
-
             var top = samples.Where(s => s.T >= at && s.T <= at + SpeedWindow).Select(s => s.Speed).DefaultIfEmpty(0f).Max();
             var afterHold = recorded.Take(i).Any(r => r.Move.StartsWith("Hold", StringComparison.Ordinal) && at - r.Time <= SlingWindow);
             (afterHold ? slung : plain).Add(top);
@@ -160,23 +148,22 @@ internal static partial class SelfTest
 
         var summary =
             $"\"{chart.Name}\": {fired} of {recorded.Count} recorded moves fired{Environment.NewLine}" +
-            $"path error before each correction: {errors}{Environment.NewLine}" +
             $"Straight/Uppercut after a Hold: {Speeds(slung)}{Environment.NewLine}" +
             $"Straight/Uppercut without: {Speeds(plain)}";
-        Mod.Say($"[SelfTest] playback{Environment.NewLine}{summary}");
+        Logger.Info($"[SelfTest] playback{Environment.NewLine}{summary}");
 
         try
         {
             var folder = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles", "SelfTest");
-            var csv = new StringBuilder("t,path_error_m,fastest_structure_mps" + Environment.NewLine);
-            foreach ((var t, var e, var s) in samples)
-                csv.AppendLine(string.Create(CultureInfo.InvariantCulture, $"{t:0.000},{e:0.000},{s:0.00}"));
+            var csv = new StringBuilder("t,fastest_structure_mps" + Environment.NewLine);
+            foreach ((var t, var s) in samples)
+                csv.AppendLine(string.Create(CultureInfo.InvariantCulture, $"{t:0.000},{s:0.00}"));
             File.WriteAllText(Path.Combine(folder, $"playback-{stem}.csv"), csv.ToString());
             File.WriteAllText(Path.Combine(folder, $"playback-{stem}.txt"), summary + Environment.NewLine);
         }
         catch (IOException e)
         {
-            Mod.Say($"[SelfTest] could not write the playback report: {e.Message}");
+            Logger.Info($"[SelfTest] could not write the playback report: {e.Message}");
         }
     }
 }

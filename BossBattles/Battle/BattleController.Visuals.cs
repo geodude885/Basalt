@@ -1,7 +1,6 @@
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
-using UnityEngine;
 
 namespace BossBattles.Battle;
 
@@ -10,8 +9,6 @@ internal sealed partial class BattleController
 {
     private readonly ReShade _reshade = new();
     private long _lastBeat = -1;
-
-    public Color? LaneEdgeColour => _lane.EdgeColourNow;
 
     /// <summary>How strongly a chart's looks and signals apply: 0 off, 1 full.</summary>
     public float VisualsStrength

@@ -34,7 +34,7 @@ $devCs = $devCs -replace $devInfo, "MelonInfo(typeof($modName.DevTools.DevToolsE
 Set-Content $devCsPath -Value $devCs -NoNewline
 Write-Host "[OK] Updated DevToolsEntry.cs" -ForegroundColor Green
 
-# Thunderstore manifest — update name, version, author
+# Thunderstore manifest - update name, version, author
 $manifestPath = Join-Path $root "Thunderstore\manifest.json"
 $manifest = Get-Content $manifestPath -Raw
 $manifest = $manifest -replace '"name"\s*:\s*"[^"]*"', "`"name`": `"$modName`""

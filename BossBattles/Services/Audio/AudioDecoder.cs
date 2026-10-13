@@ -22,22 +22,27 @@ public interface IPcmSource : IDisposable
 /// <summary>Opens an MP3, OGG or WAV by its extension; the game ships without Unity's own decoders.</summary>
 public static class AudioDecoder
 {
-    public static IPcmSource Open(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    public static IPcmSource Open(string path)
     {
-        ".mp3" => new Mp3Source(File.OpenRead(path)),
-        ".ogg" => new OggSource(File.OpenRead(path)),
-        ".wav" => WavSource.Open(File.OpenRead(path)),
-        _ => throw new NotSupportedException($"{Path.GetFileName(path)}: songs are .mp3, .ogg or .wav"),
-    };
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        if (extension is not (".mp3" or ".ogg" or ".wav")) throw new NotSupportedException($"{Path.GetFileName(path)}: songs are .mp3, .ogg or .wav");
 
-    /// <summary>A whole song decoded - for small ones and tests; the game streams instead.</summary>
-    public static PcmAudio DecodeAll(IPcmSource source)
-    {
-        var samples = new List<float>((int)Math.Min(int.MaxValue / 2, source.Frames * source.Channels));
-        var block = new float[source.SampleRate * source.Channels];
-        int read;
-        while ((read = source.Read(block, 0, block.Length)) > 0) samples.AddRange(block.Take(read));
-        return new PcmAudio(samples.ToArray(), source.Channels, source.SampleRate);
+        FileStream stream = File.OpenRead(path);
+        try
+        {
+            return extension switch
+            {
+                ".mp3" => new Mp3Source(stream),
+                ".ogg" => new OggSource(stream),
+                _ => WavSource.Open(stream),
+            };
+        }
+        catch
+        {
+            // A file that is not what its name says must not stay open (and locked) behind the error.
+            stream.Dispose();
+            throw;
+        }
     }
 
     private sealed class Mp3Source : IPcmSource

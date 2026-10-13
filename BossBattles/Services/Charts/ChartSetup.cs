@@ -25,8 +25,12 @@ public static class ChartSetup
     {
         var text = ChartDocument.SetRaw(chartText, "arena", JsonSerializer.Serialize(Arena(arena), Options));
         text = ChartDocument.SetRaw(text, "lane", JsonSerializer.Serialize(new LaneDto(Round(lane.Length), Round(lane.Width)), Options));
-        return ChartDocument.SetRaw(text, "actors", JsonSerializer.Serialize(actors.Select(Actor).ToList(), Indented));
+        return WriteActors(text, actors);
     }
+
+    /// <summary>The chart text with its actors set.</summary>
+    public static string WriteActors(string chartText, IReadOnlyList<ActorSpec> actors) =>
+        ChartDocument.SetRaw(chartText, "actors", JsonSerializer.Serialize(actors.Select(Actor).ToList(), Indented));
 
     /// <summary>
     /// The chart text with every <c>"z"</c> in <c>events</c> and <c>phases</c> scaled by
@@ -91,7 +95,8 @@ public static class ChartSetup
         actor.Name,
         new PointDto(Round(actor.At.X), Round(actor.At.Z), actor.At.Facing == 0f ? null : Round(actor.At.Facing)),
         actor.Look,
-        actor.Shiftstones);
+        actor.Shiftstones,
+        actor.Measurement is { } size ? new MeasurementDto(MathF.Round(size.Height, 3), MathF.Round(size.ArmSpan, 3)) : null);
 
     private static float Round(float value) => MathF.Round(value, 2);
 
@@ -101,7 +106,9 @@ public static class ChartSetup
 
     private sealed record PointDto(float X, float Z, float? Facing);
 
-    private sealed record ActorDto(string Id, string Name, PointDto At, string Look, IReadOnlyList<string>? Shiftstones);
+    private sealed record ActorDto(string Id, string Name, PointDto At, string Look, IReadOnlyList<string>? Shiftstones, MeasurementDto? Measurement);
+
+    private sealed record MeasurementDto(float Height, float ArmSpan);
 
     /// <summary>A number as a chart writes it.</summary>
     public static string Format(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);

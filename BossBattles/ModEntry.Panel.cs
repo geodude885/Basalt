@@ -1,5 +1,4 @@
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Scoring;
 using BossBattles.UI;
@@ -35,7 +34,7 @@ public sealed partial class ModEntry
             case StudioState.Deciding:
                 return new[]
                 {
-                    new PickerButton("keep", "KEEP", Green, KeepTake),
+                    new PickerButton("keep", "KEEP", Green, () => Saved(studio.Keep)),
                     new PickerButton("again", "AGAIN", Orange, studio.Again),
                     new PickerButton("replay", "REPLAY", Blue, studio.Review),
                     new PickerButton("discard", "DISCARD", Red, studio.Discard),
@@ -51,7 +50,7 @@ public sealed partial class ModEntry
                     new PickerButton("map", "MAP", Blue, studio.NextMap),
                     new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneHere),
                     new PickerButton("actorhere", "ACTOR HERE", Blue, studio.ActorHere),
-                    new PickerButton("save", "SAVE", Green, SaveSetup),
+                    new PickerButton("save", "SAVE", Green, () => Saved(studio.SaveSetup)),
                     new PickerButton("cancel", "CANCEL", Red, studio.CancelSetup),
                 };
 
@@ -85,7 +84,7 @@ public sealed partial class ModEntry
             buttons.Add(new PickerButton("record", "RECORD", Red, () => RecordChosen()));
             buttons.Add(new PickerButton("mime", "MIME", Orange, () => RecordChosen(mime: true)));
             if (Studio.HasTrack(chosen)) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseSection(chosen!, _settings.ArenaOverride)));
-            if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => UndoChosen(chosen!)));
+            if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => Saved(() => Studio.Undo(chosen!))));
         }
 
         return buttons;
@@ -103,10 +102,10 @@ public sealed partial class ModEntry
                     ? new PickerCard($"<color=#ffa040><b>MIMING</b></color>\n<b>{studio.ActorName}</b>\n<size=60%>{seconds:0.0}s</size>\n<size=45%>throw the chart's shots by hand - nothing spawns. {what}</size>")
                     : new PickerCard($"<color=#ff5050><b>RECORDING</b></color>\n<b>{studio.ActorName}</b>\n<size=60%>{seconds:0.0}s  |  {moves} move{(moves == 1 ? "" : "s")}</size>\n<size=45%>{what}</size>");
 
-            case StudioState.Deciding when studio.Take is { } take:
-                var span = studio.IsSection ? $"{studio.Section.From:0.0}s to {studio.Section.To:0.0}s" : $"{take.Duration - take.Start:0.0}s";
+            case StudioState.Deciding when studio.NewClip is { } clip:
+                var span = studio.IsSection ? $"{studio.Section.From:0.0}s to {studio.Section.To:0.0}s" : $"{clip.Duration - clip.Start:0.0}s";
                 return new PickerCard(
-                    $"<size=45%>{(studio.IsSection ? "SECTION" : "TAKE")}</size>\n<b>{take.Name}</b>\n<size=55%>{span}  |  {take.Moves.Count} move{(take.Moves.Count == 1 ? "" : "s")}</size>\n" +
+                    $"<size=45%>{(studio.IsSection ? "SECTION" : "CLIP")}</size>\n<b>{clip.Name}</b>\n<size=55%>{span}  |  {clip.Moves.Count} move{(clip.Moves.Count == 1 ? "" : "s")}</size>\n" +
                     $"<size=45%>keep it in {studio.Entry?.Name}, record again, watch it again, or throw it away</size>");
 
             case StudioState.Setup:
@@ -134,14 +133,10 @@ public sealed partial class ModEntry
     {
         const int width = 28;
         var length = Math.Max(end, to);
-        var bar = new char[width];
-        for (var i = 0; i < width; i++)
-        {
-            var t = (i + 0.5) * length / width;
-            bar[i] = t >= from && t < to ? '#' : '-';
-        }
-
-        return $"|{new string(bar)}|";
+        IEnumerable<char> bar = Enumerable.Range(0, width)
+            .Select(i => (i + 0.5) * length / width)
+            .Select(t => t >= from && t < to ? '#' : '-');
+        return $"|{string.Concat(bar)}|";
     }
 
     /// <summary>The chosen chart, where it is played and your best - or why it does not load.</summary>

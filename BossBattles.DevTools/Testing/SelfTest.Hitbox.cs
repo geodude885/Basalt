@@ -1,7 +1,6 @@
 using System.Collections;
 using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Pools;
 using UnityEngine;
@@ -23,7 +22,7 @@ internal static partial class SelfTest
 
         Actor? actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists);
         SkinnedMeshRenderer? mesh = actor?.Player?.Controller?.GetComponentInChildren<SkinnedMeshRenderer>();
-        if (actor == null || mesh == null || Mod.Battle.LaneOrigin is not { } origin)
+        if (actor == null || mesh == null || LaneOrigin is not { } origin)
         {
             _hitboxProblem = "hitbox check: no actor to throw at";
             yield break;
@@ -33,7 +32,7 @@ internal static partial class SelfTest
         foreach (var recentProjectile in new[] { false, true })
         {
             Vector3 chest = mesh.bounds.center + (Vector3.up * 0.2f);
-            Vector3 towardYou = ActorRig.Flat(origin - chest);
+            Vector3 towardYou = VectorHelpers.Flat(origin - chest);
             Vector3 from = chest + (towardYou * 4f);
             Vector3 along = (chest - from).normalized;
 
@@ -63,6 +62,16 @@ internal static partial class SelfTest
             yield return new WaitForSeconds(0.2f);
         }
 
-        Mod.Say($"[SelfTest] hitbox: {string.Join(", ", results)}");
+        Logger.Info($"[SelfTest] hitbox: {string.Join(", ", results)}");
+
+        // Lethal hits through the game's own ReduceHealth: the actor must live on, on some health.
+        foreach (var amount in new short[] { 19, 19, 30 })
+        {
+            actor.Player!.Controller.PlayerHealth.ReduceHealth(amount, true);
+            yield return new WaitForSeconds(0.3f);
+            var hp = actor.Exists ? actor.Player!.Data.HealthPoints : (short)0;
+            Logger.Info($"[SelfTest] lethal hit of {amount}: the actor {(actor.Exists ? $"lives on {hp} HP" : "is gone")}");
+            if (!actor.Exists || hp <= 0) _hitboxProblem = (_hitboxProblem == null ? "" : _hitboxProblem + "; ") + $"a hit of {amount} killed the actor";
+        }
     }
 }

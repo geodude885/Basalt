@@ -1,5 +1,3 @@
-using BossBattles.Actors;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
@@ -20,7 +18,6 @@ internal static class Arena
     private const int PitIndex = 4;
     private const float LoadFadeSeconds = 2f;
 
-    /// <summary>Match spots closer than this are not a lane.</summary>
     private const float MinimumArenaLane = 2f;
 
     /// <summary>How far the lane ends stay inside the arena floor's edge.</summary>
@@ -67,12 +64,12 @@ internal static class Arena
         SceneManager? scenes = SceneManager.instance ?? UnityEngine.Object.FindObjectOfType<SceneManager>();
         if (scenes == null)
         {
-            Mod.Note("Arena.LoadFailed", "no SceneManager to load with");
+            Logger.Error("[Arena.LoadFailed] no SceneManager to load with");
             return;
         }
 
         scenes.LoadSceneAsync(index, false, false, LoadFadeSeconds, LoadSceneMode.Single, null);
-        Mod.Note("Arena.Loading", $"scene {index}");
+        Logger.Info($"[Arena.Loading] scene {index}");
     }
 
     /// <summary>The two match spots of a loaded Ring or Pit, or null when they cannot be found.</summary>
@@ -84,48 +81,8 @@ internal static class Arena
             : (locations.transform.GetChild(0), locations.transform.GetChild(1));
     }
 
-    /// <summary>Logs every transform in a match map that could mark the players' ends, inactive ones included.</summary>
-    public static void DumpSpotCandidates()
-    {
-        var logic = GameObject.Find("Logic");
-        if (logic == null)
-        {
-            Mod.Note("Arena.Spots", "no Logic root in this scene");
-            return;
-        }
-
-        foreach (var path in new[] { "ArenaLocation", "Pedestals", "SpawnPointHandler", "SpawntransformSlabOne", "SpawntransformSlabTwo" })
-        {
-            Transform? root = logic.transform.Find(path);
-            if (root == null)
-            {
-                Mod.Note("Arena.Spots", $"{path}: missing", echo: false);
-                continue;
-            }
-
-            var lines = new List<string> { $"{path} {Describe.Vector(root.position)}{(root.gameObject.activeInHierarchy ? "" : " (inactive)")}" };
-            for (var i = 0; i < root.childCount; i++)
-            {
-                Transform child = root.GetChild(i);
-                lines.Add($"{child.name} {Describe.Vector(child.position)}{(child.gameObject.activeSelf ? "" : " (inactive)")}");
-            }
-
-            Mod.Note("Arena.Spots", string.Join(" | ", lines), echo: false);
-        }
-    }
-
     /// <summary>What a chart's arena spot is measured from: a match map's centre, the Gym's origin, or null for "here".</summary>
     public static Vector3? Anchor(ArenaKind kind) => kind == ArenaKind.Here ? null : kind == ArenaKind.Gym ? Vector3.zero : MatchSpots()?.You.position ?? Vector3.zero;
-
-    /// <summary>A compass bearing in degrees (0 = +Z, 90 = +X) as a flat vector.</summary>
-    public static Vector3 Compass(float degrees) => Quaternion.Euler(0f, degrees, 0f) * Vector3.forward;
-
-    /// <summary>A flat direction's compass bearing, 0 to 360.</summary>
-    public static float Bearing(Vector3 direction)
-    {
-        var degrees = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-        return degrees < 0f ? degrees + 360f : degrees;
-    }
 
     /// <summary>
     /// The lane: from the chart's spot when it has one; otherwise from your feet here and in the Gym,
@@ -136,7 +93,7 @@ internal static class Arena
         return kind != ArenaKind.Here && spec.HasSpot
             ? SpotFrame(kind, spec, lane)
             : kind is ArenaKind.Here or ArenaKind.Gym
-            ? LaneFrame.From(Describe.ToNumerics(yourFloor), Describe.ToNumerics(spec.Facing is { } f ? Compass(f) : yourFacing))
+            ? LaneFrame.From(StringHelpers.ToNumerics(yourFloor), StringHelpers.ToNumerics(spec.Facing is { } f ? VectorHelpers.Compass(f) : yourFacing))
             : FittedFrame(kind, spec, lane, yourFloor, yourFacing);
     }
 
@@ -147,94 +104,67 @@ internal static class Arena
 
         if (!TryFloorHeight(spot, out var floorY))
         {
-            Mod.Note("Arena.SpotOffFloor", $"{kind}: nothing to stand on at the chart's spot {Describe.Vector(spot)} - check arena.at");
+            Logger.Warning($"[Arena.SpotOffFloor] {kind}: nothing to stand on at the chart's spot {StringHelpers.Vector(spot)} - check arena.at");
             return null;
         }
 
         spot.y = floorY;
         Vector3 towardCentre = anchor - spot;
         towardCentre.y = 0f;
-        Vector3 direction = spec.Facing is { } facing ? Compass(facing)
+        Vector3 direction = spec.Facing is { } facing ? VectorHelpers.Compass(facing)
             : towardCentre.sqrMagnitude > 0.25f ? towardCentre.normalized
             : Vector3.forward;
 
         Vector3 far = spot + (direction * lane.Length);
         if (!TryFloorHeight(far, out _))
-            Mod.Note("Arena.LaneOffFloor", $"{kind}: the lane's far end {Describe.Vector(far)} is off the floor - the actor may fall", echo: false);
+            Logger.Debug($"[Arena.LaneOffFloor] {kind}: the lane's far end {StringHelpers.Vector(far)} is off the floor - the actor may fall");
 
-        Mod.Note("Arena.Lane", $"{kind}: chart spot {Describe.Vector(spot)} facing {Bearing(direction):0}deg, {lane.Length:0.0} m", echo: false);
-        return LaneFrame.From(Describe.ToNumerics(spot), Describe.ToNumerics(direction));
+        Logger.Debug($"[Arena.Lane] {kind}: chart spot {StringHelpers.Vector(spot)} facing {VectorHelpers.Bearing(direction):0}deg, {lane.Length:0.0} m");
+        return LaneFrame.From(StringHelpers.ToNumerics(spot), StringHelpers.ToNumerics(direction));
     }
 
     private static LaneFrame? FittedFrame(ArenaKind kind, ArenaSpec spec, Lane lane, Vector3 yourFloor, Vector3 yourFacing)
     {
-        DumpSpotCandidates();
-
         (Transform You, Transform Them)? spots = MatchSpots();
         if (spots != null)
         {
             Vector3 you = spots.Value.You.position;
             Vector3 them = spots.Value.Them.position;
             if (Vector2.Distance(new Vector2(you.x, you.z), new Vector2(them.x, them.z)) >= MinimumArenaLane)
-                return LaneFrame.Between(Describe.ToNumerics(you), Describe.ToNumerics(them), lane.Length);
+                return LaneFrame.Between(StringHelpers.ToNumerics(you), StringHelpers.ToNumerics(them), lane.Length);
 
             // Solo, both spots sit on the arena's centre.
-            Mod.Note("Arena.SpotsTogether", $"{kind}: the match spots are {Describe.Vector(you)} and {Describe.Vector(them)} - measuring the arena floor instead", echo: false);
+            Logger.Debug($"[Arena.SpotsTogether] {kind}: the match spots are {StringHelpers.Vector(you)} and {StringHelpers.Vector(them)} - measuring the arena floor instead");
         }
         else
         {
-            Mod.Note("Arena.NoMatchSpots", $"{kind}: no ArenaLocation in {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} - measuring the arena floor instead");
+            Logger.Warning($"[Arena.NoMatchSpots] {kind}: no ArenaLocation in {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} - measuring the arena floor instead");
         }
 
         Vector3 centre = spots?.You.position ?? Vector3.zero;
         Vector3 towardCentre = centre - yourFloor;
         towardCentre.y = 0f;
-        Vector3 direction = spec.Facing is { } facing ? Compass(facing)
+        Vector3 direction = spec.Facing is { } facing ? VectorHelpers.Compass(facing)
             : towardCentre.sqrMagnitude > 0.25f ? towardCentre.normalized
-            : ActorRig.Flat(yourFacing);
-
-        // Across the floor through its centre, kept clear of the edge; the arena may shrink a lane, never stretch it.
-        if (TryArenaFloor(centre, out Bounds floor))
-        {
-            var radius = Mathf.Min(Mathf.Min(floor.extents.x, floor.extents.z) - EdgeMargin, lane.Length / 2f);
-            if (radius >= MinimumArenaLane / 2f)
-            {
-                var floorCentre = new Vector3(centre.x, floor.max.y, centre.z);
-                Vector3 near = floorCentre - (direction * radius);
-                Vector3 far = floorCentre + (direction * radius);
-                Mod.Note("Arena.Lane", $"{kind}: floor {Describe.Vector(floor.center)} extents {Describe.Vector(floor.extents)}; lane {Describe.Vector(near)} -> {Describe.Vector(far)} ({radius * 2f:0.0} m)", echo: false);
-                return LaneFrame.Between(Describe.ToNumerics(near), Describe.ToNumerics(far), lane.Length);
-            }
-
-            Mod.Note("Arena.FloorTooSmall", $"{kind}: the floor under the centre is only {floor.size.x:0.0} x {floor.size.z:0.0} m");
-        }
+            : VectorHelpers.Flat(yourFacing);
 
         // Last resort: from where the map put you, towards the centre, at the chart's own length.
-        return LaneFrame.From(Describe.ToNumerics(yourFloor), Describe.ToNumerics(direction));
-    }
+        var fromYou = LaneFrame.From(StringHelpers.ToNumerics(yourFloor), StringHelpers.ToNumerics(direction));
+        if (!TryArenaFloor(centre, out Bounds floor)) return fromYou;
 
-    /// <summary>Of <paramref name="directions"/> evenly spread, the one with the most clear space at chest height.</summary>
-    public static (Vector3 Direction, float Clear) OpenestDirection(Vector3 floor, int directions = 16, float reach = 30f)
-    {
-        Vector3 from = floor + (Vector3.up * 1.2f);
-        (Vector3 Direction, float Clear) best = (Vector3.forward, -1f);
-
-        for (var i = 0; i < directions; i++)
+        // Across the floor through its centre, kept clear of the edge; the arena may shrink a lane, never stretch it.
+        var radius = Mathf.Min(Mathf.Min(floor.extents.x, floor.extents.z) - EdgeMargin, lane.Length / 2f);
+        if (radius < MinimumArenaLane / 2f)
         {
-            Vector3 direction = Quaternion.Euler(0f, 360f * i / directions, 0f) * Vector3.forward;
-            var clear = reach;
-
-            foreach (RaycastHit hit in Physics.RaycastAll(from, direction, reach))
-            {
-                Collider collider = hit.collider;
-                if (!IsGround(collider)) continue;
-                clear = Mathf.Min(clear, hit.distance);
-            }
-
-            if (clear > best.Clear) best = (direction, clear);
+            Logger.Info($"[Arena.FloorTooSmall] {kind}: the floor under the centre is only {floor.size.x:0.0} x {floor.size.z:0.0} m");
+            return fromYou;
         }
 
-        return best;
+        var floorCentre = new Vector3(centre.x, floor.max.y, centre.z);
+        Vector3 near = floorCentre - (direction * radius);
+        Vector3 far = floorCentre + (direction * radius);
+        Logger.Debug($"[Arena.Lane] {kind}: floor {StringHelpers.Vector(floor.center)} extents {StringHelpers.Vector(floor.extents)}; lane {StringHelpers.Vector(near)} -> {StringHelpers.Vector(far)} ({radius * 2f:0.0} m)");
+        return LaneFrame.Between(StringHelpers.ToNumerics(near), StringHelpers.ToNumerics(far), lane.Length);
     }
 
     /// <summary>The height of the ground under a point, looking down from well above it.</summary>
@@ -266,7 +196,7 @@ internal static class Arena
         }
 
         floor = default;
-        Mod.Note("Arena.NoFloor", $"nothing to stand on under the arena centre {Describe.Vector(centre)}");
+        Logger.Warning($"[Arena.NoFloor] nothing to stand on under the arena centre {StringHelpers.Vector(centre)}");
         return false;
     }
 
@@ -284,7 +214,7 @@ internal static class Arena
             return collider.gameObject.layer;
         }
 
-        Mod.Note("Arena.NoFloor", $"nothing but players under {Describe.Vector(near)} - backstop on the default layer");
+        Logger.Warning($"[Arena.NoFloor] nothing but players under {StringHelpers.Vector(near)} - backstop on the default layer");
         return 0;
     }
 }

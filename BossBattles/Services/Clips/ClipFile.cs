@@ -5,10 +5,10 @@ namespace BossBattles.Services.Clips;
 
 /// <summary>
 /// Clips on disk: JSON, one compact row per frame. Poses are <c>[px, py, pz, qx, qy, qz, qw]</c>,
-/// sticks <c>[x, y]</c>; a take adds its lane spot <c>"p"</c>, facing <c>"a"</c> and moves.
+/// with the lane spot <c>"p"</c>, facing <c>"a"</c> and moves.
 /// <code>
-/// { "name": "boss-take-1", "moves": [ { "t": 2.1, "move": "Straight" } ],
-///   "frames": [ { "t": 0, "o": [...], "h": [...], "l": [...], "r": [...], "w": [0, 0], "n": [0, 0], "p": [0, 12] }, ... ] }
+/// { "name": "boss-clip-1", "moves": [ { "t": 2.1, "move": "Straight" } ],
+///   "frames": [ { "t": 0, "h": [...], "l": [...], "r": [...], "p": [0, 12], "a": 0 }, ... ] }
 /// </code>
 /// </summary>
 public static class ClipFile
@@ -30,14 +30,14 @@ public static class ClipFile
             Frames = clip.Frames.Select(f => new FrameDto
             {
                 T = MathF.Round(f.Time, 4),
-                O = Pose(f.Offset),
                 H = Pose(f.Head),
                 L = Pose(f.LeftHand),
                 R = Pose(f.RightHand),
-                W = new[] { f.Walk.X, f.Walk.Y },
-                N = new[] { f.Turn.X, f.Turn.Y },
-                P = f.Lane is { } p ? new[] { MathF.Round(p.X, 4), MathF.Round(p.Y, 4) } : null,
+                P = f.Offset is { } p ? new[] { MathF.Round(p.X, 4), MathF.Round(p.Y, 4) } : null,
                 A = f.Yaw is { } a ? MathF.Round(a, 2) : null,
+                F = f.LeftFingers is { } lf && f.RightFingers is { } rf
+                    ? new[] { lf.Index, lf.Grip, lf.Thumb, lf.Sway, rf.Index, rf.Grip, rf.Thumb, rf.Sway }.Select(v => MathF.Round(v, 3)).ToArray()
+                    : null,
             }).ToList(),
         };
 
@@ -60,26 +60,23 @@ public static class ClipFile
         if (dto?.Frames == null || dto.Frames.Count == 0) return (null, "the clip has no frames");
 
         var frames = new List<ClipFrame>(dto.Frames.Count);
-        for (var i = 0; i < dto.Frames.Count; i++)
+        foreach ((FrameDto f, var i) in dto.Frames.Select((f, i) => (f, i)))
         {
-            FrameDto f = dto.Frames[i];
-            if (!TryPose(f.O, out ClipPose offset) || !TryPose(f.H, out ClipPose head)
-                || !TryPose(f.L, out ClipPose left) || !TryPose(f.R, out ClipPose right))
+            if (!TryPose(f.H, out ClipPose head) || !TryPose(f.L, out ClipPose left) || !TryPose(f.R, out ClipPose right))
             {
-                return (null, $"frames[{i}] needs o, h, l and r as [px, py, pz, qx, qy, qz, qw]");
+                return (null, $"frames[{i}] needs h, l and r as [px, py, pz, qx, qy, qz, qw]");
             }
 
-            if (i > 0 && f.T < frames[i - 1].Time) return (null, $"frames[{i}].t ({f.T}) goes back in time");
+            if (frames.Count > 0 && f.T < frames[^1].Time) return (null, $"frames[{i}].t ({f.T}) goes back in time");
 
-            frames.Add(new ClipFrame(f.T, offset, head, left, right, Stick(f.W), Stick(f.N), f.P is { Length: 2 } ? new Vector2(f.P[0], f.P[1]) : null, f.A));
+            frames.Add(new ClipFrame(f.T, head, left, right, f.P is { Length: 2 } ? new Vector2(f.P[0], f.P[1]) : null, f.A,
+                f.F is { Length: 8 } ? new ClipFingers(f.F[0], f.F[1], f.F[2], f.F[3]) : null,
+                f.F is { Length: 8 } ? new ClipFingers(f.F[4], f.F[5], f.F[6], f.F[7]) : null));
         }
 
-        var moves = new List<ClipMove>();
-        foreach (MoveDto move in dto.Moves ?? [])
-        {
-            if (string.IsNullOrWhiteSpace(move.Move)) return (null, "a move needs a name");
-            moves.Add(new ClipMove(move.T, move.Move));
-        }
+        List<MoveDto> moveDtos = dto.Moves ?? [];
+        if (moveDtos.Any(m => string.IsNullOrWhiteSpace(m.Move))) return (null, "a move needs a name");
+        var moves = moveDtos.Select(m => new ClipMove(m.T, m.Move!)).ToList();
 
         return (new Clip(string.IsNullOrWhiteSpace(dto.Name) ? fallbackName : dto.Name, frames) { Moves = moves.OrderBy(m => m.Time).ToList() }, null);
     }
@@ -101,8 +98,6 @@ public static class ClipFile
         return true;
     }
 
-    private static Vector2 Stick(float[]? values) => values is { Length: 2 } ? new Vector2(values[0], values[1]) : Vector2.Zero;
-
     private sealed class ClipDto
     {
         public string? Name { get; set; }
@@ -119,13 +114,11 @@ public static class ClipFile
     private sealed class FrameDto
     {
         public float T { get; set; }
-        public float[]? O { get; set; }
         public float[]? H { get; set; }
         public float[]? L { get; set; }
         public float[]? R { get; set; }
-        public float[]? W { get; set; }
-        public float[]? N { get; set; }
         public float[]? P { get; set; }
         public float? A { get; set; }
+        public float[]? F { get; set; }
     }
 }

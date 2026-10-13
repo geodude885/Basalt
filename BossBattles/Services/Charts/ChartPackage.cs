@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
-using BossBattles.Services.Clips;
 
 namespace BossBattles.Services.Charts;
 
@@ -64,10 +63,10 @@ public static class ChartPackage
     }
 
     /// <summary>
-    /// Packs a chart as written, with its song, cover and clips (from its <c>clips/</c>, else
-    /// <paramref name="clips"/>), overwriting <paramref name="output"/>.
+    /// Packs a chart as written, with its song, cover and the clips in its <c>clips/</c>, overwriting
+    /// <paramref name="output"/>.
     /// </summary>
-    public static PackResult Pack(ChartEntry entry, string output, Func<string, Clip?>? clips = null)
+    public static PackResult Pack(ChartEntry entry, string output)
     {
         Chart chart = entry.Result.Chart ?? throw new ArgumentException($"{entry.Name} does not load, so it cannot be packed", nameof(entry));
         var chartJson = File.ReadAllText(entry.Source == ChartSource.Package
@@ -88,9 +87,7 @@ public static class ChartPackage
             if (chart.Music != null) AddFile(zip, entry, chart.Music.File, "song", included, missing);
             if (chart.Cover != null) AddFile(zip, entry, chart.Cover, "cover", included, missing);
 
-            foreach (var name in chart.Events.OfType<ClipEvent>().Select(c => c.Clip)
-                         .Concat(chart.Tracks.SelectMany(t => t.Takes).Select(t => t.Clip))
-                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var name in chart.Tracks.SelectMany(t => t.Clips).Select(t => t.Clip).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 var entryName = $"{ClipsFolder}/{FileStem(name)}.json";
                 var own = ChartPaths.Inside(entry.AssetFolder, entryName);
@@ -98,11 +95,6 @@ public static class ChartPackage
                 if (own != null && File.Exists(own))
                 {
                     zip.CreateEntryFromFile(own, entryName);
-                    included.Add(entryName);
-                }
-                else if (clips?.Invoke(name) is { } clip)
-                {
-                    WriteText(zip, entryName, ClipFile.Write(clip));
                     included.Add(entryName);
                 }
                 else

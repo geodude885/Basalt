@@ -1,4 +1,4 @@
-using BossBattles.Actors;
+using BossBattles.DevTools.Testing;
 using HarmonyLib;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
@@ -8,7 +8,7 @@ using UnityEngine.XR;
 
 namespace BossBattles.DevTools.Flatscreen;
 
-/// <summary>Walks (numpad 8/2/4/6) and snap-turns (7/9) your player when no headset is active.</summary>
+/// <summary>Walks (numpad 8/2/4/6) and snap-turns (7/9) your player when no headset is active, and drives the test actor.</summary>
 public static class FlatscreenControls
 {
     private static Vector2 _walk;
@@ -72,17 +72,28 @@ public static class FlatscreenControls
     private static float Axis(KeyCode positive, KeyCode negative) =>
         (Input.GetKey(positive) ? 1f : 0f) - (Input.GetKey(negative) ? 1f : 0f);
 
+    /// <summary>The numpad for you without a headset, and the keys for the test actor in bot control.</summary>
     [HarmonyPatch(typeof(PlayerMovement), nameof(PlayerMovement.ProcessInput))]
-    public static class LocalSticks
+    public static class Sticks
     {
+        private static bool _throwLogged;
+
         public static bool Prefix(PlayerMovement __instance)
         {
             try
             {
+                if (__instance.ParentController is not { } controller) return true;
+
+                if (TestBench.Sticks is { } test && TestBench.Actor?.Player?.Controller is { } actor && actor.Pointer == controller.Pointer)
+                {
+                    MovementInput.Apply(__instance, test.Walk, test.Turn);
+                    return false;
+                }
+
                 if (!Enabled || !IsFlatscreen) return true;
 
                 PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
-                if (you == null || __instance.ParentController == null || __instance.ParentController.Pointer != you.Pointer) return true;
+                if (you == null || controller.Pointer != you.Pointer) return true;
 
                 MovementInput.Apply(__instance, _walk, _turn);
                 return false;
@@ -94,6 +105,19 @@ public static class FlatscreenControls
                 Log($"numpad movement failed and is off for this session: {e}");
                 return true;
             }
+        }
+
+        /// <summary>
+        /// Without a headset the game's ProcessInput throws every frame, and once patched the interop
+        /// trampoline reports each one: suppressed, the first logged.
+        /// </summary>
+        public static Exception? Finalizer(Exception? __exception)
+        {
+            if (__exception == null || _throwLogged) return null;
+
+            _throwLogged = true;
+            Log($"PlayerMovement.ProcessInput throws - expected without a headset; suppressed: {__exception.Message}");
+            return null;
         }
     }
 }

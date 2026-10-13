@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Reflection;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using MelonLoader;
 using UnityEngine;
@@ -77,7 +76,8 @@ internal sealed class ReShade
                 Original original = Remember(pack);
                 if (!look.On)
                 {
-                    Restore(pack, original);
+                    Set(pack.Enabled, original.Enabled.Value);
+                    foreach ((MelonPreferences_Entry<float> entry, var value) in original.Values) Set(entry, value);
                     continue;
                 }
 
@@ -121,7 +121,7 @@ internal sealed class ReShade
             try
             {
                 var loaded = load.Invoke(pack.Handle, null) is true;
-                Mod.Note(loaded ? "Visuals.Preloaded" : "Visuals.PreloadFailed", $"{pack.Name}: {(loaded ? "loaded" : "did not load")} in {clock.Elapsed.TotalMilliseconds:0.0} ms", echo: !loaded);
+                Logger.Write(loaded ? LogLevel.Debug : LogLevel.Error, $"[{(loaded ? "Visuals.Preloaded" : "Visuals.PreloadFailed")}] {pack.Name}: {(loaded ? "loaded" : "did not load")} in {clock.Elapsed.TotalMilliseconds:0.0} ms");
             }
             catch (Exception e)
             {
@@ -148,11 +148,11 @@ internal sealed class ReShade
             }
         }
 
-        Mod.Note("Visuals.Restored", $"{_originals.Count} pack(s) put back to your settings", echo: false);
+        Logger.Debug($"[Visuals.Restored] {_originals.Count} pack(s) put back to your settings");
         _originals.Clear();
     }
 
-    /// <summary>The installed packs and their parameters, for the log.</summary>
+    /// <summary>The installed packs and their parameters, for the Logger.</summary>
     public static string Describe()
     {
         if (!Installed) return "RumbleReShaded is not installed";
@@ -175,14 +175,8 @@ internal sealed class ReShade
             (pack.Enabled, pack.Enabled.Value),
             pack.Params.ToDictionary(p => p.Entry, p => p.Entry.Value));
         _originals[pack.Handle] = original;
-        Mod.Note("Visuals.Pack", $"{pack.Name}: taken over for the run (yours: {(original.Enabled.Value ? "on" : "off")})", echo: false);
+        Logger.Debug($"[Visuals.Pack] {pack.Name}: taken over for the run (yours: {(original.Enabled.Value ? "on" : "off")})");
         return original;
-    }
-
-    private static void Restore(Pack pack, Original original)
-    {
-        Set(pack.Enabled, original.Enabled.Value);
-        foreach ((MelonPreferences_Entry<float> entry, var value) in original.Values) Set(entry, value);
     }
 
     /// <summary>Writes only a real change: each write raises the entry's changed event.</summary>
@@ -200,7 +194,7 @@ internal sealed class ReShade
 
     private void Once(string key, string text)
     {
-        if (_reported.Add(key)) Mod.Note(key.Split(':')[0], text);
+        if (_reported.Add(key)) Logger.Write(key.Contains("Failed", StringComparison.Ordinal) ? LogLevel.Error : LogLevel.Warning, $"[{key.Split(':')[0]}] {text}");
     }
 
     private static Pack? FindPack(string name) =>
@@ -255,19 +249,19 @@ internal sealed class ReShade
             Type? mod = rrs?.GetType("RumbleReShaded.RumbleReShadedMod");
             if (api == null || mod == null)
             {
-                Mod.Note("Visuals.NoReShade", rrs == null ? "RumbleReShaded is not installed - chart looks and battle signals are off" : "this RumbleReShaded has no API (1.2.0+ needed)", echo: false);
+                Logger.Debug(rrs == null ? "[Visuals.NoReShade] RumbleReShaded is not installed - chart looks and battle signals are off" : "[Visuals.NoReShade] this RumbleReShaded has no API (1.2.0+ needed)");
                 return;
             }
 
             _fire = api.GetMethod("Fire", new[] { typeof(string), typeof(Vector3), typeof(float), typeof(float), typeof(float) });
             _ready = api.GetProperty("Ready");
             _packs = mod.GetProperty("Packs");
-            Mod.Note("Visuals.ReShade", $"RumbleReShaded {rrs!.GetName().Version} found (API {api.GetProperty("ApiVersion")?.GetValue(null)})", echo: false);
+            Logger.Debug($"[Visuals.ReShade] RumbleReShaded {rrs!.GetName().Version} found (API {api.GetProperty("ApiVersion")?.GetValue(null)})");
         }
         catch (Exception e)
         {
             _fire = null;
-            Mod.Note("Visuals.NoReShade", $"RumbleReShaded could not be read: {e.Message}");
+            Logger.Info($"[Visuals.NoReShade] RumbleReShaded could not be read: {e.Message}");
         }
     }
 
@@ -276,11 +270,9 @@ internal sealed class ReShade
         /// <summary>A parameter by label or shader property, ignoring case, spaces and underscores.</summary>
         public Param? Find(string key)
         {
-            var wanted = Squash(key);
-            return Params.FirstOrDefault(p => Squash(p.Label) == wanted || Squash(p.Property) == wanted);
+            var wanted = StringHelpers.Squash(key);
+            return Params.FirstOrDefault(p => StringHelpers.Squash(p.Label) == wanted || StringHelpers.Squash(p.Property) == wanted);
         }
-
-        private static string Squash(string s) => new(s.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
     }
 
     private sealed record Param(string Property, string Label, float Min, float Max, MelonPreferences_Entry<float> Entry);

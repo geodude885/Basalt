@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<Import Project="..\Version.props" />
 	<Import Project="..\Rumble.props" />
@@ -26,11 +26,6 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="BossBattles.DevTools" />
-	</ItemGroup>
-
-	<!-- Built from editor/index.html by tools/build-editor.py. -->
-	<ItemGroup>
-		<EmbeddedResource Include="Editor\BossBattlesEditor.html" LogicalName="BossBattles.ChartEditor.html" />
 	</ItemGroup>
 
 	<!-- The song decoders: MelonLoader loads libraries from RUMBLE\UserLibs. -->

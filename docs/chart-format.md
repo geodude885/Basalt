@@ -31,7 +31,7 @@ top-level folder), the song and cover, and `clips/<clip>.json` for each clip the
 makes one. A package may not contain paths reaching outside itself, more than 512 entries, or more
 than 256 MB unpacked.
 
-Clips are looked up in the chart's own `clips/` first, then in `UserData/BossBattles/Clips`.
+Recorded clips are kept in the chart's own `clips/`.
 
 ## Coordinates and time
 
@@ -102,6 +102,7 @@ minutes are kept in mono to save memory. Prefer MP3 or OGG for sharing - a WAV i
 | `at` | `{ x, z, facing }` | far end, centre | Its lane spot; `facing` in degrees, 0 = looking down the lane at you. |
 | `look` | string | `you` | `you` (whoever plays), `default`, `defaultMale`, `defaultFemale`, or a character string as the game stores it. A chart made in game stores its maker's, so everyone fights the boss as it was dressed. |
 | `shiftstones` | `"you"` or list | `you` | The stones it wears: `"you"` for whoever plays's, or up to two names - `Adamant`, `Charge`, `Flow`, `Guard`, `Stubborn`, `Surge`, `Vigor`, `Volatile` (`"VigorStone"` works too); `[]` for none. A chart made in game stores its maker's. |
+| `measurement` | `{ height, armSpan }` | yours | The body's size in metres. KEEPing a clip stores the recorder's, so recorded poses fit the body whoever plays. |
 
 ### `phases[]`
 
@@ -109,7 +110,7 @@ minutes are kept in mono to save memory. Prefer MP3 or OGG for sharing - a WAV i
 |---|---|---|---|
 | `name` | string | "Phase n" | Shown as it starts. |
 | `start` / `startBeat` | time | required (first must be 0) | Strictly increasing. |
-| `scoreMultiplier` | number | 1 | Multiplies damage and knock-out points on actors. |
+| `scoreMultiplier` | number | 1 | Multiplies the points for damage on actors. |
 | `colours` | object | the chart's | The lane's colours from this phase on, over the chart's own (fields as in [`colours`](#colours); any left out stay as the chart has them). The lane fades to them over a second. `"walls": "none"` hides walls the chart shows. |
 | `actor`, `at` | id, spot | - | Moves one actor as the phase starts. |
 
@@ -121,7 +122,6 @@ Each has a time (`t` or `beat`), optionally `actor` (default: the first), and ex
 |---|---|---|
 | `projectile` | object, below | A structure telegraphs, then flies at you. |
 | `move` | name | The actor does one of its moves: `Straight`, `Uppercut`, `Kick`, `Stomp`, `Explode`, `Flick`, `Parry`, `Jump`, `RockSlide`, `Disc`, `SpawnBall`, `SpawnCube`, `SpawnPillar`, `SpawnWall`, `HoldLeft`, `HoldRight`. |
-| `clip` | name | The actor plays a recorded clip. |
 | `at` | `{ x, z, facing }` | The actor moves to a new spot, planted. |
 
 `projectile`:
@@ -138,22 +138,22 @@ Each has a time (`t` or `beat`), optionally `actor` (default: the first), and ex
 
 ### `tracks[]`
 
-Written by RECORD / KEEP; one per actor. Each take plays until the next take starts, or its own end.
+Written by RECORD / KEEP; one per actor. Each clip plays until the next clip starts, or its own end.
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `actor` | id | the first actor | Whose performance. |
-| `takes[].t` / `takes[].beat` | time | required | When the take starts, in chart time; strictly increasing. |
-| `takes[].clip` | name | required | The take, in the chart's `clips/`. |
-| `takes[].from` | seconds | 0 | Where in the take to start - takes keep chart time, so a whole take is `from` = `t`. |
-| `takes[].to` | seconds | its end | Where in the take to stop. |
-| `takes[].mime` | bool | false | Mimed: the actor moves as recorded but runs none of its moves, so nothing spawns - a performance over the chart's own projectiles. Recorded with MIME on the picker: the chart's projectiles fly while you perform at the boss's end, and your own moves stay off. |
+| `clips[].t` / `clips[].beat` | time | required | When the clip starts, in chart time; strictly increasing. |
+| `clips[].clip` | name | required | The recording, in the chart's `clips/`. |
+| `clips[].from` | seconds | 0 | Where in the recording to start - clips keep chart time, so a whole clip is `from` = `t`. |
+| `clips[].to` | seconds | its end | Where in the recording to stop. |
+| `clips[].mime` | bool | false | Mimed: the actor moves as recorded but runs none of its moves, so nothing spawns - a performance over the chart's own projectiles. Recorded with MIME on the picker: the chart's projectiles fly while you perform at the boss's end, and your own moves stay off. |
 
-A take is a clip that also holds the performer's path (`"p": [x, z]` per frame, lane coordinates)
-and the moves made (`"moves": [ { "t", "move" } ]`). During a take the actor's gesture recognition
-is off, each move runs at its time, and the actor is held to the path. Charted `move` events still
-run on top of a take; an `at` for an actor in the middle of a take is skipped (the path would only
-drag it back).
+A clip holds the performer's head, hands and fingers, path (`"p": [x, z]` per frame, lane
+coordinates), facing and the moves made (`"moves": [ { "t", "move" } ]`). While a clip plays the
+actor's gesture recognition is off, each move runs at its time, and the actor is held to the path.
+Charted `move` events still run on top of a clip; an `at` for an actor in the middle of a clip is
+skipped (the path would only drag it back).
 
 ### `colours`
 
@@ -205,7 +205,6 @@ the chart's `visuals`:
 | `bossbattles.spawn` | event | A projectile comes up, at its spot; lasts its telegraph. |
 | `bossbattles.launch` | event | A projectile is thrown, from its spot. |
 | `bossbattles.hit` | event | You take damage, at your head; strength = damage / 5 (up to 1). |
-| `bossbattles.knockout` | event | An actor is knocked out, where it stands. |
 | `bossbattles.phase` | event | A new phase starts, at your end of the lane. |
 | `bossbattles.survived` / `bossbattles.defeated` | event | The battle ends. |
 | `_RRS_bossbattles_running` | global float | 1 during a battle, else 0. |
@@ -222,7 +221,7 @@ setting; at 0 no events are sent.
 ## Versioning
 
 - **Format 2** added `tracks`. A chart with tracks says `"format": 2`, so an older mod refuses it
-  rather than playing it without its recorded actor. Keeping a take raises the format for you.
+  rather than playing it without its recorded actor. Keeping a clip raises the format for you.
 
 
 `format` changes only when an existing chart would be read differently. New optional fields do not

@@ -1,4 +1,3 @@
-using BossBattles.Core;
 using HarmonyLib;
 using Il2CppRUMBLE.Networking.MatchFlow;
 
@@ -24,7 +23,7 @@ public static class ArenaPatches
                 if (!Mod.Battle.HoldsArena) return;
 
                 runOriginal = false;
-                Mod.Note("Arena.ForceQuitBlocked", "the match handler tried to send you back to the Gym mid-battle", echo: false);
+                Logger.Debug("[Arena.ForceQuitBlocked] the match handler tried to send you back to the Gym mid-battle");
             });
 
             return runOriginal;

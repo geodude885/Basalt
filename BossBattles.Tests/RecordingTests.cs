@@ -1,4 +1,5 @@
 using System.Numerics;
+using BossBattles.DevTools.Testing;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Xunit;
@@ -78,36 +79,36 @@ public sealed class ChartDocumentTests
 public sealed class TrackTests
 {
     [Fact]
-    public void TracksLoadAndPlayEachTakeUntilTheNext()
+    public void TracksLoadAndPlayEachClipUntilTheNext()
     {
         Chart chart = Load(/*lang=json,strict*/ """
             {
               "format": 2,
               "actors": [ { "id": "boss" } ],
-              "tracks": [ { "actor": "boss", "takes": [
-                { "t": 0, "clip": "boss-take-1" },
-                { "t": 8, "clip": "boss-take-2", "from": 8, "to": 12 },
-                { "t": 12, "clip": "boss-take-1", "from": 12 }
+              "tracks": [ { "actor": "boss", "clips": [
+                { "t": 0, "clip": "boss-clip-1" },
+                { "t": 8, "clip": "boss-clip-2", "from": 8, "to": 12 },
+                { "t": 12, "clip": "boss-clip-1", "from": 12 }
               ] } ]
             }
             """);
 
         Track track = Assert.Single(chart.Tracks);
-        Assert.Equal(3, track.Takes.Count);
+        Assert.Equal(3, track.Clips.Count);
 
-        var plays = new ChartRunner(chart).Schedule.OfType<PlayTake>().ToList();
-        Assert.Equal(new PlayTake(0, "boss", "boss-take-1", 0, 8), plays[0]);
-        Assert.Equal(new PlayTake(8, "boss", "boss-take-2", 8, 12), plays[1]);
-        Assert.Equal(new PlayTake(12, "boss", "boss-take-1", 12, null), plays[2]);
+        var plays = new ChartRunner(chart).Schedule.OfType<PlayClip>().ToList();
+        Assert.Equal(new PlayClip(0, "boss", "boss-clip-1", 0, 8), plays[0]);
+        Assert.Equal(new PlayClip(8, "boss", "boss-clip-2", 8, 12), plays[1]);
+        Assert.Equal(new PlayClip(12, "boss", "boss-clip-1", 12, null), plays[2]);
     }
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "tracks": [ { "takes": [ { "t": 0, "clip": "a" } ] } ] }""", "format")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "actor": "nobody", "takes": [] } ] }""", "is not one of the chart's actors")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "takes": [ { "t": 0 } ] } ] }""", "needs the take's name")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "takes": [ { "t": 2, "clip": "a" }, { "t": 1, "clip": "b" } ] } ] }""", "must be after the take before it")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "takes": [ { "t": 0, "clip": "a", "from": 3, "to": 2 } ] } ] }""", "must be after from")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "takes": [] }, { "takes": [] } ] }""", "one per actor")]
+    [InlineData(/*lang=json,strict*/ """{ "tracks": [ { "clips": [ { "t": 0, "clip": "a" } ] } ] }""", "format")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "actor": "nobody", "clips": [] } ] }""", "is not one of the chart's actors")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [ { "t": 0 } ] } ] }""", "needs the clip's name")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [ { "t": 2, "clip": "a" }, { "t": 1, "clip": "b" } ] } ] }""", "must be after the clip before it")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [ { "t": 0, "clip": "a", "from": 3, "to": 2 } ] } ] }""", "must be after from")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [] }, { "clips": [] } ] }""", "one per actor")]
     public void BadTracksAreReported(string json, string expected)
     {
         ChartLoadResult result = ChartLoader.Load(json);
@@ -117,7 +118,7 @@ public sealed class TrackTests
     }
 
     [Fact]
-    public void KeepingATakeWritesTheTrackRaisesTheFormatAndCoversTheEnd()
+    public void KeepingAClipWritesTheTrackRaisesTheFormatAndCoversTheEnd()
     {
         const string text = /*lang=json*/ """
             {
@@ -129,32 +130,42 @@ public sealed class TrackTests
             }
             """;
         Chart chart = Load(text);
-        Clip take = Take("boss-take-1", 0f, 9.5f);
+        Clip clip = Recorded("boss-clip-1", 0f, 9.5f);
 
-        var kept = Takes.KeepWhole(text, chart, "boss", take);
+        var kept = TrackEdits.KeepWhole(text, chart, "boss", clip, 0);
         Chart after = Load(kept);
 
         Assert.Contains("// my chart", kept, StringComparison.Ordinal);
-        Assert.Equal(new TakeSegment(0, "boss-take-1", 0), Assert.Single(Assert.Single(after.Tracks).Takes));
+        Assert.Equal(new TrackClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
         Assert.Equal(10.5, after.End);
 
-        var again = Takes.KeepWhole(kept, after, "boss", Take("boss-take-2", 0f, 3f));
-        Assert.Equal("boss-take-2", Assert.Single(Assert.Single(Load(again).Tracks).Takes).Clip);
+        var again = TrackEdits.KeepWhole(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
+        Assert.Equal("boss-clip-2", Assert.Single(Assert.Single(Load(again).Tracks).Clips).Clip);
         Assert.Equal(10.5, Load(again).End);
     }
 
     [Fact]
-    public void TakeNamesCountUp()
+    public void AClipRecordedLateStartsAtZeroAndTheTrackPlacesIt()
+    {
+        const string text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ], "end": 5 }""";
+        Chart after = Load(TrackEdits.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
+
+        Assert.Equal(new TrackClip(40, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
+        Assert.Equal(45, after.End);
+    }
+
+    [Fact]
+    public void ClipNamesCountUp()
     {
         var folder = Path.Combine(Path.GetTempPath(), $"BossBattles-{Guid.NewGuid():N}");
         try
         {
-            Assert.Equal("boss-take-1", Takes.NextName(folder, "boss"));
+            Assert.Equal("boss-clip-1", TrackEdits.NextName(folder, "boss"));
             Directory.CreateDirectory(folder);
-            File.WriteAllText(Path.Combine(folder, "boss-take-1.json"), "{}");
-            File.WriteAllText(Path.Combine(folder, "boss-take-7.json"), "{}");
-            File.WriteAllText(Path.Combine(folder, "other-take-9.json"), "{}");
-            Assert.Equal("boss-take-8", Takes.NextName(folder, "boss"));
+            File.WriteAllText(Path.Combine(folder, "boss-clip-1.json"), "{}");
+            File.WriteAllText(Path.Combine(folder, "boss-clip-7.json"), "{}");
+            File.WriteAllText(Path.Combine(folder, "other-clip-9.json"), "{}");
+            Assert.Equal("boss-clip-8", TrackEdits.NextName(folder, "boss"));
         }
         finally
         {
@@ -163,18 +174,18 @@ public sealed class TrackTests
     }
 
     [Fact]
-    public void ATakeKeepsItsPathAndMovesOnDisk()
+    public void AClipKeepsItsPathAndMovesOnDisk()
     {
-        Clip take = Take("boss-take-1", 2f, 4f);
-        Clip withMoves = new(take.Name, take.Frames) { Moves = new[] { new ClipMove(2.5f, "Straight"), new ClipMove(3f, "Kick") } };
+        Clip clip = Recorded("boss-clip-1", 2f, 4f);
+        Clip withMoves = new(clip.Name, clip.Frames) { Moves = new[] { new ClipMove(2.5f, "Straight"), new ClipMove(3f, "Kick") } };
 
         (Clip? read, var error) = ClipFile.Read(ClipFile.Write(withMoves), "x");
 
         Assert.Null(error);
         Assert.Equal(withMoves.Moves, read!.Moves);
         Assert.Equal(2f, read.Start);
-        Assert.Equal(new Vector2(0.5f, 11f), read.Frames[0].Lane);
-        Assert.Equal(new Vector2(0.75f, 11f), read.Sample(3f).Lane!.Value, new Vector2Comparer());
+        Assert.Equal(new Vector2(0.5f, 11f), read.Frames[0].Offset);
+        Assert.Equal(new Vector2(0.75f, 11f), read.Sample(3f).Offset!.Value, new Vector2Comparer());
     }
 
     [Fact]
@@ -185,19 +196,19 @@ public sealed class TrackTests
         (Clip? read, _) = ClipFile.Read(ClipFile.Write(old), "x");
 
         Assert.Empty(read!.Moves);
-        Assert.Null(read.Frames[0].Lane);
+        Assert.Null(read.Frames[0].Offset);
         Assert.DoesNotContain("\"P\"", ClipFile.Write(old), StringComparison.Ordinal);
     }
 
-    /// <summary>A take from <paramref name="start"/> to <paramref name="end"/> walking from x 0.5 to 1.0 at z 11.</summary>
-    private static Clip Take(string name, float start, float end)
+    /// <summary>A clip from <paramref name="start"/> to <paramref name="end"/> walking from x 0.5 to 1.0 at z 11.</summary>
+    private static Clip Recorded(string name, float start, float end)
     {
         var pose = new ClipPose(Vector3.Zero, Quaternion.Identity);
         var frames = new List<ClipFrame>();
         for (var t = start; t <= end + 0.0001f; t += 0.5f)
         {
             var x = 0.5f + (0.5f * (t - start) / Math.Max(0.001f, end - start));
-            frames.Add(new ClipFrame(t, pose, pose, pose, pose, Vector2.Zero, Vector2.Zero, new Vector2(x, 11f)));
+            frames.Add(new ClipFrame(t, pose, pose, pose, new Vector2(x, 11f)));
         }
 
         return new Clip(name, frames);
@@ -219,55 +230,55 @@ public sealed class TrackTests
 
 public sealed class SectionTests
 {
-    private static readonly TakeSegment[] Whole = { new(0, "take-1", 0) };
+    private static readonly TrackClip[] Whole = { new(0, "clip-1", 0) };
 
     [Fact]
-    public void PunchingIntoOneTakeCutsItAndResumesIt()
+    public void PunchingIntoOneClipCutsItAndResumesIt()
     {
-        IReadOnlyList<TakeSegment> result = Takes.PunchIn(Whole, "take-2", 4, 8);
+        IReadOnlyList<TrackClip> result = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
 
         Assert.Equal(new[]
         {
-            new TakeSegment(0, "take-1", 0, 4),
-            new TakeSegment(4, "take-2", 4, 8),
-            new TakeSegment(8, "take-1", 8),
+            new TrackClip(0, "clip-1", 0, 4),
+            new TrackClip(4, "clip-2", 0, 4),
+            new TrackClip(8, "clip-1", 8),
         }, result);
     }
 
     [Fact]
     public void PunchingAgainOverAnEarlierPunchReplacesWhatItCovers()
     {
-        IReadOnlyList<TakeSegment> once = Takes.PunchIn(Whole, "take-2", 4, 8);
-        IReadOnlyList<TakeSegment> twice = Takes.PunchIn(once, "take-3", 6, 10);
+        IReadOnlyList<TrackClip> once = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
+        IReadOnlyList<TrackClip> twice = TrackEdits.PunchIn(once, "clip-3", 6, 10);
 
         Assert.Equal(new[]
         {
-            new TakeSegment(0, "take-1", 0, 4),
-            new TakeSegment(4, "take-2", 4, 6),
-            new TakeSegment(6, "take-3", 6, 10),
-            new TakeSegment(10, "take-1", 10),
+            new TrackClip(0, "clip-1", 0, 4),
+            new TrackClip(4, "clip-2", 0, 2),
+            new TrackClip(6, "clip-3", 0, 4),
+            new TrackClip(10, "clip-1", 10),
         }, twice);
     }
 
     [Fact]
     public void PunchingFromTheStartOrOverEverythingLeavesNothingStale()
     {
-        Assert.Equal(new[] { new TakeSegment(0, "take-2", 0, 3), new TakeSegment(3, "take-1", 3) }, Takes.PunchIn(Whole, "take-2", 0, 3));
-        Assert.Equal(new[] { new TakeSegment(0, "take-2", 0, 30) }, Takes.PunchIn(new[] { new TakeSegment(0, "take-1", 0, 20) }, "take-2", 0, 30));
+        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 3), new TrackClip(3, "clip-1", 3) }, TrackEdits.PunchIn(Whole, "clip-2", 0, 3));
+        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 30) }, TrackEdits.PunchIn(new[] { new TrackClip(0, "clip-1", 0, 20) }, "clip-2", 0, 30));
     }
 
     [Fact]
     public void ASplicedTrackLoadsAndPlaysInOrder()
     {
-        const string text = /*lang=json,strict*/ """{ "format": 2, "actors": [ { "id": "boss" } ], "tracks": [ { "actor": "boss", "takes": [ { "t": 0, "clip": "take-1", "from": 0 } ] } ] }""";
+        const string text = /*lang=json,strict*/ """{ "format": 2, "actors": [ { "id": "boss" } ], "tracks": [ { "actor": "boss", "clips": [ { "t": 0, "clip": "clip-1", "from": 0 } ] } ] }""";
         Chart chart = ChartLoader.Load(text).Chart!;
-        Clip take = new("take-2", new[] { Frame(4f), Frame(8f) });
+        Clip clip = new("clip-2", new[] { Frame(0f), Frame(4f) });
 
-        Chart after = ChartLoader.Load(Takes.KeepSection(text, chart, "boss", take, 4, 8)).Chart!;
-        var plays = new ChartRunner(after).Schedule.OfType<PlayTake>().ToList();
+        Chart after = ChartLoader.Load(TrackEdits.KeepSection(text, chart, "boss", clip, 4, 8)).Chart!;
+        var plays = new ChartRunner(after).Schedule.OfType<PlayClip>().ToList();
 
-        Assert.Equal(new[] { "take-1", "take-2", "take-1" }, plays.Select(p => p.Clip));
-        Assert.Equal(new double?[] { 4, 8, null }, plays.Select(p => p.Until));
+        Assert.Equal(new[] { "clip-1", "clip-2", "clip-1" }, plays.Select(p => p.Clip));
+        Assert.Equal(new double?[] { 4, 4, null }, plays.Select(p => p.To));
     }
 
     [Fact]
@@ -283,7 +294,7 @@ public sealed class SectionTests
                 { "t": 5.2, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 9 }, "speed": 5, "telegraph": 0.5 } },
                 { "t": 6, "move": "Straight" }
               ],
-              "tracks": [ { "takes": [ { "t": 0, "clip": "take-1" } ] } ]
+              "tracks": [ { "clips": [ { "t": 0, "clip": "clip-1" } ] } ]
             }
             """).Chart!;
 
@@ -291,7 +302,7 @@ public sealed class SectionTests
         var first = runner.Advance(5).ToList();
 
         Assert.Equal("B", Assert.Single(first.OfType<EnterPhase>()).Phase.Name);
-        Assert.Equal(5, Assert.Single(first.OfType<PlayTake>()).From);
+        Assert.Equal(5, Assert.Single(first.OfType<PlayClip>()).From);
         Assert.Single(first.OfType<SpawnProjectile>());
         Assert.Empty(first.OfType<LaunchProjectile>());
         Assert.Single(first.OfType<PlaceActor>());
@@ -338,7 +349,7 @@ public sealed class SectionTests
     private static ClipFrame Frame(float t)
     {
         var pose = new ClipPose(Vector3.Zero, Quaternion.Identity);
-        return new ClipFrame(t, pose, pose, pose, pose, Vector2.Zero, Vector2.Zero, Vector2.Zero);
+        return new ClipFrame(t, pose, pose, pose, Vector2.Zero);
     }
 }
 
@@ -364,7 +375,8 @@ public sealed class TempoTests
             """).Chart!;
 
         Assert.Equal(4 + 2, Assert.Single(chart.Events).Time, 6);
-        Assert.Equal(new[] { new TempoChange(0, 120), new TempoChange(8, 60) }, chart.Tempo!.Changes);
+        Assert.Equal(120, chart.Tempo!.BpmAt(3.9));
+        Assert.Equal(60, chart.Tempo.BpmAt(4.1));
     }
 
     [Fact]
@@ -413,16 +425,16 @@ public sealed class FacingTests
         Assert.Equal(expected, Clip.LerpDegrees(from, to, t) % 360f, 2);
 
     [Fact]
-    public void ATakeKeepsItsFacingsOnDisk()
+    public void AClipKeepsItsFacingsOnDisk()
     {
         var pose = new ClipPose(Vector3.Zero, Quaternion.Identity);
-        var take = new Clip("t", new[]
+        var clip = new Clip("t", new[]
         {
-            new ClipFrame(0f, pose, pose, pose, pose, Vector2.Zero, Vector2.Zero, Vector2.Zero, 350f),
-            new ClipFrame(1f, pose, pose, pose, pose, Vector2.Zero, Vector2.Zero, Vector2.Zero, 30f),
+            new ClipFrame(0f, pose, pose, pose, Vector2.Zero, 350f),
+            new ClipFrame(1f, pose, pose, pose, Vector2.Zero, 30f),
         });
 
-        (Clip? read, _) = ClipFile.Read(ClipFile.Write(take), "t");
+        (Clip? read, _) = ClipFile.Read(ClipFile.Write(clip), "t");
 
         Assert.Equal(350f, read!.Frames[0].Yaw);
         Assert.Equal(10f, read.Sample(0.5f).Yaw!.Value, 2);
@@ -433,9 +445,9 @@ public sealed class FacingTests
     {
         var lane = LaneFrame.From(Vector3.Zero, new Vector3(1f, 0f, 0f));
 
-        Assert.Equal(90f, lane.Bearing, 2);
-        Assert.Equal(180f, lane.ToLaneYaw(270f), 2);
-        Assert.Equal(270f, lane.ToWorldYaw(180f), 2);
+        Assert.Equal(90f, lane.Anchor.Yaw, 2);
+        Assert.Equal(180f, lane.Anchor.ToLocalYaw(270f), 2);
+        Assert.Equal(270f, lane.Anchor.ToWorldYaw(180f), 2);
     }
 }
 

@@ -1,8 +1,9 @@
 using BossBattles.Actors;
-using BossBattles.Core;
+using BossBattles.Services.Clips;
 using HarmonyLib;
 using Il2CppRUMBLE.Audio;
 using Il2CppRUMBLE.Combat.ShiftStones;
+using Il2CppRUMBLE.Input;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
@@ -20,32 +21,30 @@ public static class ActorPatches
 {
     public static int Apply(HarmonyLib.Harmony harmony) => PatchGroup.Apply(harmony, typeof(ActorPatches));
 
-    /// <summary>Lethal damage knocks an actor out instead of running the game's death handling.</summary>
+    /// <summary>
+    /// An actor never reaches 0 HP, where the game's death handling would run - for an extra player
+    /// it crashed the process. Before a lethal hit it is put back on full health, so the hit lands as
+    /// any other: its effects play and the score counts all of it.
+    /// </summary>
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.ReduceHealth))]
-    public static class KnockOutInsteadOfLethalReduce
+    public static class NoLethalHits
     {
         [HarmonyPriority(Priority.First)]
         public static bool Prefix(PlayerHealth __instance, short amount)
         {
             var runOriginal = true;
 
-            PatchGuard.Run(nameof(KnockOutInsteadOfLethalReduce), () =>
+            PatchGuard.Run(nameof(NoLethalHits), () =>
             {
                 Actor? actor = Mod.Actors.Find(__instance.ParentController);
-                if (actor == null) return;
+                if (actor == null || amount < actor.Player!.Data.HealthPoints) return;
 
-                if (actor.KnockedOut)
-                {
-                    runOriginal = false;
-                    return;
-                }
+                actor.FullHeal();
+                if (amount < Actor.MaxHealth) return;
 
-                var hp = actor.Player!.Data.HealthPoints;
-                if (amount < hp) return;
-
+                // Lethal even on full health: scored, not dealt.
                 runOriginal = false;
-                Mod.Battle.OnActorDamaged(actor, hp);
-                actor.KnockOut($"hit of {amount} on {hp} HP");
+                Mod.Battle.OnActorDamaged(actor, amount);
             });
 
             return runOriginal;
@@ -53,22 +52,16 @@ public static class ActorPatches
     }
 
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.SetHealth))]
-    public static class KnockOutInsteadOfLethalSet
+    public static class NoLethalSetHealth
     {
         [HarmonyPriority(Priority.First)]
         public static bool Prefix(PlayerHealth __instance, short newHealth)
         {
             var runOriginal = true;
 
-            PatchGuard.Run(nameof(KnockOutInsteadOfLethalSet), () =>
+            PatchGuard.Run(nameof(NoLethalSetHealth), () =>
             {
-                if (newHealth > 0) return;
-
-                Actor? actor = Mod.Actors.Find(__instance.ParentController);
-                if (actor == null) return;
-
-                runOriginal = false;
-                actor.KnockOut($"SetHealth({newHealth})");
+                if (newHealth <= 0 && Mod.Actors.Find(__instance.ParentController) != null) runOriginal = false;
             });
 
             return runOriginal;
@@ -136,7 +129,7 @@ public static class ActorPatches
         });
     }
 
-    /// <summary>An actor takes <see cref="Actor.KnockbackTaken"/> of the game's knockback; 0 skips it.</summary>
+    /// <summary>An actor clips <see cref="Actor.SelfKnockbackMultiplier"/> of the game's knockback; 0 skips it.</summary>
     [HarmonyPatch(typeof(CombatManager), nameof(CombatManager.ApplyPlayerKnockbackForce))]
     public static class Knockback
     {
@@ -151,13 +144,13 @@ public static class ActorPatches
                 Actor? actor = Mod.Actors.Find(controller);
                 if (actor == null) return;
 
-                if (actor.KnockbackTaken <= 0f)
+                if (actor.SelfKnockbackMultiplier <= 0f)
                 {
                     runOriginal = false;
                     return;
                 }
 
-                multiplier *= actor.KnockbackTaken;
+                multiplier *= actor.SelfKnockbackMultiplier;
             });
 
             knockbackMultiplier = multiplier;
@@ -166,46 +159,64 @@ public static class ActorPatches
     }
 
     /// <summary>
-    /// A Local player's ProcessInput reads your joystick; a bot-controlled actor gets its own sticks
-    /// instead. Gestures need nothing: pose recognition is pure head and hand geometry.
+    /// A Local player's ProcessInput reads your joystick; an actor gets still sticks instead, as its clip
+    /// moves and turns it. Gestures need nothing: pose recognition is pure head and hand geometry.
     /// </summary>
     [HarmonyPatch(typeof(PlayerMovement), nameof(PlayerMovement.ProcessInput))]
-    public static class BotSticks
+    public static class ActorSticks
     {
         [HarmonyPriority(Priority.First)]
         public static bool Prefix(PlayerMovement __instance)
         {
             var runOriginal = true;
 
-            PatchGuard.Run(nameof(BotSticks), () =>
+            PatchGuard.Run(nameof(ActorSticks), () =>
             {
-                Actor? actor = Mod.Actors.Find(__instance.ParentController);
-                if (actor == null || !actor.IsBotControlled) return;
+                if (Mod.Actors.Find(__instance.ParentController) == null) return;
 
                 runOriginal = false;
-                MovementInput.Apply(__instance, actor.Input.Walk, actor.Input.Turn);
+                __instance.currentRawWalkInput = Vector2.zero;
+                __instance.currentRawTurnInput = Vector2.zero;
+                __instance.currentWalkInput = Vector2.zero;
             });
 
             return runOriginal;
-        }
-
-        /// <summary>
-        /// Without a headset the game's ProcessInput throws every frame, and once patched the interop
-        /// trampoline reports each one: log the first, count the rest.
-        /// </summary>
-        public static Exception? Finalizer(Exception? __exception)
-        {
-            if (__exception == null) return null;
-
-            Mod.Note("Input.ProcessInputThrew",
-                $"PlayerMovement.ProcessInput threw - expected without a headset; suppressed, further ones only counted: {__exception.Message}",
-                echo: Mod.Census["Input.ProcessInputThrew"] == 0);
-            return null;
         }
     }
 
     // Sounds only your own player plays are authored 2D; played inside these scopes for an actor,
     // they are made positional (ActorSoundsPositional).
+
+    /// <summary>A Local player's fingers follow your controllers; an actor's follow its clip instead.</summary>
+    [HarmonyPatch(typeof(PlayerHandPresence), nameof(PlayerHandPresence.GetHandPresenceInputForHand))]
+    public static class ActorFingers
+    {
+        private static bool _throwLogged;
+
+        [HarmonyPriority(Priority.First)]
+        public static bool Prefix(PlayerHandPresence __instance, InputManager.Hand hand, ref PlayerHandPresence.HandPresenceInput __result)
+        {
+            ClipFingers? fingers = null;
+            PatchGuard.Run(nameof(ActorFingers), () => fingers = Mod.Actors.Find(__instance.ParentController)?.Fingers(hand == InputManager.Hand.Left));
+            if (fingers is not { } held) return true;
+
+            __result = new PlayerHandPresence.HandPresenceInput { indexInput = held.Index, gripInput = held.Grip, thumbInput = held.Thumb, swayInput = held.Sway };
+            return false;
+        }
+
+        /// <summary>
+        /// Without a headset the game's own read throws every frame, and once patched the interop
+        /// trampoline reports each one: suppressed (relaxed fingers), the first logged.
+        /// </summary>
+        public static Exception? Finalizer(Exception? __exception)
+        {
+            if (__exception == null || _throwLogged) return null;
+
+            _throwLogged = true;
+            Logger.Debug($"[Actor.FingersThrew] PlayerHandPresence.GetHandPresenceInputForHand throws - expected without a headset; suppressed: {__exception.Message}");
+            return null;
+        }
+    }
 
     [HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseCompleted))]
     public static class PoseSoundScope
@@ -249,7 +260,7 @@ public static class ActorPatches
             AudioSource? source = __result.AudioSource;
             if (source == null || source.spatialBlend >= 1f) return;
 
-            Mod.Note("Actor.SoundMadePositional", $"{(call == null ? "?" : call.name)} spatialBlend {source.spatialBlend:F2} -> 1", echo: false);
+            Logger.Debug($"[Actor.SoundMadePositional] {(call == null ? "?" : call.name)} spatialBlend {source.spatialBlend:F2} -> 1");
             source.spatialBlend = 1f;
         });
     }

@@ -1,5 +1,3 @@
-using BossBattles.Core;
-
 namespace BossBattles.Patches;
 
 internal static class PatchGroup
@@ -14,16 +12,16 @@ internal static class PatchGroup
 
         foreach (Type patch in group.GetNestedTypes())
         {
-            Mod.Log?.Line($"patching {group.Name}.{patch.Name}...");
+            Logger.Debug($"patching {group.Name}.{patch.Name}...");
             try
             {
                 var count = harmony.CreateClassProcessor(patch).Patch()?.Count ?? 0;
                 total += count;
-                Mod.Note(count == 0 ? "Patches.PatchedNothing" : "Patches.Patched", $"{group.Name}.{patch.Name}", echo: count == 0);
+                Logger.Write(count == 0 ? LogLevel.Warning : LogLevel.Debug, $"[{(count == 0 ? "Patches.PatchedNothing" : "Patches.Patched")}] {group.Name}.{patch.Name}");
             }
             catch (Exception e)
             {
-                Mod.Note("Patches.PatchFailed", $"{group.Name}.{patch.Name}: {e.Message}");
+                Logger.Error($"[Patches.PatchFailed] {group.Name}.{patch.Name}: {e.Message}");
             }
         }
 

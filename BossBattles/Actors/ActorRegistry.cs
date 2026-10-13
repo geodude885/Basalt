@@ -3,30 +3,17 @@ using UnityEngine;
 
 namespace BossBattles.Actors;
 
-/// <summary>Every actor in play; patches ask it whether a player is one of ours.</summary>
 internal sealed class ActorRegistry
 {
     private readonly List<Actor> _actors = [];
 
     public IReadOnlyList<Actor> All => _actors;
 
-    public Actor? First => _actors.FirstOrDefault(a => a.Exists);
-
     public void Add(Actor actor) => _actors.Add(actor);
 
     public void Remove(Actor actor) => _actors.Remove(actor);
 
-    public Actor? Find(Player? player)
-    {
-        if (player == null) return null;
-
-        foreach (Actor actor in _actors)
-        {
-            if (actor.Owns(player)) return actor;
-        }
-
-        return null;
-    }
+    public Actor? Find(Player? player) => player == null ? null : _actors.FirstOrDefault(a => a.Owns(player));
 
     public Actor? Find(PlayerController? controller) => controller == null ? null : Find(controller.assignedPlayer);
 

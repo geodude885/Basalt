@@ -1,6 +1,6 @@
 using BossBattles.Actors;
 using BossBattles.Battle;
-using BossBattles.Core;
+using BossBattles.Services.Charts;
 using BossBattles.Services.Placement;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppRUMBLE.Managers;
@@ -112,6 +112,10 @@ internal sealed class ChartPicker
 
     public IEnumerable<string> ButtonIds => _buttons.Select(b => b.Spec.Id);
 
+    /// <summary>The showing buttons' faces, unit boxes in their own space.</summary>
+    public IEnumerable<(string Id, Transform Face)> ShownButtons =>
+        _shown ? _buttons.Where(b => b.Root.activeSelf).Select(b => (b.Spec.Id, b.Face)) : [];
+
     public Transform? Root => _root?.transform;
 
     public void Update()
@@ -134,11 +138,16 @@ internal sealed class ChartPicker
         if (!_shown) return;
 
         if (Time.time >= _nextRefresh) Refresh();
-        if (Follow) KeepNearYou();
+        // Following you: brought back when you walk away from it.
+        if (Follow && PlayerManager.instance?.localPlayer?.Controller is { } you)
+        {
+            Vector3 away = _root!.transform.position - ActorRig.From(you).Head.position;
+            away.y = 0f;
+            if (away.magnitude > 1.6f) PlaceInFrontOfYou();
+        }
 
         foreach (Button button in _buttons) button.Settle();
         CheckPokes();
-        CheckClick();
     }
 
     /// <summary>Brings the picker to you, opening it; in the Gym this becomes its fixed spot.</summary>
@@ -148,7 +157,18 @@ internal sealed class ChartPicker
         if (_root == null || !_shown) return;
 
         PlaceInFrontOfYou();
-        SaveSpot();
+        if (!FixedInGym || !Arena.InScene(ArenaKind.Gym)) return;
+
+        Vector3 position = _root.transform.position;
+        try
+        {
+            _spots.Set(Arena.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
+            Logger.Debug($"[Picker.Moved] {StringHelpers.Vector(position)}");
+        }
+        catch (IOException e)
+        {
+            Logger.Error($"[Picker.SaveFailed] {e.Message}");
+        }
     }
 
     /// <summary>The same as pushing the button; false when no such button shows.</summary>
@@ -158,7 +178,7 @@ internal sealed class ChartPicker
         if (button == null) return false;
 
         button.Flash();
-        Mod.Note("Picker.Pressed", id, echo: false);
+        Logger.Debug($"[Picker.Pressed] {id}");
         _nextRefresh = 0f;
         button.Spec.Press();
         return true;
@@ -207,7 +227,7 @@ internal sealed class ChartPicker
         else
         {
             // Same buttons; their actions may close over new state.
-            for (var i = 0; i < wanted.Count; i++) _buttons[i].Spec = wanted[i];
+            foreach ((Button button, PickerButton spec) in _buttons.Zip(wanted)) button.Spec = spec;
         }
     }
 
@@ -218,21 +238,17 @@ internal sealed class ChartPicker
         _buttonKey = key;
 
         // Rows of up to five, each centred, the first under the card.
-        for (var row = 0; row * ButtonsPerRow < specs.Count; row++)
+        foreach ((PickerButton[] inRow, var row) in specs.Chunk(ButtonsPerRow).Select((r, i) => (r, i)))
         {
-            var inRow = specs.Skip(row * ButtonsPerRow).Take(ButtonsPerRow).ToList();
-            var total = (inRow.Count * ButtonWidth) + ((inRow.Count - 1) * ButtonGap);
-            for (var i = 0; i < inRow.Count; i++)
-            {
-                var x = (-total / 2f) + (ButtonWidth / 2f) + (i * (ButtonWidth + ButtonGap));
-                AddButton(inRow[i], x, -row * RowSpacing);
-            }
+            var total = (inRow.Length * ButtonWidth) + ((inRow.Length - 1) * ButtonGap);
+            foreach ((PickerButton spec, var i) in inRow.Select((s, i) => (s, i)))
+                AddButton(spec, (-total / 2f) + (ButtonWidth / 2f) + (i * (ButtonWidth + ButtonGap)), -row * RowSpacing);
         }
 
         _leftWasIn = _rightWasIn = true;
     }
 
-    /// <summary>The cover beside the text, scaled to its shape; the text takes the whole card without one.</summary>
+    /// <summary>The cover beside the text, scaled to its shape; the text clips the whole card without one.</summary>
     private void ShowCover(string? path)
     {
         if (_cover == null || _card == null) return;
@@ -257,33 +273,14 @@ internal sealed class ChartPicker
         _card.rectTransform.sizeDelta = new Vector2(show ? 0.42f : 0.74f, 0.38f);
     }
 
-    private static bool InScene(string scene) =>
-        string.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, scene, StringComparison.Ordinal);
-
     /// <summary>In the Gym, its fixed spot; false anywhere else, when it has none, or when it is not wanted.</summary>
     private bool PlaceAtSavedSpot()
     {
-        if (_root == null || !FixedInGym || !InScene(Arena.GymScene) || _spots.Get(Arena.GymScene) is not { } spot) return false;
+        if (_root == null || !FixedInGym || !Arena.InScene(ArenaKind.Gym) || _spots.Get(Arena.GymScene) is not { } spot) return false;
 
         _root.transform.SetPositionAndRotation(new Vector3(spot.X, spot.Y, spot.Z), Quaternion.Euler(0f, spot.Yaw, 0f));
         _leftWasIn = _rightWasIn = true;
         return true;
-    }
-
-    private void SaveSpot()
-    {
-        if (_root == null || !FixedInGym || !InScene(Arena.GymScene)) return;
-
-        Vector3 position = _root.transform.position;
-        try
-        {
-            _spots.Set(Arena.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
-            Mod.Note("Picker.Moved", Describe.Vector(position), echo: false);
-        }
-        catch (IOException e)
-        {
-            Mod.Note("Picker.SaveFailed", e.Message);
-        }
     }
 
     private void CheckPokes()
@@ -291,7 +288,7 @@ internal sealed class ChartPicker
         PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
         if (you == null) return;
 
-        var rig = ActorRig.Of(you);
+        var rig = ActorRig.From(you);
         Button? left = ButtonAt(rig.LeftHand.position);
         Button? right = ButtonAt(rig.RightHand.position);
 
@@ -301,25 +298,6 @@ internal sealed class ChartPicker
 
         _leftWasIn = left != null;
         _rightWasIn = right != null;
-    }
-
-    private void CheckClick()
-    {
-        if (!Input.GetMouseButtonDown(0)) return;
-
-        Camera? camera = Mod.ClickCamera?.Invoke() ?? Camera.main;
-        if (camera == null) return;
-
-        Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-        Button? hit = _buttons
-            .Where(b => b.Root.activeSelf)
-            .Select(b => (Button: b, Distance: b.RayDistance(ray)))
-            .Where(h => h.Distance != null)
-            .OrderBy(h => h.Distance)
-            .Select(h => h.Button)
-            .FirstOrDefault();
-
-        if (hit != null) TryPress(hit);
     }
 
     private void TryPress(Button button)
@@ -332,27 +310,12 @@ internal sealed class ChartPicker
     private Button? ButtonAt(Vector3 point) =>
         _buttons.FirstOrDefault(b => !b.Native && b.Root.activeSelf && b.Contains(point, PokeMargin));
 
-    private void OnGameButton(Button button)
-    {
-        if (button.Root != null && button.Root.activeInHierarchy && _buttons.Contains(button)) TryPress(button);
-    }
-
-    private void KeepNearYou()
-    {
-        if (_root == null || PlayerManager.instance?.localPlayer?.Controller is not { } you) return;
-
-        Vector3 head = ActorRig.Of(you).Head.position;
-        Vector3 offset = _root.transform.position - head;
-        offset.y = 0f;
-        if (offset.magnitude > 1.6f) PlaceInFrontOfYou();
-    }
-
     private void PlaceInFrontOfYou()
     {
         PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
         if (you == null || _root == null) return;
 
-        var rig = ActorRig.Of(you);
+        var rig = ActorRig.From(you);
         Vector3 facing = rig.Facing;
         var right = Vector3.Cross(Vector3.up, facing);
 
@@ -361,7 +324,7 @@ internal sealed class ChartPicker
             : rig.Head.position + (facing * Distance) + (Vector3.up * Height) + (right * Side);
 
         Vector3 away = position - rig.Head.position;
-        _root.transform.SetPositionAndRotation(position, Quaternion.LookRotation(ActorRig.Flat(away)));
+        _root.transform.SetPositionAndRotation(position, Quaternion.LookRotation(VectorHelpers.Flat(away)));
         _leftWasIn = _rightWasIn = true; // no press from hands already where it appears
         _arrivedAt = Time.time;
     }
@@ -390,12 +353,12 @@ internal sealed class ChartPicker
             _cover.SetActive(false);
 
             Refresh();
-            Mod.Note("Picker.Built", $"chart picker built with {(_buttons.Any(b => b.Native) ? "the game's buttons" : "the mod's own buttons")}", echo: false);
+            Logger.Debug($"[Picker.Built] chart picker built with {(_buttons.Any(b => b.Native) ? "the game's buttons" : "the mod's own buttons")}");
             return true;
         }
         catch (Exception e)
         {
-            Mod.Note("Picker.Failed", e.ToString());
+            Logger.Error($"[Picker.Failed] {e}");
             if (_root != null) UnityEngine.Object.Destroy(_root);
             Forget();
             return false;
@@ -411,7 +374,7 @@ internal sealed class ChartPicker
         Button? made = null;
         GameObject? native = GameButtons.Create(holder.transform, () =>
         {
-            if (made != null) OnGameButton(made);
+            if (made != null && made.Root != null && made.Root.activeInHierarchy && _buttons.Contains(made)) TryPress(made);
         });
 
         GameObject face;
@@ -470,12 +433,7 @@ internal sealed class ChartPicker
         text.enableWordWrapping = false;
         text.color = Color.white;
 
-        if (text.font == null)
-        {
-            TMP_FontAsset? font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
-            if (font != null) text.font = font;
-        }
-
+        Paint.GiveFont(text);
         return text;
     }
 
@@ -514,16 +472,9 @@ internal sealed class ChartPicker
         /// <summary>A game button, which the game presses itself.</summary>
         public bool Native { get; init; }
 
-        public bool Contains(Vector3 world, float margin) => InBox(_face.transform, world, margin);
+        public Transform Face => _face.transform;
 
-        /// <summary>How far along the ray the button is; null on a miss.</summary>
-        public float? RayDistance(Ray ray)
-        {
-            Transform face = _face.transform;
-            var local = new Ray(face.InverseTransformPoint(ray.origin), face.InverseTransformVector(ray.direction));
-            var box = new Bounds(Vector3.zero, Vector3.one);
-            return box.IntersectRay(local, out var distance) ? distance : null;
-        }
+        public bool Contains(Vector3 world, float margin) => InBox(_face.transform, world, margin);
 
         public void Flash()
         {

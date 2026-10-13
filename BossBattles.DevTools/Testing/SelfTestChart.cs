@@ -10,7 +10,7 @@ public static class SelfTestChart
 
     public const string Json = /*lang=json,strict*/ """
         {
-          "format": 1,
+          "format": 2,
           "name": "Self Test",
           "author": "BossBattles",
           "difficulty": "Test",
@@ -27,9 +27,9 @@ public static class SelfTestChart
             { "t": 2.5, "projectile": { "structure": "Ball", "from": { "x": -1, "y": 1.2, "z": 8 }, "to": { "x": 0.5, "y": 1.2 }, "speed": 8, "telegraph": 0.5 } },
             { "t": 3.2, "projectile": { "structure": "RockCube", "from": { "x": -1.2, "y": 0, "z": 8 }, "to": { "x": -1.4, "y": 1 }, "speed": 8, "telegraph": 0.5 } },
             { "t": 4,   "move": "SpawnCube" },
-            { "t": 5,   "at": { "x": 0, "z": 10 } },
-            { "t": 5.5, "clip": "selftest-sway" }
+            { "t": 5,   "at": { "x": 0, "z": 10 } }
           ],
+          "tracks": [ { "actor": "probe", "clips": [ { "t": 5.5, "clip": "selftest-sway" } ] } ],
           "end": 7
         }
         """;

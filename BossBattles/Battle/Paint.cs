@@ -1,4 +1,4 @@
-using BossBattles.Core;
+using Il2CppTMPro;
 using UnityEngine;
 
 namespace BossBattles.Battle;
@@ -51,6 +51,16 @@ internal static class Paint
         return material;
     }
 
+    /// <summary>Whatever TextMeshPro font the game has loaded, since a built game may carry no default.</summary>
+    public static void GiveFont(TextMeshPro text)
+    {
+        if (text.font != null) return;
+
+        TMP_FontAsset? font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
+        if (font != null) text.font = font;
+        else Logger.Warning("[Paint.NoFont] no TextMeshPro font loaded - text will be blank");
+    }
+
     private static Shader? FindShader()
     {
         if (_searched) return _shader;
@@ -62,13 +72,14 @@ internal static class Paint
             if (found == null) continue;
 
             _shader = found;
-            Mod.Note("Paint.Shader", $"using {name}", echo: false);
+            Logger.Debug($"[Paint.Shader] using {name}");
             return _shader;
         }
 
         _shader = Resources.FindObjectsOfTypeAll<Shader>()
             .FirstOrDefault(s => s != null && s.name.Contains("Unlit", StringComparison.OrdinalIgnoreCase));
-        Mod.Note("Paint.Shader", _shader == null ? "no usable shader loaded - shapes keep their default material" : $"using loaded {_shader.name}");
+        if (_shader == null) Logger.Warning("[Paint.Shader] no usable shader loaded - shapes keep their default material");
+        else Logger.Debug($"[Paint.Shader] using loaded {_shader.name}");
         return _shader;
     }
 }

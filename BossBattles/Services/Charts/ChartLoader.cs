@@ -161,9 +161,8 @@ public static class ChartLoader
         var cues = new List<VisualCue>();
         if (visuals == null) return cues;
 
-        for (var i = 0; i < visuals.Count; i++)
+        foreach ((VisualDto v, var i) in visuals.Select((v, i) => (v, i)))
         {
-            VisualDto v = visuals[i];
             var path = $"visuals[{i}]";
             var before = context.Errors.Count;
 
@@ -207,32 +206,30 @@ public static class ChartLoader
             context.Errors.Add($"tracks need \"format\": {TracksFormat} or later - set it at the top of the chart");
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        for (var i = 0; i < dto.Tracks.Count; i++)
+        foreach ((TrackDto track, var i) in dto.Tracks.Select((t, i) => (t, i)))
         {
-            TrackDto track = dto.Tracks[i];
             var path = $"tracks[{i}]";
             var actor = track.Actor == null ? context.DefaultActorId : ActorRef(track.Actor, $"{path}.actor", context);
             if (!seen.Add(actor)) context.Errors.Add($"{path}: \"{actor}\" already has a track - one per actor");
 
-            var takes = new List<TakeSegment>();
-            for (var j = 0; j < (track.Takes?.Count ?? 0); j++)
+            var clips = new List<TrackClip>();
+            foreach ((TrackClipDto clip, var j) in (track.Clips ?? []).Select((t, j) => (t, j)))
             {
-                TakeDto take = track.Takes![j];
-                var takePath = $"{path}.takes[{j}]";
+                var clipPath = $"{path}.clips[{j}]";
 
-                var time = Time(take.T, take.Beat, context, takePath, "t", "beat");
-                if (string.IsNullOrWhiteSpace(take.Clip)) context.Errors.Add($"{takePath}.clip needs the take's name (a file in clips/)");
-                var from = take.From ?? 0;
-                if (from < 0) context.Errors.Add($"{takePath}.from cannot be negative (got {Format(from)})");
-                if (take.To is { } to && to <= from) context.Errors.Add($"{takePath}.to ({Format(to)}) must be after from ({Format(from)})");
-                if (time == null || string.IsNullOrWhiteSpace(take.Clip)) continue;
+                var time = Time(clip.T, clip.Beat, context, clipPath, "t", "beat");
+                if (string.IsNullOrWhiteSpace(clip.Clip)) context.Errors.Add($"{clipPath}.clip needs the clip's name (a file in clips/)");
+                var from = clip.From ?? 0;
+                if (from < 0) context.Errors.Add($"{clipPath}.from cannot be negative (got {Format(from)})");
+                if (clip.To is { } to && to <= from) context.Errors.Add($"{clipPath}.to ({Format(to)}) must be after from ({Format(from)})");
+                if (time == null || string.IsNullOrWhiteSpace(clip.Clip)) continue;
 
-                if (takes.Count > 0 && time <= takes[^1].Time)
-                    context.Errors.Add($"{takePath}.t ({Format(time.Value)}) must be after the take before it ({Format(takes[^1].Time)})");
-                takes.Add(new TakeSegment(time.Value, take.Clip, from, take.To) { Mime = take.Mime ?? false });
+                if (clips.Count > 0 && time <= clips[^1].Time)
+                    context.Errors.Add($"{clipPath}.t ({Format(time.Value)}) must be after the clip before it ({Format(clips[^1].Time)})");
+                clips.Add(new TrackClip(time.Value, clip.Clip, from, clip.To) { Mime = clip.Mime ?? false });
             }
 
-            tracks.Add(new Track(actor, takes));
+            tracks.Add(new Track(actor, clips));
         }
 
         return tracks;
@@ -328,17 +325,12 @@ public static class ChartLoader
 
     private static bool TryNumber(JsonElement element, string name, out double number)
     {
-        number = 0;
-        foreach (JsonProperty property in element.EnumerateObject())
-        {
-            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.Number)
-            {
-                number = property.Value.GetDouble();
-                return true;
-            }
-        }
-
-        return false;
+        var found = element.EnumerateObject()
+            .Where(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind == JsonValueKind.Number)
+            .Select(p => (double?)p.Value.GetDouble())
+            .FirstOrDefault();
+        number = found ?? 0;
+        return found != null;
     }
 
     private static List<ActorSpec> Actors(ChartDto dto, Lane lane, List<string> errors)
@@ -349,9 +341,8 @@ public static class ChartLoader
         var actors = new List<ActorSpec>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 0; i < dto.Actors.Count; i++)
+        foreach ((ActorDto actor, var i) in dto.Actors.Select((a, i) => (a, i)))
         {
-            ActorDto actor = dto.Actors[i];
             var path = $"actors[{i}]";
 
             var id = string.IsNullOrWhiteSpace(actor.Id) ? (i == 0 ? DefaultActorId : $"actor{i + 1}") : actor.Id;
@@ -363,6 +354,7 @@ public static class ChartLoader
             actors.Add(new ActorSpec(id, string.IsNullOrWhiteSpace(actor.Name) ? id : actor.Name, at, look)
             {
                 Shiftstones = ReadStones(actor.Shiftstones, $"{path}.shiftstones", errors),
+                Measurement = ReadMeasurement(actor.Measurement, $"{path}.measurement", errors),
             });
         }
 
@@ -370,6 +362,19 @@ public static class ChartLoader
     }
 
     /// <summary>"you" (or nothing) for the player's own; else a list of up to two names.</summary>
+    private static BodySize? ReadMeasurement(MeasurementDto? measurement, string path, List<string> errors)
+    {
+        if (measurement == null) return null;
+
+        if (measurement.Height is not (>= 0.5f and <= 3f) || measurement.ArmSpan is not (>= 0.5f and <= 3f))
+        {
+            errors.Add($"{path} needs a height and armSpan in metres, from 0.5 to 3");
+            return null;
+        }
+
+        return new BodySize(measurement.Height.Value, measurement.ArmSpan.Value);
+    }
+
     private static List<string>? ReadStones(JsonElement? stones, string path, List<string> errors)
     {
         if (stones is not { } value || value.ValueKind == JsonValueKind.Null) return null;
@@ -391,15 +396,14 @@ public static class ChartLoader
         if (dto.Phases == null || dto.Phases.Count == 0) return [new("Battle", 0, 1, null, null)];
 
         var phases = new List<Phase>();
-        for (var i = 0; i < dto.Phases.Count; i++)
+        foreach ((PhaseDto phase, var i) in dto.Phases.Select((p, i) => (p, i)))
         {
-            PhaseDto phase = dto.Phases[i];
             var path = $"phases[{i}]";
 
             var start = Time(phase.Start, phase.StartBeat, context, path, "start", "startBeat") ?? 0;
             if (i == 0 && start != 0) context.Errors.Add($"{path} must start at 0 - the first phase starts the battle");
-            if (i > 0 && start <= phases[i - 1].Start)
-                context.Errors.Add($"{path}.start ({Format(start)}) must be after phases[{i - 1}] ({Format(phases[i - 1].Start)})");
+            if (i > 0 && start <= phases[^1].Start)
+                context.Errors.Add($"{path}.start ({Format(start)}) must be after phases[{i - 1}] ({Format(phases[^1].Start)})");
 
             var multiplier = phase.ScoreMultiplier ?? 1;
             if (multiplier <= 0) context.Errors.Add($"{path}.scoreMultiplier must be over 0 (got {Format(multiplier)})");
@@ -421,18 +425,17 @@ public static class ChartLoader
         var events = new List<ChartEvent>();
         if (dto.Events == null) return events;
 
-        for (var i = 0; i < dto.Events.Count; i++)
+        foreach ((EventDto e, var i) in dto.Events.Select((e, i) => (e, i)))
         {
-            EventDto e = dto.Events[i];
             var path = $"events[{i}]";
 
             var time = Time(e.T, e.Beat, context, path, "t", "beat");
             if (time == null) continue;
 
-            var kinds = (e.Projectile != null ? 1 : 0) + (e.Move != null ? 1 : 0) + (e.At != null ? 1 : 0) + (e.Clip != null ? 1 : 0);
+            var kinds = (e.Projectile != null ? 1 : 0) + (e.Move != null ? 1 : 0) + (e.At != null ? 1 : 0);
             if (kinds != 1)
             {
-                context.Errors.Add($"{path} needs exactly one of projectile, move, clip or at (has {kinds})");
+                context.Errors.Add($"{path} needs exactly one of projectile, move or at (has {kinds})");
                 continue;
             }
 
@@ -447,11 +450,6 @@ public static class ChartLoader
             {
                 if (string.IsNullOrWhiteSpace(e.Move)) context.Errors.Add($"{path}.move needs a move name, e.g. \"Straight\"");
                 else events.Add(new MoveEvent(time.Value, i, actor, e.Move));
-            }
-            else if (e.Clip != null)
-            {
-                if (string.IsNullOrWhiteSpace(e.Clip)) context.Errors.Add($"{path}.clip needs a clip name (a file in UserData/BossBattles/Clips)");
-                else events.Add(new ClipEvent(time.Value, i, actor, e.Clip));
             }
             else
             {
@@ -549,16 +547,13 @@ public static class ChartLoader
             return null;
         }
 
-        if (beats != null)
+        if (beats != null && context.Tempo == null)
         {
-            if (context.Tempo == null)
-            {
-                context.Errors.Add($"{path}.{beatsName} needs the chart's bpm");
-                return null;
-            }
-
-            seconds = context.Tempo.Seconds(beats.Value);
+            context.Errors.Add($"{path}.{beatsName} needs the chart's bpm");
+            return null;
         }
+
+        if (beats != null) seconds = context.Tempo!.Seconds(beats.Value);
 
         if (seconds == null)
         {
@@ -636,10 +631,10 @@ public static class ChartLoader
     private sealed class TrackDto
     {
         public string? Actor { get; set; }
-        public List<TakeDto>? Takes { get; set; }
+        public List<TrackClipDto>? Clips { get; set; }
     }
 
-    private sealed class TakeDto
+    private sealed class TrackClipDto
     {
         public double? T { get; set; }
         public double? Beat { get; set; }
@@ -676,6 +671,13 @@ public static class ChartLoader
         public PointDto? At { get; set; }
         public string? Look { get; set; }
         public JsonElement? Shiftstones { get; set; }
+        public MeasurementDto? Measurement { get; set; }
+    }
+
+    private sealed class MeasurementDto
+    {
+        public float? Height { get; set; }
+        public float? ArmSpan { get; set; }
     }
 
     private sealed class PhaseDto
@@ -697,7 +699,6 @@ public static class ChartLoader
         public string? Actor { get; set; }
         public ProjectileDto? Projectile { get; set; }
         public string? Move { get; set; }
-        public string? Clip { get; set; }
         public PointDto? At { get; set; }
     }
 

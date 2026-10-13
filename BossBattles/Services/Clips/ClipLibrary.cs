@@ -45,17 +45,13 @@ public sealed class ClipLibrary
 
     public Clip? Find(string name) => _clips.TryGetValue(name, out Clip? clip) ? clip : null;
 
-    /// <summary>Makes a clip findable without writing it to disk - until the next <see cref="Reload"/>.</summary>
-    public void Put(Clip clip) => _clips[clip.Name] = clip;
-
     /// <summary>Saves a clip under a file name made from its name, never overwriting; returns the path.</summary>
     public string Save(Clip clip)
     {
         Directory.CreateDirectory(Folder);
 
         var stem = string.Concat(clip.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
-        var path = Path.Combine(Folder, $"{stem}.json");
-        for (var n = 2; File.Exists(path); n++) path = Path.Combine(Folder, $"{stem}-{n}.json");
+        var path = Enumerable.Range(1, int.MaxValue).Select(n => Path.Combine(Folder, n == 1 ? $"{stem}.json" : $"{stem}-{n}.json")).First(p => !File.Exists(p));
 
         File.WriteAllText(path, ClipFile.Write(clip));
         _clips[clip.Name] = clip;

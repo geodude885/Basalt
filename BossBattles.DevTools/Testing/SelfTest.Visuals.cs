@@ -1,6 +1,5 @@
 using System.Collections;
 using BossBattles.Battle;
-using BossBattles.Core;
 using BossBattles.Services.Charts;
 using MelonLoader;
 using UnityEngine;
@@ -24,7 +23,7 @@ internal static partial class SelfTest
     {
         if (!ReShade.Installed || MelonPreferences.GetEntry<float>(LookCategory, "_Strength") == null)
         {
-            Mod.Say($"[SelfTest] no RumbleReShaded {LookPack} pack - chart looks not checked");
+            Logger.Info($"[SelfTest] no RumbleReShaded {LookPack} pack - chart looks not checked");
             return chart;
         }
 
@@ -50,7 +49,7 @@ internal static partial class SelfTest
         if (!enabled.Value || Math.Abs(strength.Value - expected) > 0.01f)
             _visualsProblem = $"chart look: {LookPack} was {(enabled.Value ? "on" : "off")} at strength {strength.Value:0.00} mid-run, not on at {expected:0.00}";
         else
-            Mod.Say($"[SelfTest] chart look on: {LookPack} at {strength.Value:0.00} (yours {strengthWas:0.00}, {(enabledWas ? "on" : "off")})");
+            Logger.Info($"[SelfTest] chart look on: {LookPack} at {strength.Value:0.00} (yours {strengthWas:0.00}, {(enabledWas ? "on" : "off")})");
 
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return null;

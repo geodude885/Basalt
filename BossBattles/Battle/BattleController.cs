@@ -1,9 +1,10 @@
+using System.Collections;
 using BossBattles.Actors;
+using BossBattles.Arenas;
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using BossBattles.Services.Scoring;
-using Il2CppRUMBLE.Managers;
-using Il2CppRUMBLE.Players;
 using MelonLoader;
 using UnityEngine;
 
@@ -21,13 +22,8 @@ public enum BattleState
 
 public enum BattleMode
 {
-    /// <summary>A battle: survive it.</summary>
     Play,
-
-    /// <summary>Recording a clip in the actor's place: no actors, no projectiles, no end.</summary>
     Record,
-
-    /// <summary>Watching a clip just recorded, as a player would face it; not scored.</summary>
     Review,
 }
 
@@ -36,12 +32,15 @@ public enum BattleMode
 /// executes each <see cref="ChartCommand"/> the <see cref="ChartRunner"/> hands back. You win by
 /// lasting to the end; your health reaching 0 loses.
 /// </summary>
-internal sealed partial class BattleController
+internal sealed class BattleController
 {
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;
     private const float PhaseBannerSeconds = 2f;
     private const float PhaseColourFadeSeconds = 1f;
+
+    /// <summary>A newly ready actor placed at once had not settled and went on falling.</summary>
+    private const float ActorSettleSeconds = 0.1f;
 
     /// <summary>A long MP3 can take a while to decode; the countdown waits this long for it.</summary>
     private const float MusicWaitSeconds = 90f;
@@ -51,6 +50,9 @@ internal sealed partial class BattleController
     private readonly Board _board = new();
     private readonly List<Actor> _actors = [];
     private readonly Music _music = new();
+    private readonly MoveLock _moves = new();
+    private readonly StructureSweeper _sweeper = new();
+    private readonly BattlePlayer _player = new();
     private ArenaSpec _arenaSpec = ArenaSpec.Here;
     private ClipLibrary? _chartClips;
     private string? _scoreKey;
@@ -88,13 +90,12 @@ internal sealed partial class BattleController
 
     public bool ShowPhaseBanners { get; set; } = true;
 
-    /// <summary>Recording a mimed clip: the chart's projectiles fly and your moves stay off.</summary>
     public bool Miming { get; private set; }
 
-    /// <summary>While true the match handler may not send you back to the Gym (see ArenaPatches).</summary>
-    public bool HoldsArena => State != BattleState.Idle && Arena.IsMatchMap(CurrentArena);
+    public bool StayInMap => State != BattleState.Idle && Arena.IsMatchMap(CurrentArena);
 
-    /// <summary>Your music volume, 0 to 1; a chart's own volume applies on top.</summary>
+    public ChartSignals Signals { get; } = new();
+
     public float MusicVolume
     {
         get => _music.Volume;
@@ -148,8 +149,14 @@ internal sealed partial class BattleController
     {
         Miming = mode == BattleMode.Record && mime;
         ArenaKind arena = arenaOverride ?? chart.Arena.Map;
+        if (Arena.Online)
+        {
+            Logger.Info("[Battle.NotStarted] not in a park or match - charts play in the Gym");
+            return;
+        }
+
         if (State != BattleState.Idle) Stop("a new battle was started");
-        if (PlayerManager.instance?.localPlayer?.Controller == null)
+        if (BattlePlayer.Controller == null)
         {
             Logger.Warning("[Battle.NotStarted] no local player yet");
             return;
@@ -200,17 +207,17 @@ internal sealed partial class BattleController
         if (State == BattleState.Idle) return;
 
         Logger.Info($"[Battle.Stopped] {reason}");
-        RestoreInvincibility();
-        if (State == BattleState.Running && Mode != BattleMode.Record) FullHealth();
-        EndVisuals();
+        _player.RestoreInvincibility();
+        if (State == BattleState.Running && Mode != BattleMode.Record) BattlePlayer.FullHealth();
+        Signals.End();
         foreach (Actor actor in _actors) actor.Despawn();
         _actors.Clear();
         _projectiles.Clear();
         _lane.Destroy();
         _board.Hide();
         _music.Clear();
-        ReleaseYourMoves();
-        GiveSpawnsBack();
+        _moves.Release();
+        _moves.GiveSpawnsBack();
         _runner = null;
         State = BattleState.Idle;
     }
@@ -224,10 +231,8 @@ internal sealed partial class BattleController
     public void OnSceneLoaded(string scene)
     {
         // Everything built in the old scene went with it, your player too.
-        EndVisuals();
-        _movesHeldFor = null;
-        _withheldFrom = null;
-        _withheld.Clear();
+        Signals.End();
+        _moves.Forget();
         MoveEffects.Forget();
         _actors.Clear();
         _projectiles.Forget();
@@ -269,9 +274,9 @@ internal sealed partial class BattleController
             case BattleState.Running:
                 KeepLane();
                 _projectiles.Update();
-                KeepYouVulnerable();
-                UpdateVisuals();
-                CleanUpStillStructures();
+                if (Mode != BattleMode.Record) _player.KeepVulnerable();
+                Signals.Update(Chart!, ChartTime);
+                _sweeper.Update(Chart!.Rules.CleanupSeconds);
                 foreach (ChartCommand command in _runner!.Advance(Math.Max(0, ChartTime)))
                 {
                     Execute(command);
@@ -294,7 +299,7 @@ internal sealed partial class BattleController
 
         _score!.PlayerDamaged(amount);
         Logger.Debug($"[Battle.YouWereHit] -{amount}, {healthNow} left");
-        _reshade.Fire("hit", YourHead(), Mathf.Clamp01(amount / 5f), 0.6f);
+        Signals.Fire("hit", BattlePlayer.Head, Mathf.Clamp01(amount / 5f), 0.6f);
         if (healthNow <= 0) Finish(survived: false, ChartTime);
     }
 
@@ -304,11 +309,88 @@ internal sealed partial class BattleController
         _score!.ActorDamaged(amount, _phase?.ScoreMultiplier ?? 1);
     }
 
+    private IEnumerator PrepareAfterSettling(int session)
+    {
+        // The match maps finish setting themselves up over the first frames.
+        yield return new WaitForSeconds(ArenaSettleSeconds);
+        if (session == _session && State == BattleState.LoadingArena) Prepare();
+    }
+
+    /// <summary>Lays the battle out: the lane, the board, you, and the actors on their spots.</summary>
+    private void Prepare()
+    {
+        try
+        {
+            var yours = ActorRig.From(BattlePlayer.Controller!);
+            LaneFrame? frame = _fixedFrame ?? Arena.Frame(CurrentArena, _arenaSpec, Chart!.Lane, yours.Feet, yours.Facing);
+            if (frame == null)
+            {
+                Stop("no lane could be laid out");
+                return;
+            }
+
+            _frame = frame.Value;
+            StructureSweeper.ClearAll();
+            ActorSpec performer = Chart!.Actors.FirstOrDefault(a => a.Id == _recordActor) ?? Chart.DefaultActor;
+
+            if (Mode == BattleMode.Record)
+            {
+                // In the actor's place, facing down the lane as it will; a section starts where it stood then.
+                Vector3 spot = _recordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
+                _player.Place(spot, Quaternion.Euler(0f, _frame.ActorYawDegrees(performer.At.Facing), 0f));
+            }
+            else if (Arena.IsMatchMap(CurrentArena) || _arenaSpec.HasSpot || _fixedFrame != null)
+            {
+                _player.Place(StringHelpers.ToUnity(_frame.Anchor.Position), Quaternion.LookRotation(StringHelpers.ToUnity(_frame.Anchor.Forward)));
+            }
+
+            _lane.Build(_frame, Chart.Lane, ShowBackstop, walls: true, zone: Mode == BattleMode.Record ? null : Chart.Zone,
+                colours: Chart.ColoursIn(Chart.Phases.LastOrDefault(p => p.Start <= StartAt)), panes: Chart.EverShowsWalls);
+            if (Mode == BattleMode.Record)
+            {
+                _board.Place(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
+                _board.Show($"<b>Recording {performer.Name}</b>\nget ready");
+            }
+            else
+            {
+                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), StringHelpers.ToUnity(_frame.Anchor.Position));
+                _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "clip review" : "get ready")}");
+            }
+
+            foreach (ActorSpec spec in Mode == BattleMode.Record ? Enumerable.Empty<ActorSpec>() : Chart.Actors)
+            {
+                var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { SelfKnockbackMultiplier = 0f, Measurement = spec.Measurement };
+                _actors.Add(actor);
+                Vector3 spot = World(spec.At.X, 0f, spec.At.Z);
+                var yaw = _frame.ActorYawDegrees(spec.At.Facing);
+
+                // Spawning puts the head on the floor, so the body falls until placed properly.
+                var session = _session;
+                actor.OnReady += ready => MelonCoroutines.Start(PlaceWhenSettled(ready, spot, yaw, session));
+                actor.Spawn(spot, Quaternion.Euler(0f, yaw, 0f));
+            }
+
+            _spawnDeadline = Time.time + ActorSpawnTimeoutSeconds;
+            State = BattleState.SpawningActors;
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"[Battle.PrepareFailed] {e}");
+            Stop("preparing failed");
+        }
+    }
+
+    private IEnumerator PlaceWhenSettled(Actor actor, Vector3 spot, float yaw, int session)
+    {
+        yield return new WaitForSecondsRealtime(ActorSettleSeconds);
+        if (session == _session && actor.Exists && State is not (BattleState.Idle or BattleState.Running or BattleState.Finished)) actor.Place(spot, yaw);
+    }
+
     private void KeepLane()
     {
         _lane.Tick();
         _lane.LetStructuresThrough();
-        KeepYouInLane();
+        _player.KeepInLane(_frame, Chart!, zoned: Mode != BattleMode.Record);
     }
 
     private void BeginCountdown()
@@ -319,9 +401,8 @@ internal sealed partial class BattleController
         _countdownEnds = Time.time + CountdownSeconds;
         _musicDeadline = _countdownEnds + MusicWaitSeconds;
         _lane.LetActorsThrough(_actors.SelectMany(a => a.Colliders));
-        HoldYourMoves();
-        ReShade.Refresh();
-        _reshade.Preload(Chart!.Visuals.Select(v => v.Pack));
+        _moves.Hold();
+        Signals.Prepare(Chart!);
         State = BattleState.Countdown;
     }
 
@@ -342,14 +423,18 @@ internal sealed partial class BattleController
         if (_music.State == MusicState.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
         if (Chart.Music != null) _music.Play(Chart.Music.Start + StartAt, Chart.Music.Volume);
         _board.Show("<b>GO</b>", 1f);
-        if (Mode != BattleMode.Record) FullHealth();
         foreach (Actor actor in _actors) actor.FullHeal();
-        _still.Clear();
-        KeepYouVulnerable();
-        ReShade.Refresh();
-        _lastBeat = -1;
-        if (Chart.Visuals.Count > 0) Logger.Debug($"[Visuals.Chart] {Chart.Visuals.Count} look(s); installed: {ReShade.Describe()}");
-        ReleaseYourMoves();
+        _sweeper.Reset();
+        Signals.Begin(Chart);
+
+        if (Mode != BattleMode.Record)
+        {
+            BattlePlayer.FullHealth();
+            _player.KeepVulnerable();
+        }
+
+        // Miming keeps your moves off: you throw the chart's shots by hand.
+        if (!Miming) _moves.Release(Mode == BattleMode.Record ? SpawnRule.All : Chart.Rules.Spawn);
         State = BattleState.Running;
     }
 
@@ -363,7 +448,7 @@ internal sealed partial class BattleController
                     _phase = enter.Phase;
                     if (enter.Time > 0 && ShowPhaseBanners) _board.Show($"<b>{enter.Phase.Name}</b>{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
                     Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
-                    if (enter.Time > 0) _reshade.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
+                    if (enter.Time > 0) Signals.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
                     _lane.Recolour(Chart!.ColoursIn(enter.Phase), enter.Time > 0 && enter.Time > StartAt ? PhaseColourFadeSeconds : 0f);
                     break;
 
@@ -378,12 +463,12 @@ internal sealed partial class BattleController
 
                 case SpawnProjectile spawn:
                     _projectiles.Spawn(spawn.Id, spawn.Projectile, _frame);
-                    _reshade.Fire("spawn", World(spawn.Projectile.From.X, spawn.Projectile.From.Y, spawn.Projectile.From.Z), 1f, (float)Math.Max(0.2, spawn.Projectile.Telegraph));
+                    Signals.Fire("spawn", World(spawn.Projectile.From.X, spawn.Projectile.From.Y, spawn.Projectile.From.Z), 1f, (float)Math.Max(0.2, spawn.Projectile.Telegraph));
                     break;
 
                 case LaunchProjectile launch:
                     _projectiles.Launch(launch.Id, launch.Projectile, AimPoint(launch.Projectile.To));
-                    _reshade.Fire("launch", World(launch.Projectile.From.X, launch.Projectile.From.Y, launch.Projectile.From.Z), 1f, 0.5f);
+                    Signals.Fire("launch", World(launch.Projectile.From.X, launch.Projectile.From.Y, launch.Projectile.From.Z), 1f, 0.5f);
                     _score!.ProjectileLaunched();
                     break;
 
@@ -412,12 +497,7 @@ internal sealed partial class BattleController
     {
         // Miming, you stand at the boss's end: "the player" is the lane's near end.
         if (aim.AtPlayer && Miming) return World(0f, 1.3f, 0f);
-        if (aim.AtPlayer)
-        {
-            PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
-            if (you != null) return ActorRig.From(you).Head.position + (Vector3.down * 0.25f);
-        }
-
+        if (aim.AtPlayer && BattlePlayer.Controller is { } you) return ActorRig.From(you).Head.position + (Vector3.down * 0.25f);
         return World(aim.X, aim.Y, 0f);
     }
 
@@ -429,11 +509,11 @@ internal sealed partial class BattleController
         LastResult = result;
         State = BattleState.Finished;
         _music.FadeOut();
-        GiveSpawnsBack();
-        RestoreInvincibility();
-        if (Mode != BattleMode.Record) FullHealth();
-        _reshade.Fire(survived ? "survived" : "defeated", YourHead(), 1f, 2f);
-        EndVisuals();
+        _moves.GiveSpawnsBack();
+        _player.RestoreInvincibility();
+        if (Mode != BattleMode.Record) BattlePlayer.FullHealth();
+        Signals.Fire(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
+        Signals.End();
 
         BestScore? previous = _scoreKey == null ? null : Scores?.Best(_scoreKey);
         try

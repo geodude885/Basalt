@@ -4,15 +4,15 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>Structures on the map: cleared before a battle, and broken when left standing still.</summary>
-internal sealed partial class BattleController
+internal sealed class StructureSweeper
 {
     private static readonly string[] PlayerStructures = { "Disc", "Ball", "RockCube", "Pillar", "Wall" };
 
     private readonly Dictionary<IntPtr, (Vector3 At, float Since)> _still = [];
-    private float _nextCleanup;
+    private float _nextSweep;
 
     /// <summary>Breaks every structure a player spawned (scenery stays) with the game's own <c>Structure.Kill</c>.</summary>
-    private static void ClearStructures()
+    public static void ClearAll()
     {
         CombatManager? combat = CombatManager.instance;
         if (combat == null) return;
@@ -39,15 +39,16 @@ internal sealed partial class BattleController
         Logger.Debug($"[Battle.Cleared] {cleared} structure(s) cleared off the map");
     }
 
+    public void Reset() => _still.Clear();
+
     /// <summary>
-    /// The chart's cleanup rule: a structure still for <see cref="Services.Charts.Rules.CleanupSeconds"/> breaks, so a
-    /// wall grounded in front of you cannot soak up a whole section. Held (kinematic) projectiles are left.
+    /// The chart's cleanup rule: a structure still for <paramref name="afterSeconds"/> breaks, so a wall grounded in
+    /// front of you cannot soak up a whole section. Held (kinematic) projectiles are left.
     /// </summary>
-    private void CleanUpStillStructures()
+    public void Update(double afterSeconds)
     {
-        var after = Chart?.Rules.CleanupSeconds ?? 0;
-        if (after <= 0 || Time.time < _nextCleanup) return;
-        _nextCleanup = Time.time + 0.25f;
+        if (afterSeconds <= 0 || Time.time < _nextSweep) return;
+        _nextSweep = Time.time + 0.25f;
 
         CombatManager? combat = CombatManager.instance;
         if (combat == null) return;
@@ -67,12 +68,12 @@ internal sealed partial class BattleController
                 continue;
             }
 
-            if (Time.time - still.Since < after) continue;
+            if (Time.time - still.Since < afterSeconds) continue;
 
             try
             {
                 structure.Kill(at, true, true, false);
-                Logger.Debug($"[Battle.CleanedUp] {structure.gameObject.name} still for {after:0.#}s - broken");
+                Logger.Debug($"[Battle.CleanedUp] {structure.gameObject.name} still for {afterSeconds:0.#}s - broken");
             }
             catch (Exception e)
             {

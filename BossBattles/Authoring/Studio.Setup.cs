@@ -1,7 +1,9 @@
+using BossBattles.Arenas;
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using UnityEngine;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Authoring;
 
 /// <summary>Lane setup: a preview lane you walk around, resized and moved from the panel, then written into the chart.</summary>
 internal sealed partial class Studio

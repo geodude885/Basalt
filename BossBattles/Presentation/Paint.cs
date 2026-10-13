@@ -1,7 +1,7 @@
 using Il2CppTMPro;
 using UnityEngine;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Presentation;
 
 /// <summary>
 /// Materials for the mod's own shapes. A primitive's default shader is not in the game build (it

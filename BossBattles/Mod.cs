@@ -1,4 +1,5 @@
 using BossBattles.Actors;
+using BossBattles.Authoring;
 using BossBattles.Battle;
 
 namespace BossBattles;

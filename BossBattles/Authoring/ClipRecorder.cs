@@ -1,4 +1,5 @@
 using System.Numerics;
+using BossBattles.Actors;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Input;
@@ -6,7 +7,7 @@ using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
 
-namespace BossBattles.Actors;
+namespace BossBattles.Authoring;
 
 /// <summary>
 /// Records a player as a clip: head, hands and fingers, where they stand and face in a lane, and every move the

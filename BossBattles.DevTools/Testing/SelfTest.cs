@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
+using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;
@@ -169,12 +170,19 @@ internal static partial class SelfTest
         }
         if (_arena == ArenaKind.Here)
         {
-            // The flatscreen spawn faces a wall of scenery; lay the lane where there is room.
+            // Somewhere flat and open: you stand at the lane's start, so you are moved there first.
             PlayerController you = PlayerManager.instance.localPlayer.Controller;
             var yours = ActorRig.From(you);
-            (Vector3 direction, var clear) = OpenestDirection(yours.Feet);
-            you.PlayerMovement.Rotate(Vector3.SignedAngle(yours.Facing, direction, Vector3.up), false);
-            Logger.Info($"[SelfTest] laying the lane towards {StringHelpers.Vector(direction)}: {clear:0.0} m clear");
+            if (FlatLane(yours.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
+            {
+                you.PlayerMovement.Reposition(lane.Start + (Vector3.up * (yours.Head.position.y - yours.Vr.position.y)), Quaternion.LookRotation(lane.Direction));
+                Logger.Info($"[SelfTest] laying the lane at {StringHelpers.Vector(lane.Start)} towards {StringHelpers.Vector(lane.Direction)}");
+                yield return new WaitForSeconds(0.5f);
+            }
+            else
+            {
+                Logger.Info("[SelfTest] no flat, open spot for the lane near you - laying it where you stand");
+            }
         }
 
         Mod.Battle.Finished += OnFinished;
@@ -271,7 +279,7 @@ internal static partial class SelfTest
         // Only in place: loading the Ring or Pit takes the Gym's structures with it anyway.
         if (_arena == ArenaKind.Here && LastCleared < 1) _rulesProblem = "the cube spawned before the battle was not cleared off the map";
         if (Available("SpawnCube") || !Available("Disc"))
-            _rulesProblem = "a discs-only chart did not take the other spawn moves away (and leave the disc)";
+            _rulesProblem = $"a discs-only chart did not take the other spawn moves away (and leave the disc): moves {string.Join(", ", You?.PlayerProcessor.availableStacks.ToArray().Select(m => m?.CachedName) ?? [])}";
 
         // The gestures themselves - what a VR player actually uses - not just the move list.
         var hadGestures = HasGesture("Disc");

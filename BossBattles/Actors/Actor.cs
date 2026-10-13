@@ -320,12 +320,12 @@ internal sealed partial class Actor
 
         try
         {
-            List<string?> pools = Stones?.Select(Shiftstones.Pool).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
+            List<string?> pools = Stones?.Select(Shiftstones.GetPoolName).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
             foreach ((var pool, var slot) in pools.Select((p, slot) => (p, slot)))
             {
                 if (pool == null)
                 {
-                    Logger.Warning($"[Actor.UnknownStone] {this}: no shiftstone called \"{Stones![slot]}\" - there are {string.Join(", ", Shiftstones.Catalog().Select(s => s.Pool))}");
+                    Logger.Warning($"[Actor.UnknownStone] {this}: no shiftstone called \"{Stones![slot]}\"");
                     continue;
                 }
 

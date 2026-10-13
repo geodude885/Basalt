@@ -4,7 +4,7 @@ using BossBattles.Services.Charts;
 using MelonLoader;
 using UnityEngine;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Presentation;
 
 /// <summary>
 /// RumbleReShaded, found by reflection when installed: a chart's shader looks and the battle's signals.

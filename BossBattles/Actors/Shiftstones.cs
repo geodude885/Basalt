@@ -8,7 +8,26 @@ internal static class Shiftstones
 {
     private static List<(string Pool, string Display)>? _catalog;
 
-    public static IReadOnlyList<(string Pool, string Display)> Catalog()
+    /// <summary>The pool for a chart's stone name, or null.</summary>
+    public static string? GetPoolName(string name)
+    {
+        var wanted = StringHelpers.Squash(name);
+        var names = new[] { wanted, wanted + "stone" };
+        return Catalog().FirstOrDefault(s => names.Contains(StringHelpers.Squash(s.Pool)) || names.Contains(StringHelpers.Squash(s.Display))).Pool;
+    }
+
+    /// <summary>The stones a player has equipped, by pool name.</summary>
+    public static List<string> EquippedBy(PlayerController player)
+    {
+        var names = player.PlayerShiftstones.GetEquippedShiftstones()
+            .Where(stone => stone != null)
+            .Select(stone => stone.gameObject.name.Replace("(Clone)", "", StringComparison.Ordinal).Trim())
+            .ToList();
+
+        return names;
+    }
+
+    private static IReadOnlyList<(string Pool, string Display)> Catalog()
     {
         if (_catalog != null) return _catalog;
 
@@ -30,24 +49,5 @@ internal static class Shiftstones
         _catalog = found;
         Logger.Debug($"[Actor.StoneCatalog] {string.Join(", ", found.Select(f => $"{f.Pool} ({f.Display})"))}");
         return _catalog;
-    }
-
-    /// <summary>The pool for a chart's stone name, or null.</summary>
-    public static string? Pool(string name)
-    {
-        var wanted = StringHelpers.Squash(name);
-        var names = new[] { wanted, wanted + "stone" };
-        return Catalog().FirstOrDefault(s => names.Contains(StringHelpers.Squash(s.Pool)) || names.Contains(StringHelpers.Squash(s.Display))).Pool;
-    }
-
-    /// <summary>The stones a player has equipped, by pool name.</summary>
-    public static List<string> EquippedBy(PlayerController player)
-    {
-        var names = player.PlayerShiftstones.GetEquippedShiftstones()
-            .Where(stone => stone != null)
-            .Select(stone => stone.gameObject.name.Replace("(Clone)", "", StringComparison.Ordinal).Trim())
-            .ToList();
-
-        return names;
     }
 }

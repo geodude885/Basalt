@@ -6,7 +6,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Presentation;
 
 internal enum MusicState
 {

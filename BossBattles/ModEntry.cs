@@ -1,4 +1,4 @@
-using BossBattles.Battle;
+using BossBattles.Authoring;
 using BossBattles.Patches;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Placement;
@@ -112,7 +112,7 @@ public sealed partial class ModEntry : MelonMod
         Picker.Forget();
     }
 
-    public override void OnApplicationQuit() => Mod.Battle.RestoreVisuals();
+    public override void OnApplicationQuit() => Mod.Battle.Signals.End();
 
     private void ApplySettings()
     {
@@ -121,7 +121,7 @@ public sealed partial class ModEntry : MelonMod
         Mod.Battle.ShowBackstop = _settings.ShowBackstop.Value;
         Mod.Battle.ShowPhaseBanners = _settings.ShowPhaseBanners.Value;
         Mod.Battle.MusicVolume = Math.Clamp(_settings.MusicVolume.Value, 0f, 1f);
-        Mod.Battle.VisualsStrength = _settings.ChartVisuals.Value;
+        Mod.Battle.Signals.Strength = _settings.ChartVisuals.Value;
         Picker.Open = _settings.ShowPicker.Value;
         Picker.Distance = Math.Clamp(_settings.PickerDistance.Value, 0.3f, 2f);
         Picker.Height = Math.Clamp(_settings.PickerHeight.Value, -1f, 0.5f);

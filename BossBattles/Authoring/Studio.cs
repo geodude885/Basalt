@@ -1,11 +1,13 @@
 using BossBattles.Actors;
+using BossBattles.Arenas;
+using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Authoring;
 
 internal enum StudioState
 {

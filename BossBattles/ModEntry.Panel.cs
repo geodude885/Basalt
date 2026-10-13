@@ -1,3 +1,5 @@
+using BossBattles.Arenas;
+using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Scoring;
@@ -20,7 +22,7 @@ public sealed partial class ModEntry
         StudioState.Setup or StudioState.ChoosingSection => true,
         StudioState.Reviewing or StudioState.PreviewingSection => false,
         StudioState.Deciding => Mod.Battle.State is BattleState.Idle or BattleState.Finished,
-        _ => Picker.Open && Mod.Battle.State is BattleState.Idle or BattleState.Finished,
+        _ => Picker.Open && !Arena.Online && Mod.Battle.State is BattleState.Idle or BattleState.Finished,
     };
 
     private IReadOnlyList<PickerButton> PanelButtons()

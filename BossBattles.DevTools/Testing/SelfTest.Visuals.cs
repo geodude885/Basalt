@@ -1,5 +1,6 @@
 using System.Collections;
 using BossBattles.Battle;
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using MelonLoader;
 using UnityEngine;
@@ -45,7 +46,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        var expected = strengthWas + ((LookStrength - strengthWas) * Mod.Battle.VisualsStrength);
+        var expected = strengthWas + ((LookStrength - strengthWas) * Mod.Battle.Signals.Strength);
         if (!enabled.Value || Math.Abs(strength.Value - expected) > 0.01f)
             _visualsProblem = $"chart look: {LookPack} was {(enabled.Value ? "on" : "off")} at strength {strength.Value:0.00} mid-run, not on at {expected:0.00}";
         else

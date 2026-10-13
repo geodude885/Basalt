@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
+using BossBattles.Arenas;
+using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Managers;

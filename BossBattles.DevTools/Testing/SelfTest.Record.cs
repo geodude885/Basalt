@@ -1,5 +1,6 @@
 using System.Collections;
 using BossBattles.Actors;
+using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;

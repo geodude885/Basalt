@@ -10,9 +10,12 @@ Survive scripted boss battles down a single lane against game-simulated actors: 
 ```
 BossBattles/            the mod
   ModEntry*.cs          entry point, chart actions, the picker's panel
-  Core/                 shared state (Mod: actors, battle, studio) and Log, with its log level
-  Actors/               Actor (simulated player): lifecycle, playback, body; rig, recorders
-  Battle/               BattleController, projectiles, lane, arenas, music, studio, RumbleReShaded
+  Mod.cs, Logger.cs     shared state (actors, battle, studio) and the logger, with its log level
+  Actors/               Actor (simulated player): lifecycle, playback, body; rig
+  Battle/               BattleController and what it runs: projectiles, your moves, you, structures
+  Arenas/               the maps, and the lane laid out in them
+  Presentation/         music, the board, RumbleReShaded looks and signals
+  Authoring/            the studio (recording, lane setup) and the clip recorder
   Patches/              ActorPatches (health, knockback, input, sounds), ArenaPatches
   UI/                   settings, the chart picker, covers, the game's buttons
   Services/             game-free and unit tested: charts, clips, audio, scoring, logging
@@ -22,7 +25,7 @@ shaders/                the BossBattlesNight RumbleReShaded pack (a Unity projec
 tools/                  song analysis, cpp2il-isil.py
 ```
 
-UIFramework is required. RumbleReShaded is optional: `Battle/ReShade.cs` finds it by reflection,
+UIFramework is required. RumbleReShaded is optional: `Presentation/ReShade.cs` finds it by reflection,
 and nothing else references it.
 
 ## How the actors work

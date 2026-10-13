@@ -1,8 +1,9 @@
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Arenas;
 
 /// <summary>
 /// The lane's lines on the floor and its invisible walls: behind you, down both sides and across

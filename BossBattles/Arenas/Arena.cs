@@ -1,10 +1,11 @@
 using BossBattles.Services.Charts;
+using Il2CppPhoton.Pun;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SceneManager = Il2CppRUMBLE.Managers.SceneManager;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Arenas;
 
 /// <summary>
 /// Loads the match maps solo, with the game's own <c>SceneManager.LoadSceneAsync</c>, and finds
@@ -46,6 +47,9 @@ internal static class Arena
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         return new[] { ArenaKind.Gym, ArenaKind.Ring, ArenaKind.Pit }.FirstOrDefault(k => SceneFor(k) == scene);
     }
+
+    /// <summary>In a park or a match: an online room, where actors (extra Local players) must never be.</summary>
+    public static bool Online => PhotonNetwork.InRoom && !PhotonNetwork.OfflineMode;
 
     public static bool InScene(ArenaKind kind) =>
         kind == ArenaKind.Here || string.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, SceneFor(kind), StringComparison.Ordinal);

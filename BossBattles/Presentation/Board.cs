@@ -2,7 +2,7 @@ using BossBattles.Services.Scoring;
 using Il2CppTMPro;
 using UnityEngine;
 
-namespace BossBattles.Battle;
+namespace BossBattles.Presentation;
 
 /// <summary>Floating text over the lane: the countdown, phase names and results.</summary>
 internal sealed class Board

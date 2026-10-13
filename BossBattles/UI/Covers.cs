@@ -1,4 +1,4 @@
-using BossBattles.Battle;
+using BossBattles.Presentation;
 using UnityEngine;
 
 namespace BossBattles.UI;

@@ -1,3 +1,4 @@
+using BossBattles.Arenas;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Environment;
 using Il2CppRUMBLE.Managers;

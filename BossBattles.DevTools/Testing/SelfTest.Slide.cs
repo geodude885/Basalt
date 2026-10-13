@@ -38,7 +38,7 @@ internal static partial class SelfTest
 
         // 2. Knocked back mid-slide.
         while (GroundedLaunches < 2 && Time.realtimeSinceStartup < deadline) yield return null;
-        Rigidbody? second = SlidingBody();
+        Rigidbody? second = SlidingBody(except: first);
         yield return new WaitForSeconds(0.1f);
         if (second == null)
         {

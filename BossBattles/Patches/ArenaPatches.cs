@@ -20,7 +20,7 @@ public static class ArenaPatches
 
             PatchGuard.Run(nameof(NoForceQuitDuringBattle), () =>
             {
-                if (!Mod.Battle.HoldsArena) return;
+                if (!Mod.Battle.StayInMap) return;
 
                 runOriginal = false;
                 Logger.Debug("[Arena.ForceQuitBlocked] the match handler tried to send you back to the Gym mid-battle");

@@ -8,25 +8,25 @@ using Stack = Il2CppRUMBLE.MoveSystem.Stack;
 
 namespace BossBattles.Battle;
 
-/// <summary>Your moves: off through the countdown, and the spawn moves a chart's rule clips away.</summary>
-internal sealed partial class BattleController
+/// <summary>Your moves in a battle: off through the countdown, and the spawn moves a chart's rule clips away.</summary>
+internal sealed class MoveLock
 {
     private static readonly string[] SpawnMoves = { "Disc", "SpawnBall", "SpawnCube", "SpawnPillar", "SpawnWall" };
 
     private readonly List<Stack> _withheld = [];
     private PlayerController? _withheldFrom;
-    private PlayerController? _movesHeldFor;
+    private PlayerController? _heldFor;
 
-    /// <summary>Your gesture recognition off until GO, the same switch an actor's clip uses.</summary>
-    private void HoldYourMoves()
+    /// <summary>Your gesture recognition off, the same switch an actor's clip uses.</summary>
+    public void Hold()
     {
         PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
-        if (you == null || _movesHeldFor != null) return;
+        if (you == null || _heldFor != null) return;
 
         try
         {
             you.PlayerProcessor.RemoveAllStackInputSources();
-            _movesHeldFor = you;
+            _heldFor = you;
             Logger.Debug("[Battle.MovesHeld] until GO");
         }
         catch (Exception e)
@@ -35,25 +35,57 @@ internal sealed partial class BattleController
         }
     }
 
-    /// <summary>Your moves back at GO, without the spawn moves the chart's rule disallows; miming keeps them off.</summary>
-    private void ReleaseYourMoves()
+    /// <summary>Your moves back, without the spawn moves <paramref name="rule"/> disallows.</summary>
+    public void Release(SpawnRule rule = SpawnRule.All)
     {
-        if (Miming && State == BattleState.Countdown) return;
-
-        PlayerController? you = _movesHeldFor;
-        _movesHeldFor = null;
+        PlayerController? you = _heldFor;
+        _heldFor = null;
         if (you == null) return;
 
         try
         {
-            if (State == BattleState.Countdown && Mode != BattleMode.Record && Chart != null && Chart.Rules.Spawn != SpawnRule.All) Withhold(you, Chart.Rules.Spawn);
+            // Re-initialising rebuilds the move list from every move you own, so the rule clips it after.
             you.PlayerProcessor.InitializeStackInputSources(true);
+            if (rule != SpawnRule.All) Withhold(you, rule);
             if (_withheld.Count > 0) DropWithheldGestures(you);
         }
         catch (Exception e)
         {
             Logger.Warning($"[Battle.MovesNotReleased] your moves may stay off until the scene changes: {e.Message}");
         }
+    }
+
+    public void GiveSpawnsBack()
+    {
+        PlayerController? you = _withheldFrom;
+        _withheldFrom = null;
+        if (you == null || _withheld.Count == 0)
+        {
+            _withheld.Clear();
+            return;
+        }
+
+        try
+        {
+            you.PlayerProcessor.RemoveAllStackInputSources();
+            foreach (Stack stack in _withheld) you.PlayerProcessor.availableStacks.Add(stack);
+            you.PlayerProcessor.InitializeStackInputSources(true);
+            Logger.Debug($"[Battle.SpawnsReturned] {string.Join(", ", _withheld.Select(s => s.CachedName))}");
+        }
+        catch (Exception e)
+        {
+            Logger.Warning($"[Battle.SpawnsNotReturned] your spawn moves may stay off until the scene changes: {e.Message}");
+        }
+
+        _withheld.Clear();
+    }
+
+    /// <summary>For a scene change: your player went with the scene, its moves with it.</summary>
+    public void Forget()
+    {
+        _heldFor = null;
+        _withheldFrom = null;
+        _withheld.Clear();
     }
 
     private void Withhold(PlayerController you, SpawnRule rule)
@@ -93,30 +125,5 @@ internal sealed partial class BattleController
         }
 
         Logger.Write(dropped.Count > 0 ? LogLevel.Debug : LogLevel.Warning, $"[{(dropped.Count > 0 ? "Battle.GesturesDropped" : "Battle.NoGesturesFound")}] {(dropped.Count > 0 ? string.Join(", ", dropped) : "no gesture handles for the withheld moves")}; {handles.Count} gesture(s) left");
-    }
-
-    private void GiveSpawnsBack()
-    {
-        PlayerController? you = _withheldFrom;
-        _withheldFrom = null;
-        if (you == null || _withheld.Count == 0)
-        {
-            _withheld.Clear();
-            return;
-        }
-
-        try
-        {
-            you.PlayerProcessor.RemoveAllStackInputSources();
-            foreach (Stack stack in _withheld) you.PlayerProcessor.availableStacks.Add(stack);
-            you.PlayerProcessor.InitializeStackInputSources(true);
-            Logger.Debug($"[Battle.SpawnsReturned] {string.Join(", ", _withheld.Select(s => s.CachedName))}");
-        }
-        catch (Exception e)
-        {
-            Logger.Warning($"[Battle.SpawnsNotReturned] your spawn moves may stay off until the scene changes: {e.Message}");
-        }
-
-        _withheld.Clear();
     }
 }

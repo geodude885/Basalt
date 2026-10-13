@@ -1,5 +1,6 @@
 using BossBattles.Actors;
-using BossBattles.Battle;
+using BossBattles.Arenas;
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Placement;
 using Il2CppRUMBLE.Interactions.InteractionBase;

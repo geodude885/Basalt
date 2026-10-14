@@ -311,7 +311,7 @@ internal static partial class SelfTest
     }
 
     /// <summary>A screenshot from beside the lane, looking along it at you.</summary>
-    private static void Shoot(string folder, string name, LaneFrame lane, Vector3 at)
+    private static void Shoot(string folder, string name, Anchor lane, Vector3 at)
     {
         Vector3 World(float x, float y, float z)
         {

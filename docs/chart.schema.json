@@ -45,7 +45,7 @@
         },
         "at": {
           "type": "object",
-          "description": "Where you stand: metres from the arena's centre (Gym: world). Ctrl+W prints yours.",
+          "description": "Where you stand: metres from the arena's centre (Gym: world). Where am I, in the settings, prints yours.",
           "properties": {
             "x": {
               "type": "number"

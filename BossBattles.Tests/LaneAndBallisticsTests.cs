@@ -4,7 +4,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class LaneFrameTests
+public sealed class AnchorTests
 {
     private const float Tolerance = 1e-4f;
 
@@ -12,41 +12,30 @@ public sealed class LaneFrameTests
     public void LaneAxesFollowYourFacing()
     {
         // Facing +X: down the lane is +X, lane-right is -Z (Unity is left-handed).
-        var frame = LaneFrame.From(new Vector3(10, 0, 5), new Vector3(1, 0.3f, 0));
+        var frame = Anchor.Facing(new Vector3(10, 0, 5), new Vector3(1, 0.3f, 0));
 
-        AssertClose(new Vector3(1, 0, 0), frame.Anchor.Forward);
-        AssertClose(new Vector3(0, 0, -1), frame.Anchor.Right);
+        AssertClose(new Vector3(1, 0, 0), frame.Forward);
+        AssertClose(new Vector3(0, 0, -1), frame.Right);
         AssertClose(new Vector3(22, 1.5f, 4), frame.ToWorld(new Vector3(1, 1.5f, 12)));
     }
 
     [Fact]
-    public void ToLaneUndoesToWorld()
+    public void ToLocalUndoesToWorld()
     {
-        var frame = LaneFrame.From(new Vector3(-3, 0.7f, 8), new Vector3(0.6f, 0, -0.8f), 0.5f);
+        var frame = Anchor.Facing(new Vector3(-3, 0.7f, 8), new Vector3(0.6f, 0, -0.8f));
         var lane = new Vector3(-1.2f, 1.4f, 10.5f);
 
-        AssertClose(lane, frame.ToLane(frame.ToWorld(lane)));
-    }
-
-    [Fact]
-    public void BetweenFitsTheChartLaneToTheRealOne()
-    {
-        // A 12 m chart lane fitted between two arena spots 6 m apart: z is halved, x and y are not.
-        var frame = LaneFrame.Between(new Vector3(0, 0, 0), new Vector3(0, 0.5f, 6), 12f);
-
-        Assert.Equal(0.5f, frame.DepthScale, 4);
-        AssertClose(new Vector3(0, 0, 6), frame.ToWorld(new Vector3(0, 0, 12)));
-        AssertClose(new Vector3(1, 1.4f, 3), frame.ToWorld(new Vector3(1, 1.4f, 6)));
+        AssertClose(lane, frame.ToLocal(frame.ToWorld(lane)));
     }
 
     [Fact]
     public void AnActorWithNoFacingLooksBackDownTheLane()
     {
-        var north = LaneFrame.From(Vector3.Zero, Vector3.UnitZ);
+        var north = Anchor.Facing(Vector3.Zero, Vector3.UnitZ);
 
-        Assert.Equal(180f, north.ActorYawDegrees(0), 3);
-        Assert.Equal(210f, north.ActorYawDegrees(30), 3);
-        Assert.Equal(150f, north.ActorYawDegrees(-30), 3);
+        Assert.Equal(180f, north.ActorYaw(0), 3);
+        Assert.Equal(210f, north.ActorYaw(30), 3);
+        Assert.Equal(150f, north.ActorYaw(-30), 3);
     }
 
     private static void AssertClose(Vector3 expected, Vector3 actual) =>

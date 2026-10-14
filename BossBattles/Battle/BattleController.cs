@@ -57,11 +57,11 @@ internal sealed class BattleController
     private ClipLibrary? _chartClips;
     private string? _scoreKey;
     private float _musicDeadline;
-    private LaneFrame? _fixedFrame;
+    private Anchor? _fixedFrame;
     private string? _recordActor;
     private Clip? _pendingClip;
     private System.Numerics.Vector2? _recordSpot;
-    private LaneFrame _frame;
+    private Anchor _frame;
     private ChartRunner? _runner;
     private ScoreKeeper? _score;
     private Phase? _phase;
@@ -112,14 +112,14 @@ internal sealed class BattleController
     /// <summary>Chart time the battle started from: 0, or part-way for a section.</summary>
     public double StartAt { get; private set; }
 
-    public LaneFrame? Lane => LaidOut ? _frame : null;
+    public Anchor? Lane => LaidOut ? _frame : null;
 
     public IReadOnlyList<Actor> Actors => _actors;
 
     private bool LaidOut => State is not (BattleState.Idle or BattleState.LoadingArena) && Chart != null;
 
-    /// <summary>A world point in lane coordinates: x across, z along, in chart units.</summary>
-    public Vector3 ToLane(Vector3 world) => StringHelpers.ToUnity(_frame.ToLane(StringHelpers.ToNumerics(world)));
+    /// <summary>A world point in lane coordinates: x across, z along, in metres.</summary>
+    public Vector3 ToLane(Vector3 world) => StringHelpers.ToUnity(_frame.ToLocal(StringHelpers.ToNumerics(world)));
 
     public void Banner(string text, float seconds) => _board.Show(text, seconds);
 
@@ -141,7 +141,7 @@ internal sealed class BattleController
         string? scoreKey = null,
         BattleMode mode = BattleMode.Play,
         string? recordActor = null,
-        LaneFrame? lane = null,
+        Anchor? lane = null,
         Clip? pendingClip = null,
         double startAt = 0,
         System.Numerics.Vector2? recordSpot = null,
@@ -322,7 +322,7 @@ internal sealed class BattleController
         try
         {
             var yours = ActorRig.From(BattlePlayer.Controller!);
-            LaneFrame? frame = _fixedFrame ?? Arena.Frame(CurrentArena, _arenaSpec, Chart!.Lane, yours.Feet, yours.Facing);
+            Anchor? frame = _fixedFrame ?? Arena.Frame(CurrentArena, _arenaSpec, yours.Feet, yours.Facing);
             if (frame == null)
             {
                 Stop("no lane could be laid out");
@@ -337,11 +337,11 @@ internal sealed class BattleController
             {
                 // In the actor's place, facing down the lane as it will; a section starts where it stood then.
                 Vector3 spot = _recordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
-                _player.Place(spot, Quaternion.Euler(0f, _frame.ActorYawDegrees(performer.At.Facing), 0f));
+                _player.Place(spot, Quaternion.Euler(0f, _frame.ActorYaw(performer.At.Facing), 0f));
             }
             else if (Arena.IsMatchMap(CurrentArena) || _arenaSpec.HasSpot || _fixedFrame != null)
             {
-                _player.Place(StringHelpers.ToUnity(_frame.Anchor.Position), Quaternion.LookRotation(StringHelpers.ToUnity(_frame.Anchor.Forward)));
+                _player.Place(StringHelpers.ToUnity(_frame.Position), Quaternion.LookRotation(StringHelpers.ToUnity(_frame.Forward)));
             }
 
             _lane.Build(_frame, Chart.Lane, ShowBackstop, walls: true, zone: Mode == BattleMode.Record ? null : Chart.Zone,
@@ -353,7 +353,7 @@ internal sealed class BattleController
             }
             else
             {
-                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), StringHelpers.ToUnity(_frame.Anchor.Position));
+                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), StringHelpers.ToUnity(_frame.Position));
                 _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
@@ -362,7 +362,7 @@ internal sealed class BattleController
                 var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { SelfKnockbackMultiplier = 0f, Measurement = spec.Measurement };
                 _actors.Add(actor);
                 Vector3 spot = World(spec.At.X, 0f, spec.At.Z);
-                var yaw = _frame.ActorYawDegrees(spec.At.Facing);
+                var yaw = _frame.ActorYaw(spec.At.Facing);
 
                 // Spawning puts the head on the floor, so the body falls until placed properly.
                 var session = _session;
@@ -458,7 +458,7 @@ internal sealed class BattleController
                     // A clip holds its actor to the recorded path, so a move elsewhere would be dragged back.
                     Actor? placed = ActorById(place.ActorId);
                     if (placed is { PlayingClip: true }) Logger.Info($"[Battle.PlaceDuringClip] {place.ActorId} is playing a clip at {place.Time:0.0}s - its \"at\" is skipped");
-                    else placed?.Place(World(place.At.X, 0f, place.At.Z), _frame.ActorYawDegrees(place.At.Facing));
+                    else placed?.Place(World(place.At.X, 0f, place.At.Z), _frame.ActorYaw(place.At.Facing));
                     break;
 
                 case SpawnProjectile spawn:

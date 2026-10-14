@@ -16,7 +16,7 @@ internal static partial class SelfTest
 
     private static Vector3? LaneOrigin => LanePoint(0f, 0f, 0f);
 
-    private static float LaneMetres => Mod.Battle.Lane is { } frame && Mod.Battle.Chart is { } chart ? chart.Lane.Length * frame.DepthScale : 0f;
+    private static float LaneMetres => Mod.Battle.Lane != null && Mod.Battle.Chart is { } chart ? chart.Lane.Length : 0f;
 
     /// <summary>The count from the last <c>[Battle.Cleared] n structure(s)</c> line.</summary>
     private static int LastCleared =>

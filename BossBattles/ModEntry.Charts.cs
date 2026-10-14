@@ -208,7 +208,7 @@ public sealed partial class ModEntry
 
         ArenaKind map = Arena.CurrentMap();
         var rig = ActorRig.From(you);
-        Vector3 at = rig.Feet - (Arena.Anchor(map) ?? Vector3.zero);
+        Vector3 at = rig.Feet - (Arena.MapOrigin(map) ?? Vector3.zero);
 
         static string F(float v)
         {

@@ -31,6 +31,9 @@ public readonly record struct Anchor(Vector3 Position, float Yaw)
 
     public float ToWorldYaw(float localYaw) => Normalise(localYaw + Yaw);
 
+    /// <summary>World yaw for an actor spot's facing, with the anchor at your end of a lane: 0 looks back at you, positive to its right.</summary>
+    public float ActorYaw(float facing) => ToWorldYaw(180f + facing);
+
     private static float Normalise(float degrees)
     {
         degrees %= 360f;

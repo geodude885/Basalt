@@ -24,7 +24,7 @@ internal sealed class ClipRecorder
     private Il2CppSystem.Action<StackConfiguration>? _onMove;
     private PlayerStackProcessor? _processor;
     private PlayerController? _subject;
-    private LaneFrame _space;
+    private Anchor _anchor;
     private double? _startTime;
     private double _clipTime;
     private double _nextSample;
@@ -35,11 +35,11 @@ internal sealed class ClipRecorder
 
     public int MoveCount => _moves.Count;
 
-    public void Start(PlayerController subject, LaneFrame space)
+    public void Start(PlayerController subject, Anchor space)
     {
         Cancel();
         _subject = subject;
-        _space = space;
+        _anchor = space;
 
         try
         {
@@ -86,14 +86,14 @@ internal sealed class ClipRecorder
 
         var rig = ActorRig.From(_subject);
         PlayerHandPresence hands = _subject.PlayerHandPresence;
-        Vector3 spot = _space.ToLane(StringHelpers.ToNumerics(rig.Feet));
+        Vector3 spot = _anchor.ToLocal(StringHelpers.ToNumerics(rig.Feet));
         _frames.Add(new ClipFrame(
             (float)_clipTime,
             ActorRig.LocalPose(rig.Head),
             ActorRig.LocalPose(rig.LeftHand),
             ActorRig.LocalPose(rig.RightHand),
             new Vector2(spot.X, spot.Z),
-            _space.Anchor.ToLocalYaw(rig.Vr.eulerAngles.y),
+            _anchor.ToLocalYaw(rig.Vr.eulerAngles.y),
             ActorRig.Fingers(hands.GetHandPresenceInputForHand(InputManager.Hand.Left, false)),
             ActorRig.Fingers(hands.GetHandPresenceInputForHand(InputManager.Hand.Right, false))));
     }

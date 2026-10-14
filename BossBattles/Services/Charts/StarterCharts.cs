@@ -45,8 +45,8 @@ public static class StarterCharts
           "author": "BossBattles",
           "difficulty": "Normal",
           "description": "Shots cutting across the lane. Hits on the Gunner count double while it is open.",
-          // No spot: the lane is laid across the Pit through its centre.
-          "arena": { "map": "pit" },
+          // The lane centred on the Pit, running north.
+          "arena": { "map": "pit", "at": { "x": 0, "z": -6 }, "facing": 0 },
           "lane": { "length": 12, "width": 3 },
           "actors": [ { "id": "gunner", "name": "The Gunner", "at": { "x": 0, "z": 12 } } ],
           "phases": [

@@ -116,8 +116,8 @@ public enum ArenaKind
 
 /// <summary>
 /// Where a chart is played: you stand at <see cref="X"/>, <see cref="Z"/> metres from the arena's
-/// centre (Gym: world origin), the lane running along compass <see cref="Facing"/>. Without a spot it
-/// crosses the floor through the centre; without a facing it runs towards the centre.
+/// centre (Gym: world origin), the lane running along compass <see cref="Facing"/> (default north). Without a
+/// spot the lane starts where you stand, the way you face.
 /// </summary>
 public sealed record ArenaSpec(ArenaKind Map, float? X = null, float? Z = null, float? Facing = null)
 {

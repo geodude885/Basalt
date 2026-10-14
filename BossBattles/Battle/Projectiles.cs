@@ -28,10 +28,10 @@ internal sealed partial class Projectiles
     private readonly Dictionary<int, Projectile> _live = [];
     private readonly List<FlightCheck> _checks = [];
 
-    public void Spawn(int id, ProjectileEvent projectile, LaneFrame frame)
+    public void Spawn(int id, ProjectileEvent projectile, Anchor frame)
     {
         Vector3 origin = StringHelpers.ToUnity(frame.ToWorld(projectile.From));
-        Vector3 towardYou = -StringHelpers.ToUnity(frame.Anchor.Forward);
+        Vector3 towardYou = -StringHelpers.ToUnity(frame.Forward);
 
         // The floor before the pool fetch, which stands the structure at its origin in the ray's way.
         var floor = Arena.TryFloorHeight(origin, out var ground) ? ground : origin.y - 1f;
@@ -62,7 +62,7 @@ internal sealed partial class Projectiles
         {
             origin.y += floor + FloorClearance - LowestPoint(pooled.transform, origin, facing);
 
-            var laneFloor = StringHelpers.ToUnity(frame.Anchor.Position).y;
+            var laneFloor = StringHelpers.ToUnity(frame.Position).y;
             if (floor - laneFloor > 1f) Logger.Warning($"[Projectile.OffTheFloor] #{id} {projectile.Structure}: floor found {floor - laneFloor:0.00} m above the lane's");
             else if (laneFloor - floor > 1f) Logger.Debug($"[Projectile.BelowTheLane] #{id} {projectile.Structure}: the ground there is {laneFloor - floor:0.00} m below your end of the lane - it may hit the slope");
         }

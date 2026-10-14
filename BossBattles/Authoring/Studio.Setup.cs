@@ -12,7 +12,7 @@ internal sealed partial class Studio
     private Lane _setupLane;
     private List<ActorSpec> _setupActors = [];
     private (Vector3 Floor, Vector3 Facing)? _setupFrom;
-    private LaneFrame? _setupFrame;
+    private Anchor? _setupFrame;
     private bool _setupDirty;
 
     public (ArenaSpec Arena, Lane Lane, ActorSpec? Actor) SetupValues => (_setupArena, _setupLane, _setupActors.FirstOrDefault());
@@ -54,7 +54,7 @@ internal sealed partial class Studio
         }
         else
         {
-            Vector3 at = rig.Feet - (Arena.Anchor(map) ?? Vector3.zero);
+            Vector3 at = rig.Feet - (Arena.MapOrigin(map) ?? Vector3.zero);
             _setupArena = new ArenaSpec(map, MathF.Round(at.x, 2), MathF.Round(at.z, 2), MathF.Round(VectorHelpers.Bearing(rig.Facing)));
         }
 
@@ -66,7 +66,7 @@ internal sealed partial class Studio
     {
         if (You() is not { } rig || _setupFrame is not { } frame || _setupActors.Count == 0) return;
 
-        System.Numerics.Vector3 at = frame.ToLane(StringHelpers.ToNumerics(rig.Feet));
+        System.Numerics.Vector3 at = frame.ToLocal(StringHelpers.ToNumerics(rig.Feet));
         var z = Math.Max(0.5f, at.Z);
         if (z > _setupLane.Length) _setupLane = new Lane(Math.Min(ChartSetup.MaxLength, MathF.Ceiling(z)), _setupLane.Width);
 
@@ -124,7 +124,7 @@ internal sealed partial class Studio
         if (_setupArena.Map != ArenaKind.Here && !Arena.InScene(_setupArena.Map)) return;
 
         _setupFrom ??= (rig.Feet, rig.Facing);
-        LaneFrame? frame = Arena.Frame(_setupArena.Map, _setupArena, _setupLane, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
+        Anchor? frame = Arena.Frame(_setupArena.Map, _setupArena, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
         if (frame == null) return;
 
         _setupFrame = frame;

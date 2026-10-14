@@ -18,7 +18,7 @@ internal sealed partial class Actor
     public void SetPose(ActorPose pose) => _pose = pose;
 
     /// <summary>Plays <paramref name="clip"/> from clip time <paramref name="from"/> to <paramref name="to"/>, or its end.</summary>
-    public void PlayClip(Clip clip, double from, double? to, LaneFrame lane, Func<double> clock, bool mime = false)
+    public void PlayClip(Clip clip, double from, double? to, Anchor lane, Func<double> clock, bool mime = false)
     {
         if (!Exists || clip.Frames.Count == 0) return;
 
@@ -118,7 +118,7 @@ internal sealed partial class Actor
         if (frame.Yaw is { } yaw) FollowFacing(playing.Lane, yaw);
     }
 
-    private void FollowPath(LaneFrame lane, System.Numerics.Vector2 spot)
+    private void FollowPath(Anchor lane, System.Numerics.Vector2 spot)
     {
         Vector3 wanted = StringHelpers.ToUnity(lane.ToWorld(new System.Numerics.Vector3(spot.X, 0f, spot.Y)));
         Vector3 actual = _rig!.Feet;
@@ -138,16 +138,16 @@ internal sealed partial class Actor
         }
     }
 
-    private void FollowFacing(LaneFrame lane, float laneYaw)
+    private void FollowFacing(Anchor lane, float laneYaw)
     {
-        var wanted = lane.Anchor.ToWorldYaw(laneYaw);
+        var wanted = lane.ToWorldYaw(laneYaw);
         var angle = Mathf.DeltaAngle(_rig!.Vr.eulerAngles.y, wanted);
         if (Mathf.Abs(angle) < 1f) return;
 
         _player!.Controller.PlayerMovement.Rotate(angle, false);
     }
 
-    private sealed record Playing(Clip Clip, double From, double StartedAt, double? To, LaneFrame Lane, Func<double> Clock)
+    private sealed record Playing(Clip Clip, double From, double StartedAt, double? To, Anchor Lane, Func<double> Clock)
     {
         public int NextMove { get; set; }
 

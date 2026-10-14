@@ -443,11 +443,11 @@ public sealed class FacingTests
     [Fact]
     public void LaneYawsRoundTrip()
     {
-        var lane = LaneFrame.From(Vector3.Zero, new Vector3(1f, 0f, 0f));
+        var lane = Anchor.Facing(Vector3.Zero, new Vector3(1f, 0f, 0f));
 
-        Assert.Equal(90f, lane.Anchor.Yaw, 2);
-        Assert.Equal(180f, lane.Anchor.ToLocalYaw(270f), 2);
-        Assert.Equal(270f, lane.Anchor.ToWorldYaw(180f), 2);
+        Assert.Equal(90f, lane.Yaw, 2);
+        Assert.Equal(180f, lane.ToLocalYaw(270f), 2);
+        Assert.Equal(270f, lane.ToWorldYaw(180f), 2);
     }
 }
 

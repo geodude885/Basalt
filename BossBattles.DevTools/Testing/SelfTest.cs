@@ -159,8 +159,8 @@ internal static partial class SelfTest
         File.WriteAllBytes(Path.Combine(assets, ToneFile), TestAudio.Write(TestAudio.Metronome(120, chart.End + 2)));
         _song = SongFiles.FirstOrDefault(f => File.Exists(Path.Combine(assets, f))) ?? ToneFile;
 
-        // The Ring is played from a spot the chart names; the Pit is laid out automatically.
-        ArenaSpec arena = _arena == ArenaKind.Ring ? new ArenaSpec(ArenaKind.Ring, 0f, -4f, 0f) : new ArenaSpec(_arena);
+        // In the Ring and Pit, the 10 m lane centred on the arena, running north.
+        ArenaSpec arena = _arena is ArenaKind.Ring or ArenaKind.Pit ? new ArenaSpec(_arena, 0f, -5f, 0f) : new ArenaSpec(_arena);
         chart = chart with { Arena = arena, Music = new MusicSpec(_song, 0, 0.6f) };
 
         BattleResult? result = null;

@@ -114,8 +114,8 @@ internal static partial class SelfTest
     {
         _keepYouAlive = true;
         var before = Mod.Actors.All.ToList();
-        // No spot: the Ring lays the template's 12 m lane across its middle - from z = -4 it ran off the edge.
-        Mod.Battle.Start(chart with { Arena = new ArenaSpec(ArenaKind.Ring) }, ArenaKind.Ring, folder);
+        // Warm-up's spot: the template's 12 m lane fits across the Ring from there.
+        Mod.Battle.Start(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }, ArenaKind.Ring, folder);
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;

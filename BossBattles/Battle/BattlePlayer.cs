@@ -38,16 +38,16 @@ internal sealed class BattlePlayer
     /// The walls' safety net: past one anyway, you are pushed back inside the lane - both bodies
     /// shifted, height kept, and the speed carrying you out stopped. Without <paramref name="zoned"/> the whole lane is yours.
     /// </summary>
-    public void KeepInLane(LaneFrame frame, Chart chart, bool zoned)
+    public void KeepInLane(Anchor frame, Chart chart, bool zoned)
     {
         if (Time.time < _nextLaneCheck || Controller is not { } you) return;
         _nextLaneCheck = Time.time + 0.1f;
 
         var rig = ActorRig.From(you);
-        Vector3 at = StringHelpers.ToUnity(frame.ToLane(StringHelpers.ToNumerics(rig.Feet)));
+        Vector3 at = StringHelpers.ToUnity(frame.ToLocal(StringHelpers.ToNumerics(rig.Feet)));
         float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
-        var far = zoned ? chart.Zone.Length + (0.3f / frame.DepthScale) : chart.Lane.Length + (0.75f / frame.DepthScale);
-        var above = rig.Vr.position.y - frame.Anchor.Position.Y;
+        var far = zoned ? chart.Zone.Length + 0.3f : chart.Lane.Length + 0.75f;
+        var above = rig.Vr.position.y - frame.Position.Y;
         var tooHigh = zoned && above > chart.Zone.Height + 0.8f;
         if (!tooHigh && Math.Abs(at.x) <= side + 0.3f && at.z >= back - 0.3f && at.z <= far + 0.3f) return;
 

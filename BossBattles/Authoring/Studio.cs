@@ -55,7 +55,7 @@ internal sealed partial class Studio
     private readonly LaneVisuals _preview = new();
     private readonly List<GameObject> _markers = [];
     private ArenaKind? _arenaOverride;
-    private LaneFrame? _lane;
+    private Anchor? _lane;
     private string _actorId = "";
 
     /// <summary>A section being recorded again; null while recording whole.</summary>

@@ -74,7 +74,7 @@ internal sealed class LaneVisuals
     /// <param name="zone">Your part of the lane, walled and roofed; null for none (recording).</param>
     /// <param name="colours">The colours to start in; a wall colour shows the walls as panes.</param>
     /// <param name="panes">Build the wall panes even if <paramref name="colours"/> hides them, for a later phase.</param>
-    public void Build(LaneFrame frame, Lane lane, bool showBackstop, bool walls = true, Zone? zone = null, LaneColours? colours = null, bool panes = false)
+    public void Build(Anchor frame, Lane lane, bool showBackstop, bool walls = true, Zone? zone = null, LaneColours? colours = null, bool panes = false)
     {
         Destroy();
         colours ??= LaneColours.Default;
@@ -82,9 +82,9 @@ internal sealed class LaneVisuals
         Color edgeColour = _now[Role.Edge];
         Color endColour = _now[Role.End];
 
-        var length = lane.Length * frame.DepthScale;
+        var length = lane.Length;
         var halfWidth = lane.Width / 2f;
-        Vector3 forward = StringHelpers.ToUnity(frame.Anchor.Forward);
+        Vector3 forward = StringHelpers.ToUnity(frame.Forward);
         var along = Quaternion.LookRotation(forward);
 
         Vector3 Point(float x, float z)
@@ -98,7 +98,7 @@ internal sealed class LaneVisuals
         Line(Point(0f, lane.Length), along, new Vector3(lane.Width, LineHeight, LineThickness), endColour, Role.End);
 
         // The backstop is solid to physics but only a frame to the eye.
-        Vector3 origin = StringHelpers.ToUnity(frame.Anchor.Position);
+        Vector3 origin = StringHelpers.ToUnity(frame.Position);
         Vector3 wallCentre = origin - (forward * BackstopGap) + (Vector3.up * (BackstopHeight / 2f));
         var wallWidth = lane.Width + 2f;
 
@@ -114,7 +114,7 @@ internal sealed class LaneVisuals
         if (showBackstop)
         {
             Color frameColour = _now[Role.Frame];
-            Vector3 right = StringHelpers.ToUnity(frame.Anchor.Right);
+            Vector3 right = StringHelpers.ToUnity(frame.Right);
             Line(wallCentre + (Vector3.up * (BackstopHeight / 2f)), along, new Vector3(wallWidth, FrameThickness, FrameThickness), frameColour, Role.Frame);
             Line(wallCentre - (right * (wallWidth / 2f)), along, new Vector3(FrameThickness, BackstopHeight, FrameThickness), frameColour, Role.Frame);
             Line(wallCentre + (right * (wallWidth / 2f)), along, new Vector3(FrameThickness, BackstopHeight, FrameThickness), frameColour, Role.Frame);
@@ -128,7 +128,7 @@ internal sealed class LaneVisuals
 
         var runLength = length + (2f * (EndGap + BackstopThickness));
         var sideX = halfWidth + SideGap + (WallThickness / 2f);
-        Vector3 farCentre = Point(0f, lane.Length + ((EndGap + (WallThickness / 2f)) / frame.DepthScale)) + (Vector3.up * (WallHeight / 2f));
+        Vector3 farCentre = Point(0f, lane.Length + EndGap + (WallThickness / 2f)) + (Vector3.up * (WallHeight / 2f));
 
         PlayerWall("BossBattles_WallLeft", StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(-sideX, 0f, 0f))), along, forward, runLength, backstop.layer);
         PlayerWall("BossBattles_WallRight", StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(sideX, 0f, 0f))), along, forward, runLength, backstop.layer);
@@ -141,7 +141,7 @@ internal sealed class LaneVisuals
         if (zone is { } yours) BuildZone(frame, lane, yours, along, forward, backstop.layer);
         if (panes || colours.ShowsWalls) BuildPanes(frame, lane, zone, along, _now[Role.Pane]);
 
-        Logger.Debug($"[Lane.Built] {length:F1} m x {lane.Width:F1} m (depth scale {frame.DepthScale:F2}), backstop on layer {LayerMask.LayerToName(backstop.layer)}");
+        Logger.Debug($"[Lane.Built] {length:F1} m x {lane.Width:F1} m, backstop on layer {LayerMask.LayerToName(backstop.layer)}");
     }
 
     /// <summary>
@@ -184,7 +184,7 @@ internal sealed class LaneVisuals
     }
 
     /// <summary>Your zone: a line where it ends, and a wall past it and a ceiling over it that only you collide with.</summary>
-    private void BuildZone(LaneFrame frame, Lane lane, Zone zone, Quaternion along, Vector3 forward, int layer)
+    private void BuildZone(Anchor frame, Lane lane, Zone zone, Quaternion along, Vector3 forward, int layer)
     {
         if (zone.Length < lane.Length - 0.01f)
         {
@@ -197,7 +197,7 @@ internal sealed class LaneVisuals
             ZoneWall(wall, "BossBattles_ZoneEnd", layer);
         }
 
-        var depth = (zone.Length * frame.DepthScale) + EndGap + BackstopThickness + ZoneGap + WallThickness;
+        var depth = zone.Length + EndGap + BackstopThickness + ZoneGap + WallThickness;
         Vector3 under = StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(0f, zone.Height, 0f)));
         Vector3 centre = under + (forward * ((depth / 2f) - EndGap - BackstopThickness)) + (Vector3.up * (WallThickness / 2f));
         GameObject ceiling = Part(centre, along, new Vector3(lane.Width + (2f * (SideGap + WallThickness)), WallThickness, depth), BackstopColour, keepCollider: true);
@@ -208,20 +208,19 @@ internal sealed class LaneVisuals
     /// The walls made visible: see-through panes down both sides, across both ends and over the
     /// whole lane - but not across your zone's end, which would tint everything you fight.
     /// </summary>
-    private void BuildPanes(LaneFrame frame, Lane lane, Zone? zone, Quaternion along, Color colour)
+    private void BuildPanes(Anchor frame, Lane lane, Zone? zone, Quaternion along, Color colour)
     {
         var height = zone?.Height ?? Zone.DefaultHeight;
         var halfWidth = (lane.Width / 2f) + SideGap;
-        var scale = frame.DepthScale;
-        var near = -EndGap / scale;
-        var far = lane.Length + (EndGap / scale);
+        var near = -EndGap;
+        var far = lane.Length + EndGap;
 
         Vector3 At(float x, float y, float z)
         {
             return StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(x, y, z)));
         }
 
-        var run = (far - near) * scale;
+        var run = far - near;
         Pane(At(-halfWidth, height / 2f, (near + far) / 2f), along, new Vector3(PaneThickness, height, run), colour);
         Pane(At(halfWidth, height / 2f, (near + far) / 2f), along, new Vector3(PaneThickness, height, run), colour);
         Pane(At(0f, height / 2f, near), along, new Vector3(halfWidth * 2f, height, PaneThickness), colour);

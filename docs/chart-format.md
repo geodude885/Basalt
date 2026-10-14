@@ -73,11 +73,11 @@ Recorded clips are kept in the chart's own `clips/`.
 |---|---|---|---|
 | `map` | `here` / `gym` / `ring` / `pit` | `here` | Starting the chart takes you there. |
 | `at` | `{ x, z }` | - | Where you stand. The lane runs `lane.length` from here along `facing`. |
-| `facing` | degrees | towards the centre | The compass direction the lane runs from you. |
+| `facing` | degrees | your facing, or north with `at` | The compass direction the lane runs from you. |
 
-Without `at`, the Ring and Pit lay the lane across the floor through the centre (along `facing` if
-given), shrunk to fit if the floor is smaller than the lane; the Gym and `here` start from wherever
-you stand. `here` takes no `at` or `facing`. The player's arena override (setting) replaces the
+Without `at`, the lane starts wherever you stand - in the Ring and Pit, where the map puts you - and
+runs the way you face, or along `facing`. Lane setup in game saves an `at` and `facing` for you. `here`
+takes no `at` or `facing`. The player's arena override (setting) replaces the
 map; the spot is kept only when the override is the chart's own map.
 
 ### `music`

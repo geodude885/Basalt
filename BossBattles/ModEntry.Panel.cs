@@ -2,7 +2,6 @@ using BossBattles.Arena;
 using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
-using BossBattles.Services.Scoring;
 using BossBattles.UI;
 using UnityEngine;
 
@@ -27,19 +26,19 @@ public partial class ModEntry
 
     private IReadOnlyList<PickerButton> PanelButtons()
     {
-        Studio studio = Mod.Studio;
+        var studio = Mod.Studio;
         switch (studio.State)
         {
             case StudioState.Recording:
-                return new[] { new PickerButton("stop", "STOP", Red, studio.Stop) };
+                return new[] { new PickerButton("stop", "STOP", Red, studio.StopRecording) };
 
             case StudioState.Deciding:
                 return new[]
                 {
-                    new PickerButton("keep", "KEEP", Green, () => Saved(studio.Keep)),
-                    new PickerButton("again", "AGAIN", Orange, studio.Again),
-                    new PickerButton("replay", "REPLAY", Blue, studio.Review),
-                    new PickerButton("discard", "DISCARD", Red, studio.Discard),
+                    new PickerButton("keep", "KEEP", Green, () => Saved(studio.KeepClip)),
+                    new PickerButton("again", "AGAIN", Orange, studio.RestartRecording),
+                    new PickerButton("replay", "REPLAY", Blue, studio.ReviewRecording),
+                    new PickerButton("discard", "DISCARD", Red, studio.DiscardClip),
                 };
 
             case StudioState.Setup:
@@ -59,11 +58,11 @@ public partial class ModEntry
             case StudioState.ChoosingSection:
                 return new[]
                 {
-                    new PickerButton("fromearlier", "FROM -", Orange, () => studio.Nudge(start: true, -1)),
-                    new PickerButton("fromlater", "FROM +", Orange, () => studio.Nudge(start: true, 1)),
-                    new PickerButton("toearlier", "TO -", Orange, () => studio.Nudge(start: false, -1)),
-                    new PickerButton("tolater", "TO +", Orange, () => studio.Nudge(start: false, 1)),
-                    new PickerButton("preview", "PREVIEW", Blue, studio.PreviewSection),
+                    new PickerButton("fromearlier", "FROM -", Orange, () => studio.NudgeRecordingSection(start: true, -1)),
+                    new PickerButton("fromlater", "FROM +", Orange, () => studio.NudgeRecordingSection(start: true, 1)),
+                    new PickerButton("toearlier", "TO -", Orange, () => studio.NudgeRecordingSection(start: false, -1)),
+                    new PickerButton("tolater", "TO +", Orange, () => studio.NudgeRecordingSection(start: false, 1)),
+                    new PickerButton("preview", "PREVIEW", Blue, studio.PreviewSelectedSection),
                     new PickerButton("record", "RECORD", Red, () => studio.RecordSection()),
                     new PickerButton("mime", "MIME", Orange, () => studio.RecordSection(mime: true)),
                     new PickerButton("back", "BACK", Orange, studio.Back),
@@ -79,13 +78,13 @@ public partial class ModEntry
 
         if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new PickerButton("gym", "GYM", Orange, Mod.Battle.ReturnToGym));
 
-        ChartEntry? chosen = Chosen();
+        var chosen = Chosen();
         if (_settings.Editing.Value && Studio.CanEdit(chosen))
         {
             buttons.Add(new PickerButton("setup", "SETUP", Blue, () => studio.BeginSetup(chosen!)));
             buttons.Add(new PickerButton("record", "RECORD", Red, () => RecordChosen()));
             buttons.Add(new PickerButton("mime", "MIME", Orange, () => RecordChosen(mime: true)));
-            if (Studio.HasTrack(chosen)) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseSection(chosen!, _settings.ArenaOverride)));
+            if (Studio.HasTrack(chosen)) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseRecordingSection(chosen!, _settings.ArenaOverride)));
             if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => Saved(() => Studio.Undo(chosen!))));
         }
 
@@ -94,7 +93,7 @@ public partial class ModEntry
 
     private PickerCard DescribePanel()
     {
-        Studio studio = Mod.Studio;
+        var studio = Mod.Studio;
         switch (studio.State)
         {
             case StudioState.Recording:
@@ -111,7 +110,7 @@ public partial class ModEntry
                     $"<size=45%>keep it in {studio.Entry?.Name}, record again, watch it again, or throw it away</size>");
 
             case StudioState.Setup:
-                (ArenaSpec arena, Lane lane, ActorSpec? actor) = studio.SetupValues;
+                (var arena, var lane, var actor) = studio.SetupValues;
                 var where = arena.Map == ArenaKind.Here ? "here - wherever the player stands"
                     : arena.HasSpot ? $"{arena.Map}, from {arena.X:0.##}, {arena.Z:0.##} facing {arena.Facing:0}"
                     : $"{arena.Map}, laid across its middle";
@@ -124,7 +123,7 @@ public partial class ModEntry
                 return new PickerCard(
                     $"<size=45%>RE-RECORD</size>\n<b>{studio.ActorName}</b>\n<size=55%>{studio.Section.From:0.0}s to {studio.Section.To:0.0}s</size>\n" +
                     $"<size=45%><mspace=0.55em>{Timeline(studio.Section.From, studio.Section.To, studio.Chart?.End ?? studio.Section.To)}</mspace></size>\n" +
-                    $"<size=38%>PREVIEW plays it; RECORD starts {Studio.PrerollSeconds:0} s before, where the actor stood</size>");
+                    $"<size=38%>PREVIEW plays it; RECORD starts {Studio.EaseInSeconds:0} s before, where the actor stood</size>");
         }
 
         return DescribeChosen();
@@ -135,7 +134,7 @@ public partial class ModEntry
     {
         const int width = 28;
         var length = Math.Max(end, to);
-        IEnumerable<char> bar = Enumerable.Range(0, width)
+        var bar = Enumerable.Range(0, width)
             .Select(i => (i + 0.5) * length / width)
             .Select(t => t >= from && t < to ? '#' : '-');
         return $"|{string.Concat(bar)}|";
@@ -145,7 +144,7 @@ public partial class ModEntry
     private PickerCard DescribeChosen()
     {
         var all = _library.Entries.ToList();
-        ChartEntry? entry = Chosen();
+        var entry = Chosen();
         if (entry == null) return new PickerCard($"<b>No charts</b>\n<size=50%>New chart in the settings makes one in {_library.Folder}</size>");
 
         var position = $"<size=45%>CHART {all.IndexOf(entry) + 1} OF {all.Count}</size>\n";
@@ -167,7 +166,7 @@ public partial class ModEntry
             chart.Music == null ? null : $"music: {Path.GetFileNameWithoutExtension(chart.Music.File)}",
             entry.Source == ChartSource.Package ? "package" : null,
         }.Where(p => p != null));
-        BestScore? best = _scores.Best(entry.ScoreKey);
+        var best = _scores.Best(entry.ScoreKey);
 
         return new PickerCard(
             position +

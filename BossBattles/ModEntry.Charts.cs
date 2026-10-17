@@ -112,7 +112,7 @@ public partial class ModEntry
             return;
         }
 
-        Mod.Studio.Record(entry!, _settings.ArenaOverride, mime);
+        Mod.Studio.StartRecording(entry!, _settings.ArenaOverride, mime);
     }
 
     /// <summary>Runs a studio save, reloads the charts it changed, and says what happened.</summary>

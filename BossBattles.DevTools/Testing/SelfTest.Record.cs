@@ -50,7 +50,7 @@ internal static partial class SelfTest
             yield break;
         }
 
-        Mod.Studio.Record(entry, null);
+        Mod.Studio.StartRecording(entry, null);
 
         var deadline = Time.realtimeSinceStartup + 90f;
         while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
@@ -65,7 +65,7 @@ internal static partial class SelfTest
 
         if (Mod.Battle.Lane is { } recordLane)
         {
-            Vector3 at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            var at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
             Logger.Info($"[SelfTest] recording from lane x {at.x:0.00}, z {at.z:0.00} (the actor's spot is z 8)");
             if (new Vector2(at.x, at.z - 8f).magnitude > 0.5f) problems.Add($"recording did not start in the actor's place: lane x {at.x:0.0}, z {at.z:0.0}");
             if (_shots) Shoot(ShotFolder(), "5-recording", recordLane, at);
@@ -90,7 +90,7 @@ internal static partial class SelfTest
 
         if (!_picker!.InvokeGameButton("stop") && !_picker.Press("stop")) problems.Add("the panel had no STOP button while recording");
 
-        Clip? clip = Mod.Studio.NewClip;
+        var clip = Mod.Studio.NewClip;
         if (clip == null)
         {
             problems.Add("stopping did not make a clip");
@@ -124,7 +124,7 @@ internal static partial class SelfTest
             yield return null;
         }
 
-        Actor? actor = Mod.Battle.Actors.Count > 0 ? Mod.Battle.Actors[0] : null;
+        var actor = Mod.Battle.Actors.Count > 0 ? Mod.Battle.Actors[0] : null;
         if (Mod.Studio.State != StudioState.Deciding) problems.Add($"the review did not end in a decision (studio {Mod.Studio.State})");
         if (actor == null)
         {
@@ -151,14 +151,14 @@ internal static partial class SelfTest
     /// <summary>Re-records the middle of the clip: choose it, record it (a spawn and a punch), keep it, check the splice, undo it.</summary>
     private static IEnumerator RunSectionTest(string file, List<string> problems)
     {
-        ChartEntry entry = Reloaded(file);
+        var entry = Reloaded(file);
         if (!Studio.HasTrack(entry))
         {
             problems.Add("after keeping, the chart has no track to re-record");
             yield break;
         }
 
-        Mod.Studio.ChooseSection(entry, null);
+        Mod.Studio.ChooseRecordingSection(entry, null);
         yield return new WaitForSeconds(0.5f);
         if (!_picker!.ButtonIds.Contains("fromlater")) problems.Add($"choosing a section shows {string.Join(", ", _picker.ButtonIds)}");
         _picker.Press("fromlater");
@@ -174,7 +174,7 @@ internal static partial class SelfTest
 
         if (BattlePlayer.Controller is { } you)
         {
-            Vector3 at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            var at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
             Logger.Info($"[SelfTest] section recording from lane x {at.x:0.00}, z {at.z:0.00}");
             Perform(you, "SpawnCube");
             yield return new WaitForSeconds(0.5f);
@@ -184,7 +184,7 @@ internal static partial class SelfTest
         deadline = Time.realtimeSinceStartup + 60f;
         while (Mod.Studio.State is StudioState.Recording or StudioState.Reviewing && Time.realtimeSinceStartup < deadline) yield return null;
 
-        Clip? section = Mod.Studio.NewClip;
+        var section = Mod.Studio.NewClip;
         if (Mod.Studio.State != StudioState.Deciding || section == null || !Mod.Studio.IsSection)
         {
             problems.Add($"the section did not stop by itself and come up for review (studio {Mod.Studio.State})");
@@ -199,8 +199,8 @@ internal static partial class SelfTest
         _picker.Press("keep");
         yield return new WaitForSeconds(0.5f);
 
-        Chart? spliced = ChartLoader.Load(File.ReadAllText(file)).Chart;
-        IReadOnlyList<TrackClip> clips = spliced?.Tracks.SingleOrDefault()?.Clips ?? Array.Empty<TrackClip>();
+        var spliced = ChartLoader.Load(File.ReadAllText(file)).Chart;
+        var clips = spliced?.Tracks.SingleOrDefault()?.Clips ?? Array.Empty<TrackClip>();
         Logger.Info($"[SelfTest] spliced track: {string.Join(" | ", clips.Select(t => $"{t.Time:0.0}s {t.Clip} from {t.From:0.0}{(t.To is { } x ? $" to {x:0.0}" : "")}"))}");
         if (clips.Count != 3 || clips[1].Clip != section.Name) problems.Add($"keeping the section made {clips.Count} clips, not clip-1 / {section.Name} / clip-1");
 
@@ -215,8 +215,8 @@ internal static partial class SelfTest
     /// <summary>Lane setup: two metres longer, half a metre wider, saved - and the rest of the chart left alone.</summary>
     private static IEnumerator RunSetupTest(string file, List<string> problems)
     {
-        ChartEntry entry = Reloaded(file);
-        Lane before = entry.Result.Chart!.Lane;
+        var entry = Reloaded(file);
+        var before = entry.Result.Chart!.Lane;
 
         Mod.Studio.BeginSetup(entry);
         yield return new WaitForSeconds(1f);
@@ -228,7 +228,7 @@ internal static partial class SelfTest
         if (_shots && Mod.Studio.SetupValues.Lane.Length > 0 && BattlePlayer.Controller is { } you)
         {
             var rig = ActorRig.From(you);
-            Vector3 eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);
+            var eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);
             _showCamera?.Invoke(eye, rig.Feet + (rig.Facing * 5f));
             yield return null;
             Shoot(ShotFolder(), "8-setup");
@@ -238,7 +238,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.3f);
 
         var text = File.ReadAllText(file);
-        Chart? saved = ChartLoader.Load(text).Chart;
+        var saved = ChartLoader.Load(text).Chart;
         Logger.Info($"[SelfTest] lane setup saved: {saved?.Lane.Length:0.#} x {saved?.Lane.Width:0.#} m, actor at z {saved?.Actors[0].At.Z:0.#}, {saved?.Tracks.Count} track(s)");
         if (saved == null)
         {
@@ -257,7 +257,7 @@ internal static partial class SelfTest
 
     private static void ShootPanel(Transform card, string name)
     {
-        Vector3 eye = card.position - (card.forward * 1.1f) + (card.right * 0.35f) + (Vector3.up * 0.1f);
+        var eye = card.position - (card.forward * 1.1f) + (card.right * 0.35f) + (Vector3.up * 0.1f);
         _showCamera?.Invoke(eye, card.position - (Vector3.up * 0.05f));
         Shoot(ShotFolder(), name);
     }
@@ -267,7 +267,7 @@ internal static partial class SelfTest
     private static void CheckKept(string file, Clip clip, List<string> problems)
     {
         var text = File.ReadAllText(file);
-        ChartLoadResult kept = ChartLoader.Load(text);
+        var kept = ChartLoader.Load(text);
 
         if (!text.Contains("this comment must survive", StringComparison.Ordinal)) problems.Add("keeping the clip lost the chart's comment");
         if (kept.Chart == null)
@@ -276,12 +276,12 @@ internal static partial class SelfTest
             return;
         }
 
-        TrackClip? segment = kept.Chart.Tracks.SingleOrDefault()?.Clips.SingleOrDefault();
+        var segment = kept.Chart.Tracks.SingleOrDefault()?.Clips.SingleOrDefault();
         if (segment?.Clip != clip.Name) problems.Add($"the chart's track does not play {clip.Name}");
         if (kept.Chart.End < clip.Duration) problems.Add($"the chart ends at {kept.Chart.End:0.0}s, before the clip ({clip.Duration:0.0}s)");
 
         var clipFile = Path.Combine(Path.GetDirectoryName(file)!, ChartPackage.ClipsFolder, $"{clip.Name}.json");
-        (Clip? saved, var error) = File.Exists(clipFile) ? ClipFile.Read(File.ReadAllText(clipFile), clip.Name) : (null, "missing");
+        (var saved, var error) = File.Exists(clipFile) ? ClipFile.Read(File.ReadAllText(clipFile), clip.Name) : (null, "missing");
         if (saved == null) problems.Add($"the clip's file {clipFile}: {error}");
         else if (saved.Moves.Count != clip.Moves.Count) problems.Add($"the saved clip has {saved.Moves.Count} moves, not {clip.Moves.Count}");
 
@@ -299,7 +299,7 @@ internal static partial class SelfTest
     /// <summary>Runs one of your own moves by name - what the game does when it recognises the gesture.</summary>
     private static void Perform(PlayerController you, string move)
     {
-        Il2CppRUMBLE.MoveSystem.Stack? stack = you.PlayerProcessor.availableStacks.ToArray().FirstOrDefault(s => string.Equals(s.CachedName, move, StringComparison.OrdinalIgnoreCase));
+        var stack = you.PlayerProcessor.availableStacks.ToArray().FirstOrDefault(s => string.Equals(s.CachedName, move, StringComparison.OrdinalIgnoreCase));
         if (stack == null)
         {
             Logger.Info($"[SelfTest] you have no move called {move}");

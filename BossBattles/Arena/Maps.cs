@@ -46,7 +46,7 @@ internal static class Maps
     {
         if (kind == ArenaKind.Here) return null;
 
-        GameObject? spots = kind == ArenaKind.Gym ? null : GameObject.Find("ArenaLocation");
+        var spots = kind == ArenaKind.Gym ? null : GameObject.Find("ArenaLocation");
         return spots != null && spots.transform.childCount > 0 ? spots.transform.GetChild(0).position : Vector3.zero;
     }
 
@@ -54,7 +54,7 @@ internal static class Maps
     {
         if (kind == ArenaKind.Here || !spec.HasSpot) return new Anchor(yourFeet.ToNumerics(), Degrees.Wrap(spec.Facing ?? yourFacing.Bearing()));
 
-        Vector3 origin = kind.GetArenaOrigin() ?? Vector3.zero;
+        var origin = kind.GetArenaOrigin() ?? Vector3.zero;
         var spot = new Vector3(origin.x + spec.X!.Value, origin.y, origin.z + spec.Z!.Value);
         if (GameHelpers.HeightUnder(spot) is not { } floor)
         {
@@ -69,7 +69,7 @@ internal static class Maps
 
     private static void LoadScene(int index)
     {
-        SceneManager? scenes = SceneManager.instance ?? UnityEngine.Object.FindObjectOfType<SceneManager>();
+        var scenes = SceneManager.instance ?? UnityEngine.Object.FindObjectOfType<SceneManager>();
         if (scenes == null)
         {
             Logger.Error("[Arena.LoadFailed] no SceneManager to load with");

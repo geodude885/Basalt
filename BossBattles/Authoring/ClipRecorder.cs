@@ -5,16 +5,10 @@ using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Input;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
-using Il2CppRUMBLE.Players.Subsystems;
 
 namespace BossBattles.Authoring;
 
-/// <summary>
-/// Records a player as a clip: head, hands and fingers, where they stand and face in a lane, and every move the
-/// game recognises from them. Clip time starts at 0 with the first <see cref="Update"/>; where it plays is the
-/// track's business. Moves come from the player's stack processor's <c>OnStackExecutionStart</c>; the converted
-/// delegate is kept so leaving removes the same object.
-/// </summary>
+// Records both player motion and moves
 internal class ClipRecorder
 {
     private const float SampleRate = 30f;
@@ -61,7 +55,7 @@ internal class ClipRecorder
     {
         if (!Recording) return null;
 
-        Clip? clip = _frames.Count < 2 ? null : new Clip(name, _frames.ToList()) { Moves = _moves.ToList() };
+        var clip = _frames.Count < 2 ? null : new Clip(name, _frames.ToList()) { Moves = _moves.ToList() };
         Cancel();
 
         if (clip == null)
@@ -85,8 +79,8 @@ internal class ClipRecorder
         _nextSample = _clipTime + (1.0 / SampleRate);
 
         var rig = ActorRig.From(_subject);
-        PlayerHandPresence hands = _subject.PlayerHandPresence;
-        Vector3 spot = _anchor.ToLocal(rig.Feet.ToNumerics());
+        var hands = _subject.PlayerHandPresence;
+        var spot = _anchor.ToLocal(rig.Feet.ToNumerics());
 
         _frames.Add(new ClipFrame(
             (float)_clipTime,
@@ -99,7 +93,7 @@ internal class ClipRecorder
             ClipFingers.From(hands.GetHandPresenceInputForHand(InputManager.Hand.Right, false))));
     }
 
-    /// <summary>Abandons a recording without a clip.</summary>
+    // Abandons recording without a clip
     public void Cancel()
     {
         Recording = false;
@@ -112,7 +106,7 @@ internal class ClipRecorder
         _nextSample = 0;
     }
 
-    /// <summary>A move, at the clip time of the latest <see cref="Update"/>.</summary>
+    // A move, at the clip time of the latest Update
     private void OnMove(StackConfiguration config)
     {
         try

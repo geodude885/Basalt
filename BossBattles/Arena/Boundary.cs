@@ -27,11 +27,11 @@ internal class Boundary
     // Invisible wall!
     public void Wall(string name, Vector3 centre, Quaternion rotation, Vector3 size, int layer, bool zone = false)
     {
-        GameObject wall = GameHelpers.Cube(name, centre, rotation, size);
+        var wall = GameHelpers.Cube(name, centre, rotation, size);
         wall.layer = layer;
         wall.GetComponent<Renderer>().enabled = false;
 
-        Collider collider = wall.GetComponent<Collider>();
+        var collider = wall.GetComponent<Collider>();
         _walls.Add(collider);
         if (zone) _zoneWalls.Add(collider);
     }
@@ -43,15 +43,15 @@ internal class Boundary
         var everything = Time.time >= _nextFullReapply;
         if (everything) _nextFullReapply = Time.time + FullReapplySeconds;
 
-        CombatManager? combat = CombatManager.instance;
+        var combat = CombatManager.instance;
         if (combat == null) return;
 
-        foreach (Structure structure in combat.Structures)
+        foreach (var structure in combat.Structures)
         {
             if (structure == null) continue;
 
             var active = structure.gameObject.activeInHierarchy;
-            if (!_seen.TryGetValue(structure.Pointer, out (bool Active, Collider[] Colliders) known) || known.Colliders.Length == 0)
+            if (!_seen.TryGetValue(structure.Pointer, out var known) || known.Colliders.Length == 0)
                 known = (false, structure.GetComponentsInChildren<Collider>(true).ToArray());
 
             if (active && (everything || !known.Active)) Ignore(known.Colliders, _walls);
@@ -63,14 +63,14 @@ internal class Boundary
 
     private static void Ignore(IEnumerable<Collider> colliders, List<Collider> walls)
     {
-        foreach (Collider collider in colliders.Where(c => c != null))
+        foreach (var collider in colliders.Where(c => c != null))
         {
-            foreach (Collider wall in walls.Where(w => w != null)) Physics.IgnoreCollision(collider, wall, true);
+            foreach (var wall in walls.Where(w => w != null)) Physics.IgnoreCollision(collider, wall, true);
         }
     }
     public void Destroy()
     {
-        foreach (Collider wall in _walls.Where(w => w != null)) UnityEngine.Object.Destroy(wall.gameObject);
+        foreach (var wall in _walls.Where(w => w != null)) UnityEngine.Object.Destroy(wall.gameObject);
         Forget();
     }
 

@@ -16,7 +16,7 @@ public static class Ballistics
     {
         if (speed <= 0f) throw new ArgumentOutOfRangeException(nameof(speed), speed, "speed must be over 0");
 
-        Vector3 offset = to - from;
+        var offset = to - from;
         var distance = offset.Length();
         if (distance < 1e-4f) return Vector3.Zero;
 

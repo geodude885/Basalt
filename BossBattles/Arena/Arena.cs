@@ -47,7 +47,7 @@ internal class Arena
             Boundary.Wall("BossBattles_ZoneEnd", At(0f, yours.Length + Boundary.PlayerEndGap + (Boundary.Thickness / 2f)), along, new Vector3(across, Boundary.Height, Boundary.Thickness), layer, zone: true);
 
         var depth = yours.Length + behind + Boundary.PlayerEndGap + Boundary.Thickness;
-        Vector3 ceiling = origin.ToWorld(new System.Numerics.Vector3(0f, yours.Height + (Boundary.Thickness / 2f), (depth / 2f) - behind)).ToUnity();
+        var ceiling = origin.ToWorld(new System.Numerics.Vector3(0f, yours.Height + (Boundary.Thickness / 2f), (depth / 2f) - behind)).ToUnity();
         Boundary.Wall("BossBattles_ZoneCeiling", ceiling, along, new Vector3(across, Boundary.Thickness, depth), layer, zone: true);
     }
 

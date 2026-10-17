@@ -63,10 +63,10 @@ internal class Visuals
         if (_to.Count == 0) return;
 
         var k = _fadeSeconds <= 0f ? 1f : Mathf.Clamp01((Time.time - _fadeStart) / _fadeSeconds);
-        foreach ((Part part, Color target) in _to)
+        foreach ((var part, var target) in _to)
         {
-            Color from = _from.TryGetValue(part, out Color f) ? f : target;
-            Color to = target;
+            var from = _from.TryGetValue(part, out var f) ? f : target;
+            var to = target;
 
             // A pane fading in or out keeps its hue and only changes opacity.
             if (part == Part.Pane && from.a <= 0f) from = new Color(to.r, to.g, to.b, 0f);
@@ -74,9 +74,9 @@ internal class Visuals
             _now[part] = Color.Lerp(from, to, k);
         }
 
-        foreach ((Part part, Renderer renderer, Material material) in _painted.Where(p => p.Renderer != null && p.Material != null))
+        foreach ((var part, var renderer, var material) in _painted.Where(p => p.Renderer != null && p.Material != null))
         {
-            Color colour = _now[part];
+            var colour = _now[part];
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", colour);
             if (material.HasProperty("_Color")) material.SetColor("_Color", colour);
             renderer.enabled = part != Part.Pane || colour.a > 0.004f;
@@ -87,17 +87,17 @@ internal class Visuals
 
     private static Dictionary<Part, Color> Targets(LaneColours colours)
     {
-        Color edge = Pick(colours.Edges, EdgeColour);
+        var edge = PickColour(colours.Edges, EdgeColour);
         return new Dictionary<Part, Color>
         {
             [Part.Edge] = edge,
-            [Part.End] = Pick(colours.Ends, EndColour),
-            [Part.Zone] = Pick(colours.Zone, ZoneColour),
-            [Part.Frame] = Pick(colours.Backstop, edge),
-            [Part.Pane] = Pick(colours.Walls, new Color(0f, 0f, 0f, 0f)),
+            [Part.End] = PickColour(colours.Ends, EndColour),
+            [Part.Zone] = PickColour(colours.Zone, ZoneColour),
+            [Part.Frame] = PickColour(colours.Backstop, edge),
+            [Part.Pane] = PickColour(colours.Walls, new Color(0f, 0f, 0f, 0f)),
         };
 
-        static Color Pick(Rgba? chart, Color fallback)
+        static Color PickColour(Rgba? chart, Color fallback)
         {
             return chart is { } c ? new Color(c.R, c.G, c.B, c.A) : fallback;
         }
@@ -105,7 +105,7 @@ internal class Visuals
 
     private static GameObject Make(string name, Vector3 centre, Quaternion rotation, Vector3 size, Material? material)
     {
-        GameObject cube = GameHelpers.Cube(name, centre, rotation, size);
+        var cube = GameHelpers.Cube(name, centre, rotation, size);
         UnityEngine.Object.Destroy(cube.GetComponent<Collider>());
         if (material != null) cube.GetComponent<Renderer>().material = material;
         return cube;
@@ -113,13 +113,13 @@ internal class Visuals
 
     private void Remember(GameObject cube, Part part)
     {
-        Renderer renderer = cube.GetComponent<Renderer>();
+        var renderer = cube.GetComponent<Renderer>();
         _painted.Add((part, renderer, renderer.material));
         if (part == Part.Pane && _now[Part.Pane].a <= 0.004f) renderer.enabled = false;
     }
     public void Destroy()
     {
-        foreach ((_, Renderer renderer, _) in _painted.Where(p => p.Renderer != null)) UnityEngine.Object.Destroy(renderer.gameObject);
+        foreach ((_, var renderer, _) in _painted.Where(p => p.Renderer != null)) UnityEngine.Object.Destroy(renderer.gameObject);
         Forget();
     }
 

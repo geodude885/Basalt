@@ -37,7 +37,7 @@ internal partial class Studio
 
     public void Resize(float lengthChange, float widthChange)
     {
-        (_setupLane, IReadOnlyList<ActorSpec> actors) = ChartSetup.Resize(_setupLane, _setupActors, _setupLane.Length + lengthChange, _setupLane.Width + widthChange);
+        (_setupLane, var actors) = ChartSetup.Resize(_setupLane, _setupActors, _setupLane.Length + lengthChange, _setupLane.Width + widthChange);
         _setupActors = actors.ToList();
         _setupDirty = true;
     }
@@ -47,7 +47,7 @@ internal partial class Studio
     {
         if (BattlePlayer.Rig is not { } rig) return;
 
-        ArenaKind map = Maps.Current;
+        var map = Maps.Current;
         _setupFrom = (rig.Feet, rig.Facing);
         if (map == ArenaKind.Here)
         {
@@ -55,7 +55,7 @@ internal partial class Studio
         }
         else
         {
-            Vector3 at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
+            var at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
             _setupArena = new ArenaSpec(map, MathF.Round(at.x, 2), MathF.Round(at.z, 2), MathF.Round(rig.Facing.Bearing()));
         }
 
@@ -67,7 +67,7 @@ internal partial class Studio
     {
         if (BattlePlayer.Rig is not { } rig || _setupFrame is not { } frame || _setupActors.Count == 0) return;
 
-        System.Numerics.Vector3 at = frame.ToLocal(rig.Feet.ToNumerics());
+        var at = frame.ToLocal(rig.Feet.ToNumerics());
         var z = Math.Max(0.5f, at.Z);
         if (z > _setupLane.Length) _setupLane = new Lane(Math.Min(ChartSetup.MaxLength, MathF.Ceiling(z)), _setupLane.Width);
 
@@ -110,7 +110,7 @@ internal partial class Studio
     private void EndSetup()
     {
         _preview.Destroy();
-        foreach (GameObject marker in _markers)
+        foreach (var marker in _markers)
         {
             if (marker != null) UnityEngine.Object.Destroy(marker);
         }
@@ -125,14 +125,14 @@ internal partial class Studio
         if (_setupArena.Map != ArenaKind.Here && !_setupArena.Map.IsLoaded()) return;
 
         _setupFrom ??= (rig.Feet, rig.Facing);
-        Anchor? frame = _setupArena.CreateLaneAnchor(_setupArena.Map, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
+        var frame = _setupArena.CreateLaneAnchor(_setupArena.Map, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
         if (frame == null) return;
 
         _setupFrame = frame;
         _setupDirty = false;
         _preview.Build(frame.Value, _setupLane, showBackstop: true, walls: false);
 
-        foreach (GameObject marker in _markers)
+        foreach (var marker in _markers)
         {
             if (marker != null) UnityEngine.Object.Destroy(marker);
         }
@@ -146,13 +146,13 @@ internal partial class Studio
     {
         var post = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         post.name = "BossBattles_ActorMarker";
-        Collider collider = post.GetComponent<Collider>();
+        var collider = post.GetComponent<Collider>();
         if (collider != null) UnityEngine.Object.Destroy(collider);
         post.transform.position = foot + (Vector3.up * 0.9f);
         post.transform.localScale = new Vector3(0.35f, 0.9f, 0.35f);
 
-        Material? material = Paint.Colour(new Color(0.25f, 0.5f, 0.95f));
-        Renderer renderer = post.GetComponent<Renderer>();
+        var material = Paint.Colour(new Color(0.25f, 0.5f, 0.95f));
+        var renderer = post.GetComponent<Renderer>();
         if (renderer != null && material != null) renderer.material = material;
         return post;
     }

@@ -20,7 +20,7 @@ public readonly record struct Anchor(Vector3 Position, float Yaw)
 
     public Vector3 ToLocal(Vector3 world)
     {
-        Vector3 offset = world - Position;
+        var offset = world - Position;
         return new Vector3(Vector3.Dot(offset, Right), offset.Y, Vector3.Dot(offset, Forward));
     }
 

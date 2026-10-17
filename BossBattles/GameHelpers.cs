@@ -40,10 +40,9 @@ internal static class GameHelpers
 
     // Game and transforms
 
-    /// <summary>A plain cube, sized and placed: the lane's walls and markings are built from these.</summary>
-    public static GameObject Cube(string name, Vector3 centre, Quaternion rotation, Vector3 size)
+    public static GameObject Shape(PrimitiveType shape, string name, Vector3 centre, Quaternion rotation, Vector3 size)
     {
-        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var cube = GameObject.CreatePrimitive(shape);
         cube.name = name;
         cube.transform.SetPositionAndRotation(centre, rotation);
         cube.transform.localScale = size;
@@ -53,7 +52,7 @@ internal static class GameHelpers
     public static void DisableAll<T>(this GameObject root)
         where T : Behaviour
     {
-        foreach (T behaviour in root.GetComponentsInChildren<T>(true)) behaviour.enabled = false;
+        foreach (var behaviour in root.GetComponentsInChildren<T>(true)) behaviour.enabled = false;
     }
 
 

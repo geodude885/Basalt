@@ -1,7 +1,6 @@
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
-using UnityEngine;
 
 namespace BossBattles.Authoring;
 
@@ -22,73 +21,76 @@ internal enum StudioState
 /// <c>tracks</c>; a section can be recorded again and spliced in. Each save keeps the previous chart
 /// in <c>chart.json.bak</c> for <see cref="Undo"/>, and only the edited values of its text change.
 /// </summary>
-internal partial class Studio
+internal class Studio
 {
     public const double MaxRecordingLength = 600;
     public const double EaseInSeconds = 2;
-    private const string BackupExtension = ".bak";
+
+    private readonly ClipRecorder _recorder = new();
+    private ArenaKind? _arenaOverride;
+    private Anchor? _recordedLane;
+    private double _recordingStartedAtChartTime;
+    private string _actorId = "";
+    private RecordingSection? _sectionBeingRecorded;
 
     public Chart? Chart { get; private set; }
-    public StudioState State { get; private set; } = StudioState.Off;
-    public Clip? NewClip { get; private set; }
+
     public ChartEntry? Entry { get; private set; }
 
-    public (double From, double To) Section { get; private set; }
+    public StudioState State { get; private set; } = StudioState.Off;
 
-    public bool IsSection => _section != null;
+    public Clip? NewClip { get; private set; }
+
+    public bool Mime { get; private set; }
+
+    public RecordingSection Section { get; private set; }
+
+    public LaneSetup LaneSetup { get; } = new();
+
+    public bool IsSection => _sectionBeingRecorded != null;
 
     public string ActorName => Chart?.Actors.FirstOrDefault(a => a.Id == _actorId)?.Name ?? _actorId;
 
     public (double Seconds, int Moves) Progress => (_recorder.Length, _recorder.MoveCount);
-
 
     public static bool CanEdit(ChartEntry? entry) => entry?.Result.Chart != null && entry.Source != ChartSource.Package;
 
     public static bool HasTrack(ChartEntry? entry) =>
         CanEdit(entry) && entry!.Result.Chart!.Tracks.Any(t => t.ActorId == entry.Result.Chart.DefaultActor.Id && t.Clips.Count > 0);
 
-    public static bool CanUndo(ChartEntry? entry) => CanEdit(entry) && File.Exists(entry!.File + BackupExtension);
+    public static bool CanUndo(ChartEntry? entry) => CanEdit(entry) && ChartBackup.HasBackup(entry!.File);
 
-    private readonly ClipRecorder _recorder = new();
-    private double _chartTime;
-    private readonly Arena.Arena _preview = new();
-    private readonly List<GameObject> _markers = [];
-    private ArenaKind? _arenaOverride;
-    private Anchor? _lane;
-    private string _actorId = "";
-
-    private (double From, double To)? _section;
+    public static string Undo(ChartEntry entry) =>
+        ChartBackup.RestoreBackup(entry.File) ? $"undid the last save to {entry.Name}" : $"{entry.Name} has nothing to undo";
 
     public void StartRecording(ChartEntry entry, ArenaKind? arenaOverride, bool mime = false)
     {
-        if (!Begin(entry, arenaOverride)) return;
+        if (!BeginEditing(entry, arenaOverride)) return;
 
-        _section = null;
         Mime = mime;
-        Mod.Battle.Start(Chart!, arenaOverride, entry.AssetFolder, scoreKey: null, BattleMode.Record, _actorId, mime: mime);
+        StartStudioBattle(Chart!, BattleMode.Record, mime: mime);
         State = Mod.Battle.State == BattleState.Idle ? StudioState.Off : StudioState.Recording;
         Logger.Info($"[Studio] {(mime ? "miming" : "recording")} {ActorName} for {Chart!.Name} - STOP when done");
     }
-
-    public bool Mime { get; private set; }
 
     public void StopRecording()
     {
         if (State != StudioState.Recording) return;
 
-        var name = TrackEdits.NextName(ClipsFolder(), _actorId);
-        NewClip = _recorder.Stop(name);
-        _lane = Mod.Battle.Lane ?? _lane;
+        NewClip = _recorder.Stop(TrackEdits.NextName(ClipsFolder(), _actorId));
+        _recordedLane = Mod.Battle.Lane ?? _recordedLane;
         Mod.Battle.Stop("recording stopped");
 
         if (NewClip == null)
         {
-            State = _section != null ? StudioState.ChoosingSection : StudioState.Off;
+            State = IsSection ? StudioState.ChoosingSection : StudioState.Off;
             Logger.Info("[Studio] nothing was recorded");
             return;
         }
 
-        if (_section is { } section) _section = (section.From, Math.Min(section.To, _chartTime + NewClip.Duration));
+        if (_sectionBeingRecorded is { } section)
+            _sectionBeingRecorded = section with { To = Math.Min(section.To, _recordingStartedAtChartTime + NewClip.Duration) };
+
         ReviewRecording();
     }
 
@@ -96,21 +98,22 @@ internal partial class Studio
     {
         if (NewClip == null || Chart == null || Entry == null) return;
 
-        if (_section is { } section)
+        if (_sectionBeingRecorded is { } section)
         {
-            var before = Chart.Tracks.FirstOrDefault(t => t.ActorId == _actorId)?.Clips ?? Array.Empty<TrackClip>();
-            var spliceTracks = Chart.Tracks.Where(t => t.ActorId != _actorId).ToList();
-            spliceTracks.Add(new Track(_actorId, TrackEdits.PunchIn(before, NewClip.Name, section.From, section.To, Mime)));
-            var spliced = Chart with { Tracks = spliceTracks };
-            Mod.Battle.Start(spliced with { End = Math.Min(spliced.End, section.To + EaseInSeconds) }, _arenaOverride, Entry.AssetFolder,
-                scoreKey: null, BattleMode.Review, _actorId, pendingClip: NewClip, startAt: Math.Max(0, section.From - EaseInSeconds));
+            var punchedIn = TrackEdits.PunchedInTrack(Chart, _actorId, NewClip.Name, section.From, section.To, Mime);
+            var chart = Chart with { Tracks = TrackEdits.TracksWithActorTrackReplaced(Chart, _actorId, punchedIn) };
+            StartStudioBattle(chart with { End = Math.Min(chart.End, section.To + EaseInSeconds) }, BattleMode.Review,
+                startAt: Math.Max(0, section.From - EaseInSeconds), pendingClip: NewClip);
         }
         else
         {
-            var tracks = Chart.Tracks.Where(t => t.ActorId != _actorId).ToList();
-            tracks.Add(new Track(_actorId, new[] { new TrackClip(_chartTime, NewClip.Name, 0) { Mime = Mime } }));
-            var chart = Chart with { Tracks = tracks, End = Math.Max(Chart.End, _chartTime + NewClip.Duration + TrackEdits.EndPadding) };
-            Mod.Battle.Start(chart, _arenaOverride, Entry.AssetFolder, scoreKey: null, BattleMode.Review, _actorId, _lane, NewClip);
+            var whole = TrackEdits.WholeClipTrack(NewClip, _recordingStartedAtChartTime, Mime);
+            var chart = Chart with
+            {
+                Tracks = TrackEdits.TracksWithActorTrackReplaced(Chart, _actorId, whole),
+                End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + TrackEdits.EndPadding),
+            };
+            StartStudioBattle(chart, BattleMode.Review, lane: _recordedLane, pendingClip: NewClip);
         }
 
         State = StudioState.Reviewing;
@@ -125,23 +128,23 @@ internal partial class Studio
         File.WriteAllText(Path.Combine(ClipsFolder(), $"{clip.Name}.json"), ClipFile.Write(clip));
 
         var chartText = File.ReadAllText(Entry.File);
-        var kept = _section is { } section
+        var keptText = _sectionBeingRecorded is { } section
             ? TrackEdits.KeepSection(chartText, Chart, _actorId, clip, section.From, section.To, Mime)
-            : TrackEdits.KeepWhole(chartText, Chart, _actorId, clip, _chartTime, Mime);
+            : TrackEdits.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
         if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } yours)
         {
             var size = new BodySize(yours.Length, yours.ArmSpan);
-            kept = ChartSetup.WriteActors(kept, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
+            keptText = ChartSetup.WriteActors(keptText, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
         }
 
-        Save(chartText, kept);
-
+        ChartBackup.SaveKeepingBackup(Entry.File, chartText, keptText);
         Mod.Battle.Stop("clip kept");
-        var what = _section is { } s
-            ? $"kept {clip.Name} over {s.From:0.0}-{s.To:0.0}s ({clip.Moves.Count} moves) in {Entry.Name}"
+
+        var what = _sectionBeingRecorded is { } kept
+            ? $"kept {clip.Name} over {kept.From:0.0}-{kept.To:0.0}s ({clip.Moves.Count} moves) in {Entry.Name}"
             : $"kept {clip.Name} ({clip.Duration - clip.Start:0.0}s, {clip.Moves.Count} moves) in {Entry.Name}";
-        Off();
+        StopEditing();
         Logger.Debug($"[Studio.Kept] {what}");
         return what;
     }
@@ -150,47 +153,37 @@ internal partial class Studio
     {
         Mod.Battle.Stop("clip discarded");
         NewClip = null;
-        if (_section != null) State = StudioState.ChoosingSection;
-        else Off();
+        if (IsSection) State = StudioState.ChoosingSection;
+        else StopEditing();
     }
 
     public void RestartRecording()
     {
         if (Entry == null) return;
-        if (_section != null) RecordSection(Mime);
+        if (IsSection) RecordSection(Mime);
         else StartRecording(Entry, _arenaOverride, Mime);
     }
 
-
     public void ChooseRecordingSection(ChartEntry entry, ArenaKind? arenaOverride)
     {
-        if (!HasTrack(entry) || !Begin(entry, arenaOverride)) return;
+        if (!HasTrack(entry) || !BeginEditing(entry, arenaOverride)) return;
 
         Mod.Battle.Stop("choosing a section");
-
-        var end = Chart!.End;
-        Section = (Snap(end / 3), Snap(end * 2 / 3));
-        if (Section.To <= Section.From) Section = (Section.From, Section.From + Step);
+        Section = RecordingSection.MiddleThirdOf(Chart!);
         State = StudioState.ChoosingSection;
     }
 
-    public void NudgeRecordingSection(bool start, int steps)
+    public void NudgeRecordingSection(bool start, int beats)
     {
         if (Chart == null) return;
-
-        double from = Section.From, to = Section.To;
-        if (start) from = Math.Clamp(from + (steps * Step), 0, to - Step);
-        else to = Math.Clamp(to + (steps * Step), from + Step, Chart.End + 30);
-
-        Section = (Snap(from), Snap(to));
+        Section = start ? Section.MoveStartByBeats(Chart, beats) : Section.MoveEndByBeats(Chart, beats);
     }
 
     public void PreviewSelectedSection()
     {
         if (Chart == null || Entry == null) return;
 
-        Mod.Battle.Start(Chart with { End = Section.To + 1 }, _arenaOverride, Entry.AssetFolder, scoreKey: null, BattleMode.Review, _actorId,
-            startAt: Math.Max(0, Section.From - EaseInSeconds));
+        StartStudioBattle(Chart with { End = Section.To + 1 }, BattleMode.Review, startAt: Math.Max(0, Section.From - EaseInSeconds));
         State = StudioState.PreviewingSection;
     }
 
@@ -198,29 +191,45 @@ internal partial class Studio
     {
         if (Chart == null || Entry == null) return;
 
-        _section = Section;
+        _sectionBeingRecorded = Section;
         NewClip = null;
         Mime = mime;
-        Mod.Battle.Start(Chart, _arenaOverride, Entry.AssetFolder, scoreKey: null, BattleMode.Record, _actorId,
-            startAt: Math.Max(0, Section.From - EaseInSeconds), recordSpot: SpotAt(Section.From), mime: mime);
+        StartStudioBattle(Chart, BattleMode.Record, startAt: Math.Max(0, Section.From - EaseInSeconds), recordSpot: ActorSpotAt(Section.From), mime: mime);
         State = Mod.Battle.State == BattleState.Idle ? StudioState.ChoosingSection : StudioState.Recording;
         Logger.Info($"[Studio] recording {ActorName} from {Section.From:0.0}s to {Section.To:0.0}s - it stops by itself");
     }
 
-    public void Back()
+    public void CloseSection()
     {
         Mod.Battle.Stop("section closed");
-        Off();
+        StopEditing();
     }
 
-    public static string Undo(ChartEntry entry)
+    public void BeginSetup(ChartEntry entry)
     {
-        var backup = entry.File + BackupExtension;
-        if (!File.Exists(backup)) return $"{entry.Name} has nothing to undo";
+        if (!BeginEditing(entry, null)) return;
 
-        File.Copy(backup, entry.File, overwrite: true);
-        File.Delete(backup);
-        return $"undid the last save to {entry.Name}";
+        Mod.Battle.Stop("lane setup");
+        LaneSetup.BeginWith(Chart!);
+        State = StudioState.Setup;
+    }
+
+    public string SaveSetup()
+    {
+        if (Entry == null || Chart == null || State != StudioState.Setup) return "no lane setup to save";
+
+        var chartText = File.ReadAllText(Entry.File);
+        ChartBackup.SaveKeepingBackup(Entry.File, chartText, LaneSetup.WriteIntoChartText(chartText, Chart));
+        var what = $"saved {Entry.Name}'s lane: {LaneSetup.DescribeLane()}";
+        CancelSetup();
+        Logger.Debug($"[Studio.SetupSaved] {what}");
+        return what;
+    }
+
+    public void CancelSetup()
+    {
+        LaneSetup.RemovePreview();
+        StopEditing();
     }
 
     public void Update()
@@ -245,99 +254,87 @@ internal partial class Studio
                 break;
 
             case StudioState.Setup:
-                if (_setupDirty) BuildPreview();
+                LaneSetup.RebuildPreviewIfOutOfDate();
                 break;
         }
     }
 
-    public void OnSceneLoaded()
-    {
-        _preview.Forget();
-        _markers.Clear();
-        _setupDirty = true;
-    }
+    public void OnSceneLoaded() => LaneSetup.ForgetPreviewAfterSceneChange();
 
     private void UpdateRecording()
     {
         if (Mod.Battle.Mode != BattleMode.Record || Mod.Battle.State == BattleState.Idle)
         {
             _recorder.Cancel();
-            Off();
+            StopEditing();
             return;
         }
 
         if (Mod.Battle.State != BattleState.Running) return;
-        var now = Mod.Battle.ChartTime;
+        var chartTime = Mod.Battle.ChartTime;
 
-        var from = _section?.From ?? 0;
-        if (!_recorder.Recording && now < from)
+        var startsAt = _sectionBeingRecorded?.From ?? 0;
+        if (!_recorder.Recording && chartTime < startsAt)
         {
-            Mod.Battle.Banner($"<b>{Math.Ceiling(from - now):0}</b>", 0.2f);
+            Mod.Battle.Banner($"<b>{Math.Ceiling(startsAt - chartTime):0}</b>", 0.2f);
             return;
         }
 
         if (!_recorder.Recording)
         {
             if (BattlePlayer.Controller is not { } you || Mod.Battle.Lane is not { } lane) return;
-            _lane = lane;
+            _recordedLane = lane;
             _recorder.Start(you, lane);
-            _chartTime = now;
-            if (_section != null) Mod.Battle.Banner("<b>GO</b>", 0.8f);
+            _recordingStartedAtChartTime = chartTime;
+            if (IsSection) Mod.Battle.Banner("<b>GO</b>", 0.8f);
         }
 
-        _recorder.Update(now);
-        var sectionOver = _section is { } section && now >= section.To;
+        _recorder.Update(chartTime);
+        var sectionOver = _sectionBeingRecorded is { } section && chartTime >= section.To;
         if (sectionOver || Mod.Battle.SongOver || _recorder.Length > MaxRecordingLength) StopRecording();
     }
 
-    private bool Begin(ChartEntry entry, ArenaKind? arenaOverride)
+    private bool BeginEditing(ChartEntry entry, ArenaKind? arenaOverride)
     {
         if (!CanEdit(entry)) return false;
 
         _recorder.Cancel();
+        StopEditing();
         Entry = entry;
         Chart = entry.Result.Chart!;
         _arenaOverride = arenaOverride;
         _actorId = Chart.DefaultActor.Id;
-        _lane = null;
-        _section = null;
-        NewClip = null;
+        _recordedLane = null;
         return true;
     }
 
-    private void Off()
+    private void StopEditing()
     {
         State = StudioState.Off;
         NewClip = null;
-        _section = null;
+        _sectionBeingRecorded = null;
     }
 
-    /// <summary>Where the actor stood at chart time <paramref name="time"/>, from the clip playing then.</summary>
-    private System.Numerics.Vector2? SpotAt(double time)
+    private void StartStudioBattle(
+        Chart chart,
+        BattleMode mode,
+        double startAt = 0,
+        Anchor? lane = null,
+        Clip? pendingClip = null,
+        System.Numerics.Vector2? recordSpot = null,
+        bool mime = false) => Mod.Battle.Start(chart, _arenaOverride, Entry!.AssetFolder, scoreKey: null, mode, _actorId, lane, pendingClip, startAt, recordSpot, mime);
+
+    private System.Numerics.Vector2? ActorSpotAt(double chartTime)
     {
         if (Chart == null || Entry == null) return null;
 
-        var playing = new ChartRunner(Chart, time).Schedule.OfType<PlayClip>().FirstOrDefault(t => t.ActorId == _actorId && t.Time <= time);
+        var playing = new ChartRunner(Chart, chartTime).Schedule.OfType<PlayClip>().FirstOrDefault(t => t.ActorId == _actorId && t.Time <= chartTime);
         if (playing == null) return null;
 
         var clips = new ClipLibrary(ClipsFolder());
         clips.Reload();
         return clips.Find(playing.Clip)?.Sample((float)playing.From).Offset;
     }
-
-    private void Save(string before, string after)
-    {
-        File.WriteAllText(Entry!.File + BackupExtension, before);
-        File.WriteAllText(Entry.File, after);
-    }
-
-    private double Step => Chart?.Tempo is { } tempo ? 60.0 / tempo.BpmAt(Section.From) : 0.5;
-
-    /// <summary>To the nearest beat through tempo changes, or half second without a tempo.</summary>
-    private double Snap(double seconds) => Chart?.Tempo is { } tempo
-        ? Math.Round(tempo.Seconds(Math.Round(tempo.Beat(seconds))), 3)
-        : Math.Round(Math.Round(seconds / 0.5) * 0.5, 3);
-
 
     private string ClipsFolder() => Path.Combine(Entry!.AssetFolder, ChartPackage.ClipsFolder);
 }

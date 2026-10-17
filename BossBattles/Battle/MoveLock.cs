@@ -1,8 +1,5 @@
 using BossBattles.Services.Charts;
-using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
-using Il2CppRUMBLE.Players.Subsystems;
-using Il2CppRUMBLE.Poses;
 using Stack = Il2CppRUMBLE.MoveSystem.Stack;
 
 namespace BossBattles.Battle;
@@ -19,7 +16,7 @@ internal class MoveLock
     /// <summary>Your gesture recognition off, the same switch an actor's clip uses.</summary>
     public void Hold()
     {
-        PlayerController? you = BattlePlayer.Controller;
+        var you = BattlePlayer.Controller;
         if (you == null || _heldFor != null) return;
 
         try
@@ -37,7 +34,7 @@ internal class MoveLock
     /// <summary>Your moves back, without the spawn moves <paramref name="rule"/> disallows.</summary>
     public void Release(SpawnRule rule = SpawnRule.All)
     {
-        PlayerController? you = _heldFor;
+        var you = _heldFor;
         _heldFor = null;
         if (you == null) return;
 
@@ -56,7 +53,7 @@ internal class MoveLock
 
     public void GiveSpawnsBack()
     {
-        PlayerController? you = _withheldFrom;
+        var you = _withheldFrom;
         _withheldFrom = null;
         if (you == null || _withheld.Count == 0)
         {
@@ -67,7 +64,7 @@ internal class MoveLock
         try
         {
             you.PlayerProcessor.RemoveAllStackInputSources();
-            foreach (Stack stack in _withheld) you.PlayerProcessor.availableStacks.Add(stack);
+            foreach (var stack in _withheld) you.PlayerProcessor.availableStacks.Add(stack);
             you.PlayerProcessor.InitializeStackInputSources(true);
             Logger.Debug($"[Battle.SpawnsReturned] {string.Join(", ", _withheld.Select(s => s.CachedName))}");
         }
@@ -89,12 +86,12 @@ internal class MoveLock
 
     private void Withhold(PlayerController you, SpawnRule rule)
     {
-        Il2CppSystem.Collections.Generic.List<Stack> stacks = you.PlayerProcessor.availableStacks;
+        var stacks = you.PlayerProcessor.availableStacks;
         _withheld.AddRange(stacks.ToArray().Where(stack =>
             stack != null
             && SpawnMoves.Contains(stack.CachedName, StringComparer.OrdinalIgnoreCase)
             && !(rule == SpawnRule.Discs && string.Equals(stack.CachedName, "Disc", StringComparison.OrdinalIgnoreCase))));
-        foreach (Stack stack in _withheld) stacks.Remove(stack);
+        foreach (var stack in _withheld) stacks.Remove(stack);
 
         _withheldFrom = you;
         Logger.Debug($"[Battle.SpawnsWithheld] {rule}: {string.Join(", ", _withheld.Select(s => s.CachedName))}");
@@ -107,18 +104,18 @@ internal class MoveLock
     /// </summary>
     private void DropWithheldGestures(PlayerController you)
     {
-        Il2CppSystem.Collections.Generic.List<PlayerStackProcessor.StackHandle> handles = you.PlayerProcessor.activeStackHandles;
-        PlayerPoseSystem poses = you.PlayerPoseSystem;
+        var handles = you.PlayerProcessor.activeStackHandles;
+        var poses = you.PlayerPoseSystem;
         var dropped = new List<string>();
 
-        foreach (PlayerStackProcessor.StackHandle? handle in handles.ToArray())
+        foreach (var handle in handles.ToArray())
         {
             if (handle?.Stack == null || !_withheld.Any(s => s.Pointer == handle.Stack.Pointer || string.Equals(s.CachedName, handle.Stack.CachedName, StringComparison.OrdinalIgnoreCase))) continue;
 
             handles.Remove(handle);
             dropped.Add(handle.Stack.CachedName);
 
-            PoseInputSource? source = handle.InputSource;
+            var source = handle.InputSource;
             var shared = source != null && handles.ToArray().Any(h => h?.InputSource != null && h.InputSource.Pointer == source.Pointer);
             if (source != null && !shared) poses.RemoveInputSource(source);
         }

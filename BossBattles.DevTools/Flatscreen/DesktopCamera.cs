@@ -82,8 +82,8 @@ public class DesktopCamera
         if (!Active) return null;
 
         RenderTexture target = new(width, height, 24);
-        RenderTexture? previousTarget = _camera!.targetTexture;
-        RenderTexture? previousActive = RenderTexture.active;
+        var previousTarget = _camera!.targetTexture;
+        var previousActive = RenderTexture.active;
 
         try
         {
@@ -113,8 +113,8 @@ public class DesktopCamera
     {
         if (!Active || _fixed) return;
 
-        Vector3 mouse = Input.mousePosition;
-        Vector3 delta = mouse - _lastMouse;
+        var mouse = Input.mousePosition;
+        var delta = mouse - _lastMouse;
         _lastMouse = mouse;
 
         // A jump this size is the cursor re-entering the window or focus coming back, not a drag.
@@ -141,9 +141,9 @@ public class DesktopCamera
         }
 
         _lastFocus = _focus() ?? _lastFocus;
-        Vector3 target = _lastFocus + _panOffset;
+        var target = _lastFocus + _panOffset;
 
-        Transform transform = _camera!.transform;
+        var transform = _camera!.transform;
         transform.position = target - (orbit * Vector3.forward * _distance);
         transform.rotation = orbit;
     }
@@ -153,12 +153,12 @@ public class DesktopCamera
 
     private Camera? Create()
     {
-        Camera? game = Camera.main;
+        var game = Camera.main;
 
         var holder = new GameObject("DesktopCamera");
         UnityEngine.Object.DontDestroyOnLoad(holder);
 
-        Camera camera = holder.AddComponent<Camera>();
+        var camera = holder.AddComponent<Camera>();
         camera.stereoTargetEye = StereoTargetEyeMask.None;
         camera.fieldOfView = 70f;
         camera.nearClipPlane = 0.05f;

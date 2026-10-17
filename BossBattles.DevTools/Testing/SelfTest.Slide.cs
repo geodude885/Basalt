@@ -18,16 +18,16 @@ internal static partial class SelfTest
 
         // 1. Hitstop mid-slide.
         while (GroundedLaunches < 1 && Time.realtimeSinceStartup < deadline) yield return null;
-        Rigidbody? first = SlidingBody();
+        var first = SlidingBody();
         yield return new WaitForSeconds(0.1f);
-        Structure? structure = first?.GetComponent<Structure>();
+        var structure = first?.GetComponent<Structure>();
         if (first == null || structure == null)
         {
             _slideProblem = "slide check: no grounded projectile";
             yield break;
         }
 
-        Vector3 before = first.linearVelocity;
+        var before = first.linearVelocity;
         structure.FreezePhysics(0.15f);
         yield return new WaitForSeconds(0.3f);
         var speed = Vector3.Dot(first.linearVelocity, before.normalized);
@@ -38,7 +38,7 @@ internal static partial class SelfTest
 
         // 2. Knocked back mid-slide.
         while (GroundedLaunches < 2 && Time.realtimeSinceStartup < deadline) yield return null;
-        Rigidbody? second = SlidingBody(except: first);
+        var second = SlidingBody(except: first);
         yield return new WaitForSeconds(0.1f);
         if (second == null)
         {
@@ -46,7 +46,7 @@ internal static partial class SelfTest
             yield break;
         }
 
-        Vector3 thrown = second.linearVelocity;
+        var thrown = second.linearVelocity;
         second.linearVelocity = -thrown;
         yield return new WaitForSeconds(0.25f);
         var back = Vector3.Dot(second.linearVelocity, -thrown.normalized);

@@ -18,18 +18,18 @@ public static class LookTimeline
     public static Dictionary<string, PackLook> Evaluate(IReadOnlyList<VisualCue> cues, double time, Func<string, string, float> baseline)
     {
         var looks = new Dictionary<string, PackLook>(StringComparer.OrdinalIgnoreCase);
-        foreach (IGrouping<string, VisualCue> pack in cues.Where(c => c.Time <= time).GroupBy(c => c.Pack, StringComparer.OrdinalIgnoreCase))
+        foreach (var pack in cues.Where(c => c.Time <= time).GroupBy(c => c.Pack, StringComparer.OrdinalIgnoreCase))
         {
             var mine = pack.OrderBy(c => c.Time).ToList();
             var values = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             var on = false;
 
             // Each cue fades from the look so far, frozen where the next cue cut in.
-            foreach ((VisualCue cue, var cueEnd) in mine.Zip(mine.Skip(1).Select(c => c.Time).Append(time)))
+            foreach ((var cue, var cueEnd) in mine.Zip(mine.Skip(1).Select(c => c.Time).Append(time)))
             {
                 var k = cue.Fade <= 0 ? 1 : Math.Clamp((cueEnd - cue.Time) / cue.Fade, 0, 1);
 
-                Dictionary<string, float> targets = cue.Off
+                var targets = cue.Off
                     ? values.Keys.ToDictionary(key => key, key => baseline(pack.Key, key), StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, float>(cue.Set, StringComparer.OrdinalIgnoreCase);
 

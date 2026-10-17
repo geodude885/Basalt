@@ -32,7 +32,7 @@ public class ScoreBook
 
         try
         {
-            Dictionary<string, BestScore>? read = JsonSerializer.Deserialize<Dictionary<string, BestScore>>(File.ReadAllText(_file), Options);
+            var read = JsonSerializer.Deserialize<Dictionary<string, BestScore>>(File.ReadAllText(_file), Options);
             if (read != null) _best = new Dictionary<string, BestScore>(read, StringComparer.Ordinal);
         }
         catch (Exception e) when (e is IOException or JsonException)
@@ -41,12 +41,12 @@ public class ScoreBook
         }
     }
 
-    public BestScore? Best(string key) => _best.TryGetValue(key, out BestScore? best) ? best : null;
+    public BestScore? Best(string key) => _best.TryGetValue(key, out var best) ? best : null;
 
     /// <summary>Records a run; returns true (and saves) when it beats the best so far.</summary>
     public bool Record(string key, BattleResult result, DateTime when)
     {
-        BestScore? best = Best(key);
+        var best = Best(key);
         if (best != null && best.Score >= result.Score) return false;
 
         _best[key] = new BestScore(result.Score, result.Rank, result.Survived, when);

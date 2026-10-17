@@ -27,7 +27,7 @@ public static class AudioDecoder
         var extension = Path.GetExtension(path).ToLowerInvariant();
         if (extension is not (".mp3" or ".ogg" or ".wav")) throw new NotSupportedException($"{Path.GetFileName(path)}: songs are .mp3, .ogg or .wav");
 
-        FileStream stream = File.OpenRead(path);
+        var stream = File.OpenRead(path);
         try
         {
             return extension switch

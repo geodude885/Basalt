@@ -1,7 +1,6 @@
 using BossBattles.Battle;
 using BossBattles.DevTools.Testing;
 using HarmonyLib;
-using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 using UnityEngine.XR;
@@ -32,7 +31,7 @@ public static class FlatscreenControls
     public static int Apply(HarmonyLib.Harmony harmony)
     {
         var total = 0;
-        foreach (Type patch in typeof(FlatscreenControls).GetNestedTypes())
+        foreach (var patch in typeof(FlatscreenControls).GetNestedTypes())
         {
             try
             {
@@ -92,7 +91,7 @@ public static class FlatscreenControls
 
                 if (!Enabled || !IsFlatscreen) return true;
 
-                PlayerController? you = BattlePlayer.Controller;
+                var you = BattlePlayer.Controller;
                 if (you == null || controller.Pointer != you.Pointer) return true;
 
                 MovementInput.Apply(__instance, _walk, _turn);

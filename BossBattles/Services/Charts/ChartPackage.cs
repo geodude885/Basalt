@@ -32,7 +32,7 @@ public static class ChartPackage
             Directory.CreateDirectory(cacheRoot);
             foreach (var stale in Directory.EnumerateDirectories(cacheRoot, $"{stem}-*")) TryDelete(stale);
 
-            using ZipArchive zip = ZipFile.OpenRead(package);
+            using var zip = ZipFile.OpenRead(package);
             var error = Check(zip, out var prefix);
             if (error != null) return (null, error);
 
@@ -40,7 +40,7 @@ public static class ChartPackage
             TryDelete(partial);
             Directory.CreateDirectory(partial);
 
-            foreach (ZipArchiveEntry entry in zip.Entries)
+            foreach (var entry in zip.Entries)
             {
                 var name = entry.FullName.Replace('\\', '/');
                 if (name.EndsWith('/')) continue;
@@ -68,7 +68,7 @@ public static class ChartPackage
     /// </summary>
     public static PackResult Pack(ChartEntry entry, string output)
     {
-        Chart chart = entry.Result.Chart ?? throw new ArgumentException($"{entry.Name} does not load, so it cannot be packed", nameof(entry));
+        var chart = entry.Result.Chart ?? throw new ArgumentException($"{entry.Name} does not load, so it cannot be packed", nameof(entry));
         var chartJson = File.ReadAllText(entry.Source == ChartSource.Package
             ? Path.Combine(entry.AssetFolder, ChartLibrary.FolderChartFile)
             : entry.File);
@@ -80,7 +80,7 @@ public static class ChartPackage
         var partial = output + ".partial";
         if (File.Exists(partial)) File.Delete(partial);
 
-        using (ZipArchive zip = ZipFile.Open(partial, ZipArchiveMode.Create))
+        using (var zip = ZipFile.Open(partial, ZipArchiveMode.Create))
         {
             WriteText(zip, ChartLibrary.FolderChartFile, chartJson);
 
@@ -158,7 +158,7 @@ public static class ChartPackage
 
     private static string Hash(string file)
     {
-        using FileStream stream = File.OpenRead(file);
+        using var stream = File.OpenRead(file);
         using var sha = SHA256.Create();
         return Convert.ToHexString(sha.ComputeHash(stream))[..12].ToLowerInvariant();
     }

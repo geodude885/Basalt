@@ -1,6 +1,5 @@
 using BossBattles.Actors;
 using BossBattles.Battle;
-using Il2CppRUMBLE.Players;
 using UnityEngine;
 
 namespace BossBattles.DevTools.Testing;
@@ -51,11 +50,11 @@ internal static class TestBench
             return;
         }
 
-        PlayerController? you = BattlePlayer.Controller;
+        var you = BattlePlayer.Controller;
         if (you == null) return;
 
         var yours = ActorRig.From(you);
-        Vector3 at = yours.Feet + (yours.Facing * SpawnDistance);
+        var at = yours.Feet + (yours.Facing * SpawnDistance);
 
         _actor = new Actor("test", "Test Actor", "you");
         _actor.Spawn(at, Quaternion.LookRotation(-yours.Facing));
@@ -123,7 +122,7 @@ internal static class TestBench
         _nextFacingCheck = Time.time + FacingCheckInterval;
 
         var rig = ActorRig.From(body.Controller);
-        Vector3 toYou = yours.Head.position - rig.Head.position;
+        var toYou = yours.Head.position - rig.Head.position;
         toYou.y = 0f;
         if (toYou.sqrMagnitude < 0.01f) return;
 

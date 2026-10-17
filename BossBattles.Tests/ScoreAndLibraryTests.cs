@@ -11,7 +11,7 @@ public class ScoreKeeperTests
     {
         var score = new ScoreKeeper("Warm-up");
 
-        BattleResult result = score.Finish(survived: true, seconds: 28, battleLength: 28);
+        var result = score.Finish(survived: true, seconds: 28, battleLength: 28);
 
         Assert.Equal("S", result.Rank);
         Assert.Equal(ScoreKeeper.SurvivalPoints, result.Score);
@@ -26,7 +26,7 @@ public class ScoreKeeperTests
         score.ActorDamaged(2, multiplier: 2);
         score.PlayerDamaged(2);
 
-        BattleResult result = score.Finish(survived: true, seconds: 33, battleLength: 33);
+        var result = score.Finish(survived: true, seconds: 33, battleLength: 33);
 
         Assert.Equal(7, result.ActorDamage, 6);
         Assert.Equal(
@@ -41,7 +41,7 @@ public class ScoreKeeperTests
         var score = new ScoreKeeper("Crossfire");
         score.PlayerDamaged(20);
 
-        BattleResult result = score.Finish(survived: false, seconds: 10, battleLength: 40);
+        var result = score.Finish(survived: false, seconds: 10, battleLength: 40);
 
         Assert.Equal("D", result.Rank);
         Assert.Equal(1, result.HitsTaken);
@@ -117,7 +117,7 @@ public sealed class ChartLibraryTests : IDisposable
         var library = new ChartLibrary(_folder);
         library.Reload();
 
-        ChartEntry entry = Assert.Single(library.Entries);
+        var entry = Assert.Single(library.Entries);
         Assert.Equal("broken", entry.Name);
         Assert.False(entry.Result.Ok);
         Assert.Empty(library.Playable);

@@ -34,10 +34,10 @@ public class ChartLoaderTests
     [Fact]
     public void LoadsTheSampleChart()
     {
-        ChartLoadResult result = ChartLoader.Load(Sample);
+        var result = ChartLoader.Load(Sample);
 
         Assert.True(result.Ok, string.Join("; ", result.Errors));
-        Chart chart = result.Chart!;
+        var chart = result.Chart!;
 
         Assert.Equal("Training Dummy", chart.Name);
         Assert.Equal(new Lane(12, 3), chart.Lane);
@@ -51,13 +51,13 @@ public class ChartLoaderTests
         Assert.Equal("add", chart.Phases[1].ActorId);
         Assert.Equal(new Spot(1, 10), chart.Phases[1].At);
 
-        ProjectileEvent disc = Assert.IsType<ProjectileEvent>(chart.Events[0]);
+        var disc = Assert.IsType<ProjectileEvent>(chart.Events[0]);
         Assert.Equal(new Vector3(-1f, 1.4f, 10f), disc.From);
         Assert.Equal(Aim.Point(0.8f, 1.2f), disc.To);
         Assert.Equal("dummy", disc.By);
         Assert.Equal(1.4, disc.SpawnTime, 6);
 
-        ProjectileEvent ball = Assert.IsType<ProjectileEvent>(chart.Events[1]);
+        var ball = Assert.IsType<ProjectileEvent>(chart.Events[1]);
         Assert.True(ball.To.AtPlayer);
         Assert.Null(ball.By);
         Assert.Equal(ChartLoader.DefaultTelegraph, ball.Telegraph);
@@ -69,7 +69,7 @@ public class ChartLoaderTests
     [Fact]
     public void BeatsBecomeSecondsAtTheChartsBpm()
     {
-        ChartLoadResult result = ChartLoader.Load(/*lang=json,strict*/ """
+        var result = ChartLoader.Load(/*lang=json,strict*/ """
             { "bpm": 120, "phases": [ { "start": 0 }, { "startBeat": 16 } ], "events": [ { "beat": 8, "move": "Kick" } ] }
             """);
 
@@ -81,7 +81,7 @@ public class ChartLoaderTests
     [Fact]
     public void DefaultsFillTheGaps()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 10, "move": "Kick" } ] }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 10, "move": "Kick" } ] }""").Chart!;
 
         Assert.Equal("Untitled", chart.Name);
         Assert.Equal(new Lane(ChartLoader.DefaultLaneLength, ChartLoader.DefaultLaneWidth), chart.Lane);
@@ -93,7 +93,7 @@ public class ChartLoaderTests
     [Fact]
     public void ReportsEveryProblemWithItsPath()
     {
-        ChartLoadResult result = ChartLoader.Load(/*lang=json,strict*/ """
+        var result = ChartLoader.Load(/*lang=json,strict*/ """
             {
               "actors": [ { "id": "a" }, { "id": "a" } ],
               "events": [
@@ -126,7 +126,7 @@ public class ChartLoaderTests
     [Fact]
     public void PhasesMustStartAtZeroAndGoForwards()
     {
-        ChartLoadResult result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 5 }, { "start": 3 } ] }""");
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 5 }, { "start": 3 } ] }""");
 
         var all = string.Join("\n", result.Errors);
         Assert.Contains("phases[0] must start at 0", all, StringComparison.Ordinal);
@@ -136,7 +136,7 @@ public class ChartLoaderTests
     [Fact]
     public void BrokenJsonIsAnErrorNotAThrow()
     {
-        ChartLoadResult result = ChartLoader.Load("{ \"events\": [ ");
+        var result = ChartLoader.Load("{ \"events\": [ ");
 
         Assert.False(result.Ok);
         Assert.StartsWith("not valid chart JSON", result.Errors[0], StringComparison.Ordinal);
@@ -147,7 +147,7 @@ public class ChartLoaderTests
     {
         foreach ((var file, var json) in StarterCharts.All)
         {
-            ChartLoadResult result = ChartLoader.Load(json);
+            var result = ChartLoader.Load(json);
             Assert.True(result.Ok, $"{file}: {string.Join("; ", result.Errors)}");
         }
     }
@@ -155,7 +155,7 @@ public class ChartLoaderTests
     [Fact]
     public void TheSelfTestChartLoads()
     {
-        ChartLoadResult result = ChartLoader.Load(SelfTestChart.Json);
+        var result = ChartLoader.Load(SelfTestChart.Json);
         Assert.True(result.Ok, string.Join("; ", result.Errors));
     }
 
@@ -163,10 +163,10 @@ public class ChartLoaderTests
     public void AnActorKeepsItsRecordersMeasurementThroughASave()
     {
         const string Text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss", "measurement": { "height": 1.72, "armSpan": 1.68 } } ] }""";
-        Chart chart = ChartLoader.Load(Text).Chart!;
+        var chart = ChartLoader.Load(Text).Chart!;
         Assert.Equal(new BodySize(1.72f, 1.68f), chart.Actors[0].Measurement);
 
-        Chart saved = ChartLoader.Load(ChartSetup.WriteActors(Text, chart.Actors)).Chart!;
+        var saved = ChartLoader.Load(ChartSetup.WriteActors(Text, chart.Actors)).Chart!;
         Assert.Equal(chart.Actors[0].Measurement, saved.Actors[0].Measurement);
 
         Assert.Null(ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""").Chart!.Actors[0].Measurement);

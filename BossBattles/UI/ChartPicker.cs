@@ -5,7 +5,6 @@ using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Placement;
 using Il2CppRUMBLE.Interactions.InteractionBase;
-using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
 using UnityEngine;
 
@@ -142,12 +141,12 @@ internal class ChartPicker
         // Following you: brought back when you walk away from it.
         if (Follow && BattlePlayer.Controller is { } you)
         {
-            Vector3 away = _root!.transform.position - ActorRig.From(you).Head.position;
+            var away = _root!.transform.position - ActorRig.From(you).Head.position;
             away.y = 0f;
             if (away.magnitude > 1.6f) PlaceInFrontOfYou();
         }
 
-        foreach (Button button in _buttons) button.Settle();
+        foreach (var button in _buttons) button.Settle();
         CheckPokes();
     }
 
@@ -160,7 +159,7 @@ internal class ChartPicker
         PlaceInFrontOfYou();
         if (!FixedInGym || !ArenaKind.Gym.IsLoaded()) return;
 
-        Vector3 position = _root.transform.position;
+        var position = _root.transform.position;
         try
         {
             _spots.Set(Maps.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
@@ -175,7 +174,7 @@ internal class ChartPicker
     /// <summary>The same as pushing the button; false when no such button shows.</summary>
     public bool Press(string id)
     {
-        Button? button = _buttons.FirstOrDefault(b => b.Spec.Id == id);
+        var button = _buttons.FirstOrDefault(b => b.Spec.Id == id);
         if (button == null) return false;
 
         button.Flash();
@@ -188,10 +187,10 @@ internal class ChartPicker
     /// <summary>Fires a game button's own <c>onPressed</c>, as a hand pushing it would; false for the mod's own buttons.</summary>
     public bool InvokeGameButton(string id)
     {
-        Button? button = _buttons.FirstOrDefault(b => b.Spec.Id == id);
+        var button = _buttons.FirstOrDefault(b => b.Spec.Id == id);
         if (button is not { Native: true }) return false;
 
-        InteractionButton? interaction = button.Root.GetComponentInChildren<InteractionButton>(true);
+        var interaction = button.Root.GetComponentInChildren<InteractionButton>(true);
         if (interaction == null) return false;
 
         interaction.onPressed.Invoke();
@@ -215,11 +214,11 @@ internal class ChartPicker
     {
         _nextRefresh = Time.time + RefreshSeconds;
 
-        PickerCard card = Override ?? _describe();
+        var card = Override ?? _describe();
         _card!.text = card.Text;
         ShowCover(card.CoverPath);
 
-        IReadOnlyList<PickerButton> wanted = _buttonsFor();
+        var wanted = _buttonsFor();
         var key = string.Join("|", wanted.Select(b => $"{b.Id}:{b.Label}"));
         if (key != _buttonKey)
         {
@@ -228,21 +227,21 @@ internal class ChartPicker
         else
         {
             // Same buttons; their actions may close over new state.
-            foreach ((Button button, PickerButton spec) in _buttons.Zip(wanted)) button.Spec = spec;
+            foreach ((var button, var spec) in _buttons.Zip(wanted)) button.Spec = spec;
         }
     }
 
     private void BuildButtons(IReadOnlyList<PickerButton> specs, string key)
     {
-        foreach (Button old in _buttons) UnityEngine.Object.Destroy(old.Root);
+        foreach (var old in _buttons) UnityEngine.Object.Destroy(old.Root);
         _buttons.Clear();
         _buttonKey = key;
 
         // Rows of up to five, each centred, the first under the card.
-        foreach ((PickerButton[] inRow, var row) in specs.Chunk(ButtonsPerRow).Select((r, i) => (r, i)))
+        foreach ((var inRow, var row) in specs.Chunk(ButtonsPerRow).Select((r, i) => (r, i)))
         {
             var total = (inRow.Length * ButtonWidth) + ((inRow.Length - 1) * ButtonGap);
-            foreach ((PickerButton spec, var i) in inRow.Select((s, i) => (s, i)))
+            foreach ((var spec, var i) in inRow.Select((s, i) => (s, i)))
                 AddButton(spec, (-total / 2f) + (ButtonWidth / 2f) + (i * (ButtonWidth + ButtonGap)), -row * RowSpacing);
         }
 
@@ -254,12 +253,12 @@ internal class ChartPicker
     {
         if (_cover == null || _card == null) return;
 
-        Texture2D? texture = path == null ? null : Covers.Get(path);
+        var texture = path == null ? null : Covers.Get(path);
         if (path == _coverPath && texture == _coverTexture) return;
         _coverPath = path;
         _coverTexture = texture;
 
-        Material? material = texture == null ? null : Covers.Material(texture);
+        var material = texture == null ? null : Covers.Material(texture);
         var show = texture != null && material != null;
         _cover.SetActive(show);
 
@@ -286,12 +285,12 @@ internal class ChartPicker
 
     private void CheckPokes()
     {
-        PlayerController? you = BattlePlayer.Controller;
+        var you = BattlePlayer.Controller;
         if (you == null) return;
 
         var rig = ActorRig.From(you);
-        Button? left = ButtonAt(rig.LeftHand.position);
-        Button? right = ButtonAt(rig.RightHand.position);
+        var left = ButtonAt(rig.LeftHand.position);
+        var right = ButtonAt(rig.RightHand.position);
 
         // A press is a hand arriving at a button, not resting on one.
         if (left != null && !_leftWasIn) TryPress(left);
@@ -313,18 +312,18 @@ internal class ChartPicker
 
     private void PlaceInFrontOfYou()
     {
-        PlayerController? you = BattlePlayer.Controller;
+        var you = BattlePlayer.Controller;
         if (you == null || _root == null) return;
 
         var rig = ActorRig.From(you);
-        Vector3 facing = rig.Facing;
+        var facing = rig.Facing;
         var right = Vector3.Cross(Vector3.up, facing);
 
-        Vector3 position = Placement == PickerPlacement.Beside
+        var position = Placement == PickerPlacement.Beside
             ? rig.Head.position + (facing * 0.35f) - (right * 0.8f) + (Vector3.down * 0.45f)
             : rig.Head.position + (facing * Distance) + (Vector3.up * Height) + (right * Side);
 
-        Vector3 away = position - rig.Head.position;
+        var away = position - rig.Head.position;
         _root.transform.SetPositionAndRotation(position, Quaternion.LookRotation(away.Flat()));
         _leftWasIn = _rightWasIn = true; // no press from hands already where it appears
         _arrivedAt = Time.time;
@@ -347,7 +346,7 @@ internal class ChartPicker
 
             _cover = GameObject.CreatePrimitive(PrimitiveType.Quad);
             _cover.name = "Cover";
-            Collider coverCollider = _cover.GetComponent<Collider>();
+            var coverCollider = _cover.GetComponent<Collider>();
             if (coverCollider != null) UnityEngine.Object.Destroy(coverCollider);
             _cover.transform.SetParent(_root.transform, false);
             _cover.transform.localPosition = new Vector3(-0.2f, 0.17f, 0.005f);
@@ -373,7 +372,7 @@ internal class ChartPicker
         holder.transform.localPosition = new Vector3(x, -0.12f + rowOffset, -0.04f);
 
         Button? made = null;
-        GameObject? native = GameButtons.Create(holder.transform, () =>
+        var native = GameButtons.Create(holder.transform, () =>
         {
             if (made != null && made.Root != null && made.Root.activeInHierarchy && _buttons.Contains(made)) TryPress(made);
         });
@@ -408,15 +407,15 @@ internal class ChartPicker
     {
         var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
         box.name = name;
-        Collider collider = box.GetComponent<Collider>();
+        var collider = box.GetComponent<Collider>();
         if (collider != null) UnityEngine.Object.Destroy(collider);
 
         box.transform.SetParent(parent, false);
         box.transform.localPosition = position;
         box.transform.localScale = size;
 
-        Renderer renderer = box.GetComponent<Renderer>();
-        Material? material = Paint.Colour(colour);
+        var renderer = box.GetComponent<Renderer>();
+        var material = Paint.Colour(colour);
         if (renderer != null && material != null) renderer.material = material;
         return box;
     }
@@ -427,7 +426,7 @@ internal class ChartPicker
         holder.transform.SetParent(parent, false);
         holder.transform.localPosition = position;
 
-        TextMeshPro text = holder.AddComponent<TextMeshPro>();
+        var text = holder.AddComponent<TextMeshPro>();
         text.rectTransform.sizeDelta = size;
         text.alignment = TextAlignmentOptions.Center;
         text.fontSize = fontSize;
@@ -441,8 +440,8 @@ internal class ChartPicker
     /// <summary>Whether a point is inside a primitive box, grown by a margin in metres.</summary>
     private static bool InBox(Transform box, Vector3 world, float margin)
     {
-        Vector3 local = box.InverseTransformPoint(world);
-        Vector3 scale = box.lossyScale;
+        var local = box.InverseTransformPoint(world);
+        var scale = box.lossyScale;
         return Mathf.Abs(local.x) <= 0.5f + (margin / scale.x)
                && Mathf.Abs(local.y) <= 0.5f + (margin / scale.y)
                && Mathf.Abs(local.z) <= 0.5f + (margin / scale.z);
@@ -494,7 +493,7 @@ internal class ChartPicker
 
         private void Recolour(Material? material)
         {
-            Renderer renderer = _face.GetComponent<Renderer>();
+            var renderer = _face.GetComponent<Renderer>();
             if (renderer != null && material != null) renderer.sharedMaterial = material;
         }
     }

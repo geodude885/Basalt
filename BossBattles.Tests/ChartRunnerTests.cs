@@ -7,7 +7,7 @@ public class ChartRunnerTests
 {
     private static Chart Load(string json)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         return result.Chart!;
     }
@@ -25,8 +25,8 @@ public class ChartRunnerTests
 
         Assert.Empty(runner.Advance(1.4));
 
-        SpawnProjectile spawn = Assert.IsType<SpawnProjectile>(Assert.Single(runner.Advance(1.5)));
-        LaunchProjectile launch = Assert.IsType<LaunchProjectile>(Assert.Single(runner.Advance(2.0)));
+        var spawn = Assert.IsType<SpawnProjectile>(Assert.Single(runner.Advance(1.5)));
+        var launch = Assert.IsType<LaunchProjectile>(Assert.Single(runner.Advance(2.0)));
         Assert.Equal(spawn.Id, launch.Id);
 
         Assert.IsType<EndChart>(Assert.Single(runner.Advance(100)));
@@ -92,7 +92,7 @@ public class ChartRunnerTests
             c => Assert.Equal("Open", Assert.IsType<EnterPhase>(c).Phase.Name),
             c =>
             {
-                PlaceActor place = Assert.IsType<PlaceActor>(c);
+                var place = Assert.IsType<PlaceActor>(c);
                 Assert.Equal(ChartLoader.DefaultActorId, place.ActorId);
                 Assert.Equal(new Spot(1, 9), place.At);
             });

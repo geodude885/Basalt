@@ -31,7 +31,7 @@ dotnet_separate_import_directive_groups = false
 csharp_prefer_braces = when_multiline:silent
 csharp_style_var_for_built_in_types = true:silent
 csharp_style_var_when_type_is_apparent = true:silent
-csharp_style_var_elsewhere = false:silent
+csharp_style_var_elsewhere = true:silent
 
 csharp_style_expression_bodied_methods = when_on_single_line:silent
 csharp_style_expression_bodied_properties = true:silent

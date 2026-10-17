@@ -1,7 +1,6 @@
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Input;
-using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
 namespace BossBattles.Actors;
@@ -63,7 +62,7 @@ internal partial class Actor
     {
         if (!Exists) return false;
 
-        Stack? stack = _player!.Controller.PlayerProcessor.availableStacks.ToArray()
+        var stack = _player!.Controller.PlayerProcessor.availableStacks.ToArray()
             .FirstOrDefault(s => string.Equals(s.CachedName, name, StringComparison.OrdinalIgnoreCase));
 
         if (stack == null)
@@ -93,7 +92,7 @@ internal partial class Actor
 
     private void PlayClipFrame()
     {
-        Playing playing = _clip!;
+        var playing = _clip!;
         var now = playing.Clock();
         var clipTime = playing.From + (now - playing.StartedAt);
 
@@ -104,7 +103,7 @@ internal partial class Actor
             return;
         }
 
-        ClipFrame frame = playing.Clip.Sample((float)clipTime);
+        var frame = playing.Clip.Sample((float)clipTime);
         ApplyClipPose(frame);
         _fingers = frame.LeftFingers is { } left && frame.RightFingers is { } right ? (left, right) : null;
 
@@ -121,8 +120,8 @@ internal partial class Actor
 
     private void MoveTowards(Anchor origin, System.Numerics.Vector2 spot)
     {
-        Vector3 wanted = origin.ToWorld(new System.Numerics.Vector3(spot.X, 0f, spot.Y)).ToUnity();
-        Vector3 actual = _rig!.Feet;
+        var wanted = origin.ToWorld(new System.Numerics.Vector3(spot.X, 0f, spot.Y)).ToUnity();
+        var actual = _rig!.Feet;
         var shift = new Vector3(wanted.x - actual.x, 0f, wanted.z - actual.z);
 
         var error = shift.magnitude;
@@ -133,7 +132,7 @@ internal partial class Actor
         // Dont move too fast if far away
         if (error > 0.25f) shift *= Mathf.Clamp01(Time.deltaTime * 10f);
 
-        foreach (Rigidbody? body in PlantedBodies())
+        foreach (var body in PlantedBodies())
         {
             body?.position += shift;
         }

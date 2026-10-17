@@ -98,7 +98,7 @@ internal partial class Actor
         if (!Exists || _rig == null) return;
 
         // Ensure actor got flipped back to local simulation
-        PlayerController controller = _player!.Controller;
+        var controller = _player!.Controller;
         if (controller.controllerType != ControllerType.Local)
         {
             controller.controllerType = ControllerType.Local;
@@ -115,7 +115,7 @@ internal partial class Actor
     {
         if (!Exists || _rig == null) return;
 
-        foreach (Transform part in _playerUi)
+        foreach (var part in _playerUi)
         {
             // Hides the nameplate and health bars by scaleing to 0. NameBending can throw on an inactive plate.
             if (part != null && part.localScale != Vector3.zero) part.localScale = Vector3.zero;
@@ -159,7 +159,7 @@ internal partial class Actor
 
     private Player Create(Vector3 floorPosition, Quaternion facing)
     {
-        Player local = BattlePlayer.Player!;
+        var local = BattlePlayer.Player!;
 
         var shiftstones = new Il2CppStructArray<short>(2);
         shiftstones[0] = -1;
@@ -192,18 +192,18 @@ internal partial class Actor
 
     private void Setup(Player player, Vector3 floorPosition)
     {
-        PlayerController controller = player.Controller;
-        GameObject body = controller.gameObject;
+        var controller = player.Controller;
+        var body = controller.gameObject;
         body.name = $"BossBattles_Actor_{Id}";
 
         body.DisableAll<PlayerResetSystem>();
         body.DisableAll<PlayerHaptics>();
         body.DisableAll<PlayerLIV>();
         body.DisableAll<PlayerCollisionFade>();
-        foreach (Camera camera in body.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
-        foreach (AudioListener listener in body.GetComponentsInChildren<AudioListener>(true)) listener.enabled = false;
-        foreach (TrackedPoseDriver driver in body.GetComponentsInChildren<TrackedPoseDriver>(true)) driver.enabled = false;
-        foreach (AudioSource source in body.GetComponentsInChildren<AudioSource>(true)) source.spatialBlend = 1f;
+        foreach (var camera in body.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
+        foreach (var listener in body.GetComponentsInChildren<AudioListener>(true)) listener.enabled = false;
+        foreach (var driver in body.GetComponentsInChildren<TrackedPoseDriver>(true)) driver.enabled = false;
+        foreach (var source in body.GetComponentsInChildren<AudioSource>(true)) source.spatialBlend = 1f;
 
         _player = player;
         Mod.Actors.Add(this);
@@ -236,7 +236,7 @@ internal partial class Actor
 
         try
         {
-            SkinnedMeshRenderer bodyRenderer = player.Controller.PlayerVisuals.Renderer;
+            var bodyRenderer = player.Controller.PlayerVisuals.Renderer;
             if (bodyRenderer != null && !bodyRenderer.enabled) bodyRenderer.enabled = true;
 
             var baked = player.Controller.PlayerVisuals.VisualsAreReadyAndApplied;
@@ -255,7 +255,7 @@ internal partial class Actor
     private void SetInPlayerList(bool inList)
     {
         if (_player is null) return;
-        Il2CppSystem.Collections.Generic.List<Player> players = PlayerManager.instance.AllPlayers;
+        var players = PlayerManager.instance.AllPlayers;
         players.Remove(_player);
         if (inList) players.Add(_player);
     }
@@ -292,7 +292,7 @@ internal partial class Actor
 
     private void PresentAsRemote(PlayerController controller)
     {
-        ControllerType simulatedAs = controller.controllerType;
+        var simulatedAs = controller.controllerType;
         controller.controllerType = ControllerType.Remote;
 
         try
@@ -314,12 +314,12 @@ internal partial class Actor
     private void CopyShiftstones(PlayerController to, PlayerController from)
     {
         var report = new List<string>();
-        ControllerType simulatedAs = to.controllerType;
+        var simulatedAs = to.controllerType;
         to.controllerType = ControllerType.Remote;
 
         try
         {
-            List<string?> pools = Stones?.Select(Shiftstones.ToIdOrDefault).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
+            var pools = Stones?.Select(Shiftstones.ToIdOrDefault).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
             foreach ((var pool, var slot) in pools.Select((p, slot) => (p, slot)))
             {
                 if (pool == null)
@@ -328,7 +328,7 @@ internal partial class Actor
                     continue;
                 }
 
-                ShiftStone? copy = PoolManager.instance.GetPooledObject(pool)?.GetComponent<ShiftStone>();
+                var copy = PoolManager.instance.GetPooledObject(pool)?.GetComponent<ShiftStone>();
                 if (copy == null)
                 {
                     report.Add($"{slot}: {pool} NOT in a pool");

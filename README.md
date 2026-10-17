@@ -25,8 +25,8 @@ shaders/                the BossBattlesNight RumbleReShaded pack (a Unity projec
 tools/                  song analysis, cpp2il-isil.py
 ```
 
-UIFramework is required. RumbleReShaded is optional: `Presentation/ReShade.cs` finds it by reflection,
-and nothing else references it.
+UIFramework is required. RumbleReShaded is optional: only `Presentation/ReShade.cs` touches its API, and
+only once it is loaded with pack overrides (`RRS.Override`).
 
 ## How the actors work
 

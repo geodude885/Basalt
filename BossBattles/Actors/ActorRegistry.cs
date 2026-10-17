@@ -19,23 +19,23 @@ internal class ActorRegistry
 
     public void Update()
     {
-        foreach (Actor actor in _actors.ToArray()) actor.Update();
+        foreach (var actor in _actors.ToArray()) actor.Update();
     }
 
     public void LateUpdate()
     {
-        foreach (Actor actor in _actors.ToArray()) actor.LateUpdate();
+        foreach (var actor in _actors.ToArray()) actor.LateUpdate();
     }
 
     public void ForgetSceneObjects()
     {
-        foreach (Actor actor in _actors) actor.ForgetSceneObjects();
+        foreach (var actor in _actors) actor.ForgetSceneObjects();
         _actors.Clear();
     }
 
     // For stopping a structure colliding with the actors until it is clear of them.
     public void IgnoreStructure(GameObject structure, float seconds)
     {
-        foreach (Actor actor in _actors) actor.IgnoreStructure(structure, seconds);
+        foreach (var actor in _actors) actor.IgnoreStructure(structure, seconds);
     }
 }

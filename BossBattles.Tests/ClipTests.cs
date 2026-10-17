@@ -23,7 +23,7 @@ public class ClipTests
     [Fact]
     public void PosesInterpolateBetweenFrames()
     {
-        ClipFrame mid = Sample().Sample(0.5f);
+        var mid = Sample().Sample(0.5f);
 
         Assert.Equal(1f, mid.Head.Position.X, 4);
         var yaw = 2f * MathF.Atan2(mid.Head.Rotation.Y, mid.Head.Rotation.W) * 180f / MathF.PI;
@@ -33,7 +33,7 @@ public class ClipTests
     [Fact]
     public void SamplingClampsToTheEnds()
     {
-        Clip clip = Sample();
+        var clip = Sample();
 
         Assert.Equal(0f, clip.Sample(-1f).Head.Position.X);
         Assert.Equal(4f, clip.Sample(99f).Head.Position.X);
@@ -43,9 +43,9 @@ public class ClipTests
     [Fact]
     public void AClipSurvivesTheFile()
     {
-        Clip clip = Sample();
+        var clip = Sample();
 
-        (Clip? read, var error) = ClipFile.Read(ClipFile.Write(clip), "fallback");
+        (var read, var error) = ClipFile.Read(ClipFile.Write(clip), "fallback");
 
         Assert.Null(error);
         Assert.Equal("swing", read!.Name);
@@ -57,7 +57,7 @@ public class ClipTests
     [Fact]
     public void TheSyntheticSwayHasAFrameEveryThirtiethOfASecond()
     {
-        Clip sway = SyntheticClips.Sway("sway", 1.5f);
+        var sway = SyntheticClips.Sway("sway", 1.5f);
 
         Assert.Equal(46, sway.Frames.Count);
         Assert.Equal(1.5f, sway.Duration, 3);
@@ -76,7 +76,7 @@ public class ClipTests
 
         Assert.Equal(new ClipFingers(0.5f, 0.5f, 0.5f, 0.25f), clip.Sample(0.5f).LeftFingers);
 
-        (Clip? read, _) = ClipFile.Read(ClipFile.Write(clip), "x");
+        (var read, _) = ClipFile.Read(ClipFile.Write(clip), "x");
         Assert.Equal(fist, read!.Frames[0].RightFingers);
         Assert.Null(ClipFile.Read(ClipFile.Write(Sample()), "x").Clip!.Frames[0].LeftFingers);
     }

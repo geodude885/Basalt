@@ -19,11 +19,11 @@ internal static class GameButtons
 
         try
         {
-            GameObject button = UnityEngine.Object.Instantiate(_template!, parent, false);
+            var button = UnityEngine.Object.Instantiate(_template!, parent, false);
             button.name = "GameButton";
             button.SetActive(true);
 
-            InteractionButton? interaction = button.GetComponentInChildren<InteractionButton>(true);
+            var interaction = button.GetComponentInChildren<InteractionButton>(true);
             if (interaction == null)
             {
                 UnityEngine.Object.Destroy(button);
@@ -51,7 +51,7 @@ internal static class GameButtons
                 .ToList();
 
             // The button object is the InteractionButton component's parent.
-            InteractionButton? next = buttons.FirstOrDefault(b => PathOf(b.transform).Contains("Next", StringComparison.OrdinalIgnoreCase)
+            var next = buttons.FirstOrDefault(b => PathOf(b.transform).Contains("Next", StringComparison.OrdinalIgnoreCase)
                                                                   && PathOf(b.transform).Contains("tutorial", StringComparison.OrdinalIgnoreCase));
             if (next == null)
             {
@@ -78,7 +78,7 @@ internal static class GameButtons
     private static string PathOf(Transform transform)
     {
         var names = new List<string>();
-        for (Transform? t = transform; t != null; t = t.parent) names.Add(t.name);
+        for (var t = transform; t != null; t = t.parent) names.Add(t.name);
         names.Reverse();
         return string.Join("/", names);
     }

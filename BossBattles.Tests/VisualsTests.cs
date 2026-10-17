@@ -11,7 +11,7 @@ public class VisualsTests
     [Fact]
     public void ReadsCuesInSecondsAndBeats()
     {
-        Chart chart = Load(/*lang=json,strict*/ """
+        var chart = Load(/*lang=json,strict*/ """
             {
               "bpm": 120,
               "visuals": [
@@ -23,7 +23,7 @@ public class VisualsTests
             """);
 
         Assert.Equal(new[] { 1.0, 4.0, 10.0 }, chart.Visuals.Select(v => v.Time));
-        VisualCue first = chart.Visuals[0];
+        var first = chart.Visuals[0];
         Assert.Equal("UltraShade", first.Pack);
         Assert.Equal(0.5f, first.Set["saturation"]);
         Assert.True(chart.Visuals[2].Off);
@@ -38,7 +38,7 @@ public class VisualsTests
     [InlineData(/*lang=json,strict*/ """{ "visuals": [ { "beat": 1, "pack": "Grayscale", "on": true } ] }""", "needs the chart's bpm")]
     public void RejectsBrokenCues(string json, string expected)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
 
         Assert.False(result.Ok);
         Assert.Contains(result.Errors, e => e.Contains(expected, StringComparison.Ordinal));
@@ -47,11 +47,11 @@ public class VisualsTests
     [Fact]
     public void ACueFadesFromYoursToItsValues()
     {
-        VisualCue[] cues = new[] { Cue(2, "Pack", 1, ("Saturation", 0f)) };
+        var cues = new[] { Cue(2, "Pack", 1, ("Saturation", 0f)) };
 
         Assert.Empty(LookTimeline.Evaluate(cues, 1.9, Yours));
         Assert.Equal(0.5f, LookTimeline.Evaluate(cues, 2.5, Yours)["Pack"].Values["Saturation"], 3);
-        PackLook done = LookTimeline.Evaluate(cues, 9, Yours)["Pack"];
+        var done = LookTimeline.Evaluate(cues, 9, Yours)["Pack"];
         Assert.True(done.On);
         Assert.Equal(0f, done.Values["Saturation"], 3);
     }
@@ -60,7 +60,7 @@ public class VisualsTests
     public void ALaterCueFadesOnFromWhereTheLastWasCutOff()
     {
         // The first fade is a quarter done (0.75) when the second cuts in and heads for 2.
-        VisualCue[] cues = new[] { Cue(0, "Pack", 4, ("Contrast", 0f)), Cue(1, "Pack", 1, ("Contrast", 2f)) };
+        var cues = new[] { Cue(0, "Pack", 4, ("Contrast", 0f)), Cue(1, "Pack", 1, ("Contrast", 2f)) };
 
         Assert.Equal(0.75f + ((2f - 0.75f) * 0.5f), LookTimeline.Evaluate(cues, 1.5, Yours)["Pack"].Values["Contrast"], 3);
     }
@@ -68,9 +68,9 @@ public class VisualsTests
     [Fact]
     public void ValuesNotInALaterCueStayAsTheyWere()
     {
-        VisualCue[] cues = new[] { Cue(0, "Pack", 0, ("A", 0f), ("B", 0f)), Cue(1, "Pack", 0, ("B", 3f)) };
+        var cues = new[] { Cue(0, "Pack", 0, ("A", 0f), ("B", 0f)), Cue(1, "Pack", 0, ("B", 3f)) };
 
-        PackLook look = LookTimeline.Evaluate(cues, 2, Yours)["Pack"];
+        var look = LookTimeline.Evaluate(cues, 2, Yours)["Pack"];
         Assert.Equal(0f, look.Values["A"]);
         Assert.Equal(3f, look.Values["B"]);
     }
@@ -78,17 +78,17 @@ public class VisualsTests
     [Fact]
     public void OffFadesBackToYoursThenLetsGo()
     {
-        VisualCue[] cues = new[]
+        var cues = new[]
         {
             Cue(0, "Pack", 0, ("Strength", 0f)),
             new VisualCue(4, "Pack", new Dictionary<string, float>(), Off: true, Fade: 2),
         };
 
-        PackLook fading = LookTimeline.Evaluate(cues, 5, Yours)["Pack"];
+        var fading = LookTimeline.Evaluate(cues, 5, Yours)["Pack"];
         Assert.True(fading.On);
         Assert.Equal(0.5f, fading.Values["Strength"], 3);
 
-        PackLook gone = LookTimeline.Evaluate(cues, 6, Yours)["Pack"];
+        var gone = LookTimeline.Evaluate(cues, 6, Yours)["Pack"];
         Assert.False(gone.On);
         Assert.Empty(gone.Values);
     }
@@ -96,9 +96,9 @@ public class VisualsTests
     [Fact]
     public void PacksAreIndependentAndNamesIgnoreCase()
     {
-        VisualCue[] cues = new[] { Cue(0, "Grayscale", 0, ("Strength", 0.4f)), Cue(1, "grayscale", 0, ("strength", 0.8f)), Cue(0, "Other", 0, ("X", 2f)) };
+        var cues = new[] { Cue(0, "Grayscale", 0, ("Strength", 0.4f)), Cue(1, "grayscale", 0, ("strength", 0.8f)), Cue(0, "Other", 0, ("X", 2f)) };
 
-        Dictionary<string, PackLook> looks = LookTimeline.Evaluate(cues, 2, Yours);
+        var looks = LookTimeline.Evaluate(cues, 2, Yours);
         Assert.Equal(2, looks.Count);
         Assert.Equal(0.8f, looks["GRAYSCALE"].Values["Strength"]);
         Assert.Equal(2f, looks["Other"].Values["X"]);
@@ -109,7 +109,7 @@ public class VisualsTests
 
     private static Chart Load(string json)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         return result.Chart!;
     }
@@ -122,7 +122,7 @@ public class LaneColourTests
     [InlineData("66ccff33", 0.4f, 0.8f, 1f, 0.2f)]
     public void ParsesHexColours(string text, float r, float g, float b, float a)
     {
-        Assert.True(Rgba.TryParse(text, out Rgba c));
+        Assert.True(Rgba.TryParse(text, out var c));
         Assert.Equal(r, c.R, 3);
         Assert.Equal(g, c.G, 3);
         Assert.Equal(b, c.B, 3);
@@ -132,8 +132,8 @@ public class LaneColourTests
     [Fact]
     public void ReadsColoursEitherSpelling()
     {
-        Chart uk = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "#33ccff", "walls": "#66ccff33" } }""").Chart!;
-        Chart us = ChartLoader.Load(/*lang=json,strict*/ """{ "colors": { "ends": "#ff3399" } }""").Chart!;
+        var uk = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "#33ccff", "walls": "#66ccff33" } }""").Chart!;
+        var us = ChartLoader.Load(/*lang=json,strict*/ """{ "colors": { "ends": "#ff3399" } }""").Chart!;
 
         Assert.Equal(0.2f, uk.Colours.Walls!.Value.A, 3);
         Assert.Null(uk.Colours.Ends);
@@ -144,7 +144,7 @@ public class LaneColourTests
     [Fact]
     public void RejectsABadColour()
     {
-        ChartLoadResult result = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "orange" } }""");
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "orange" } }""");
 
         Assert.False(result.Ok);
         Assert.Contains(result.Errors, e => e.Contains("colours.edges", StringComparison.Ordinal));
@@ -156,15 +156,15 @@ public class PhaseColourTests
     [Fact]
     public void APhaseLaysItsColoursOverTheCharts()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
             {
               "colours": { "edges": "#00ff00", "walls": "#66ccff33" },
               "phases": [ { "name": "A", "start": 0 }, { "name": "B", "start": 5, "colours": { "ends": "#ff0000", "walls": "none" } } ]
             }
             """).Chart!;
 
-        LaneColours first = chart.ColoursIn(chart.Phases[0]);
-        LaneColours second = chart.ColoursIn(chart.Phases[1]);
+        var first = chart.ColoursIn(chart.Phases[0]);
+        var second = chart.ColoursIn(chart.Phases[1]);
 
         Assert.True(first.ShowsWalls);
         Assert.Equal(chart.Colours.Edges, second.Edges);
@@ -176,7 +176,7 @@ public class PhaseColourTests
     [Fact]
     public void WallsShownOnlyInAPhaseStillGetPanes()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 0 }, { "start": 2, "colors": { "walls": "#ffffff40" } } ] }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 0 }, { "start": 2, "colors": { "walls": "#ffffff40" } } ] }""").Chart!;
 
         Assert.False(chart.ColoursIn(chart.Phases[0]).ShowsWalls);
         Assert.True(chart.EverShowsWalls);
@@ -185,7 +185,7 @@ public class PhaseColourTests
     [Fact]
     public void ABadPhaseColourNamesThePhase()
     {
-        ChartLoadResult result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 0, "colours": { "edges": "blue" } } ] }""");
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 0, "colours": { "edges": "blue" } } ] }""");
 
         Assert.Contains(result.Errors, e => e.Contains("phases[0].colours.edges", StringComparison.Ordinal));
     }
@@ -196,7 +196,7 @@ public class ActorLookTests
     [Fact]
     public void ShiftstonesAreYoursUnlessNamed()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
             {
               "actors": [
                 { "id": "a" },
@@ -221,10 +221,10 @@ public class ActorLookTests
     [Fact]
     public void AChartMadeInGameKeepsItsMakersLookAndStones()
     {
-        ChartLoadResult result = ChartLoader.Load(ChartTemplate.Json("Mine", "maker", "look \"string\"", new[] { "VigorStone", "FlowStone" }));
+        var result = ChartLoader.Load(ChartTemplate.Json("Mine", "maker", "look \"string\"", new[] { "VigorStone", "FlowStone" }));
 
         Assert.True(result.Ok, string.Join("; ", result.Errors));
-        ActorSpec boss = result.Chart!.Actors[0];
+        var boss = result.Chart!.Actors[0];
         Assert.Equal("look \"string\"", boss.Look);
         Assert.Equal(new[] { "VigorStone", "FlowStone" }, boss.Shiftstones);
     }
@@ -232,7 +232,7 @@ public class ActorLookTests
     [Fact]
     public void LaneSetupKeepsAnActorsStones()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss", "shiftstones": [ "Vigor" ] } ] }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss", "shiftstones": [ "Vigor" ] } ] }""").Chart!;
 
         var saved = ChartSetup.Write(/*lang=json,strict*/ """{ "actors": [] }""", chart.Arena, chart.Lane, chart.Actors);
 
@@ -277,7 +277,7 @@ public class MimeClipTests
     [Fact]
     public void AMimedClipIsReadAndPlayedMimed()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
             { "format": 2, "tracks": [ { "clips": [ { "t": 0, "clip": "a" }, { "t": 5, "clip": "b", "mime": true } ] } ] }
             """).Chart!;
 
@@ -292,7 +292,7 @@ public class MimeClipTests
     [Fact]
     public void KeepingAMimedClipWritesItMimed()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""").Chart!;
         var pose = new Services.Clips.ClipPose(System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity);
         Services.Clips.ClipFrame Frame(float t)
         {
@@ -304,7 +304,7 @@ public class MimeClipTests
         var whole = TrackEdits.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
         Assert.True(ChartLoader.Load(whole).Chart!.Tracks[0].Clips[0].Mime);
 
-        IReadOnlyList<TrackClip> punched = TrackEdits.PunchIn(new[] { new TrackClip(0, "old", 0) }, "new", 2, 3, mime: true);
+        var punched = TrackEdits.PunchIn(new[] { new TrackClip(0, "old", 0) }, "new", 2, 3, mime: true);
         Assert.False(punched[0].Mime);
         Assert.True(punched[1].Mime);
         Assert.False(punched[2].Mime);
@@ -316,7 +316,7 @@ public class GroundedAndCleanupTests
     [Fact]
     public void PillarsCubesAndWallsAreGroundedUnlessToldOtherwise()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
             { "events": [
               { "t": 1, "projectile": { "structure": "Wall", "from": { "x": 0, "y": 0, "z": 5 }, "speed": 8 } },
               { "t": 2, "projectile": { "structure": "RockCube", "from": { "x": 0, "y": 0, "z": 5 }, "speed": 8, "grounded": false } },

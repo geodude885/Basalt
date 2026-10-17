@@ -112,7 +112,7 @@ public class ChartLibrary
     /// <summary>Brings starter charts still exactly as written up to date; edited or deleted ones are left alone.</summary>
     private int UpdateStarters()
     {
-        Dictionary<string, string> record = LoadRecord();
+        var record = LoadRecord();
         var written = 0;
 
         foreach ((var file, var json) in StarterCharts.All)

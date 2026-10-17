@@ -7,7 +7,6 @@ using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Scoring;
 using BossBattles.UI;
-using Il2CppRUMBLE.Players;
 using MelonLoader;
 using MelonLoader.Utils;
 using UnityEngine;
@@ -142,8 +141,8 @@ internal static partial class SelfTest
 
         // The chart built into this build, not the copy in the chart folder (written once, so it
         // can be older than the code under test); its clip is supplied in memory.
-        ChartLoadResult loaded = ChartLoader.Load(SelfTestChart.Json);
-        Chart? chart = loaded.Chart;
+        var loaded = ChartLoader.Load(SelfTestChart.Json);
+        var chart = loaded.Chart;
         if (chart == null)
         {
             Finish(loaded.Errors.Select(e => $"the self-test chart does not load: {e}").ToList());
@@ -159,7 +158,7 @@ internal static partial class SelfTest
         _song = SongFiles.FirstOrDefault(f => File.Exists(Path.Combine(assets, f))) ?? ToneFile;
 
         // In the Ring and Pit, the 10 m lane centred on the arena, running north.
-        ArenaSpec arena = _arena is ArenaKind.Ring or ArenaKind.Pit ? new ArenaSpec(_arena, 0f, -5f, 0f) : new ArenaSpec(_arena);
+        var arena = _arena is ArenaKind.Ring or ArenaKind.Pit ? new ArenaSpec(_arena, 0f, -5f, 0f) : new ArenaSpec(_arena);
         chart = chart with { Arena = arena, Music = new MusicSpec(_song, 0, 0.6f) };
 
         BattleResult? result = null;
@@ -170,7 +169,7 @@ internal static partial class SelfTest
         if (_arena == ArenaKind.Here)
         {
             // Somewhere flat and open: you stand at the lane's start, so you are moved there first.
-            PlayerController you = BattlePlayer.Controller;
+            var you = BattlePlayer.Controller;
             var yours = ActorRig.From(you);
             if (FlatLane(yours.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
@@ -305,19 +304,19 @@ internal static partial class SelfTest
 
         if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Controller is not { } you) yield break;
 
-        Vector3 feet = ActorRig.From(you).Feet;
+        var feet = ActorRig.From(you).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
         Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
 
-        foreach (Actor actor in Mod.Battle.Actors.Where(a => a.Exists))
+        foreach (var actor in Mod.Battle.Actors.Where(a => a.Exists))
         {
-            ActorSpec? spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
+            var spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
             if (spec == null) continue;
 
             // Across and along the lane only: on uneven ground an actor settles on the real floor.
-            Vector3 floor = ActorRig.From(actor.Player!.Controller).Feet;
-            Vector3 lane = Mod.Battle.ToLane(floor);
+            var floor = ActorRig.From(actor.Player!.Controller).Feet;
+            var lane = Mod.Battle.ToLane(floor);
             var away = new Vector2(lane.x - spec.At.X, lane.z - spec.At.Z).magnitude;
             var sunk = origin.y - floor.y;
             Logger.Info($"[SelfTest] {actor} is {away:0.00} m from its spot, {floor.y - origin.y:+0.00;-0.00} m from the lane's height");
@@ -339,7 +338,7 @@ internal static partial class SelfTest
             ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Chart?.Zone.Length ?? lane.Length) + 0.9f),
         };
 
-        foreach ((var name, Vector2 stick, var seconds, Func<Vector3, bool> inside) in walks)
+        foreach ((var name, var stick, var seconds, var inside) in walks)
         {
             FlatscreenControls.ScriptedWalk = stick;
             yield return new WaitForSeconds(1f);
@@ -355,7 +354,7 @@ internal static partial class SelfTest
             yield return new WaitForSeconds(0.3f);
 
             if (BattlePlayer.Controller is not { } you) break;
-            Vector3 at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            var at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
             Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");
         }

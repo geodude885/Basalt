@@ -44,13 +44,13 @@ public partial class ModEntry
             case StudioState.Setup:
                 return new[]
                 {
-                    new PickerButton("longer", "LONGER", Orange, () => studio.Resize(1f, 0f)),
-                    new PickerButton("shorter", "SHORTER", Orange, () => studio.Resize(-1f, 0f)),
-                    new PickerButton("wider", "WIDER", Orange, () => studio.Resize(0f, 0.5f)),
-                    new PickerButton("narrower", "NARROWER", Orange, () => studio.Resize(0f, -0.5f)),
-                    new PickerButton("map", "MAP", Blue, studio.NextMap),
-                    new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneHere),
-                    new PickerButton("actorhere", "ACTOR HERE", Blue, studio.ActorHere),
+                    new PickerButton("longer", "LONGER", Orange, () => studio.LaneSetup.ResizeLane(1f, 0f)),
+                    new PickerButton("shorter", "SHORTER", Orange, () => studio.LaneSetup.ResizeLane(-1f, 0f)),
+                    new PickerButton("wider", "WIDER", Orange, () => studio.LaneSetup.ResizeLane(0f, 0.5f)),
+                    new PickerButton("narrower", "NARROWER", Orange, () => studio.LaneSetup.ResizeLane(0f, -0.5f)),
+                    new PickerButton("map", "MAP", Blue, studio.LaneSetup.SwitchToNextMap),
+                    new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneSetup.StartLaneWhereYouStand),
+                    new PickerButton("actorhere", "ACTOR HERE", Blue, studio.LaneSetup.MoveFirstActorWhereYouStand),
                     new PickerButton("save", "SAVE", Green, () => Saved(studio.SaveSetup)),
                     new PickerButton("cancel", "CANCEL", Red, studio.CancelSetup),
                 };
@@ -65,7 +65,7 @@ public partial class ModEntry
                     new PickerButton("preview", "PREVIEW", Blue, studio.PreviewSelectedSection),
                     new PickerButton("record", "RECORD", Red, () => studio.RecordSection()),
                     new PickerButton("mime", "MIME", Orange, () => studio.RecordSection(mime: true)),
-                    new PickerButton("back", "BACK", Orange, studio.Back),
+                    new PickerButton("back", "BACK", Orange, studio.CloseSection),
                 };
         }
 
@@ -110,10 +110,12 @@ public partial class ModEntry
                     $"<size=45%>keep it in {studio.Entry?.Name}, record again, watch it again, or throw it away</size>");
 
             case StudioState.Setup:
-                (var arena, var lane, var actor) = studio.SetupValues;
+                var arena = studio.LaneSetup.ArenaSpec;
+                var lane = studio.LaneSetup.Lane;
+                var actor = studio.LaneSetup.FirstActor;
                 var where = arena.Map == ArenaKind.Here ? "here - wherever the player stands"
                     : arena.HasSpot ? $"{arena.Map}, from {arena.X:0.##}, {arena.Z:0.##} facing {arena.Facing:0}"
-                    : $"{arena.Map}, laid across its middle";
+                    : $"{arena.Map}, from where you stand";
                 return new PickerCard(
                     $"<size=45%>LANE SETUP</size>\n<b>{studio.Entry?.Name}</b>\n<size=50%>{where}\n" +
                     $"{lane.Length:0.#} m long  |  {lane.Width:0.#} m wide{(actor == null ? "" : $"  |  actor at {actor.At.X:0.#}, {actor.At.Z:0.#}")}</size>\n" +

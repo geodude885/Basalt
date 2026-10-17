@@ -67,7 +67,7 @@ public class ChartDocumentTests
             }
             """;
 
-        Chart chart = ChartLoader.Load(ChartDocument.SetRaw(tricky, "end", "7")).Chart!;
+        var chart = ChartLoader.Load(ChartDocument.SetRaw(tricky, "end", "7")).Chart!;
         Assert.Equal(7, chart.End);
         Assert.Equal("a } { ] [ \" quote", chart.Name);
         Assert.Equal("/* not a comment */", chart.Info.Description);
@@ -82,7 +82,7 @@ public class TrackTests
     [Fact]
     public void TracksLoadAndPlayEachClipUntilTheNext()
     {
-        Chart chart = Load(/*lang=json,strict*/ """
+        var chart = Load(/*lang=json,strict*/ """
             {
               "format": 2,
               "actors": [ { "id": "boss" } ],
@@ -94,7 +94,7 @@ public class TrackTests
             }
             """);
 
-        Track track = Assert.Single(chart.Tracks);
+        var track = Assert.Single(chart.Tracks);
         Assert.Equal(3, track.Clips.Count);
 
         var plays = new ChartRunner(chart).Schedule.OfType<PlayClip>().ToList();
@@ -112,7 +112,7 @@ public class TrackTests
     [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [] }, { "clips": [] } ] }""", "one per actor")]
     public void BadTracksAreReported(string json, string expected)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
 
         Assert.False(result.Ok);
         Assert.Contains(result.Errors, e => e.Contains(expected, StringComparison.Ordinal));
@@ -130,11 +130,11 @@ public class TrackTests
               "end": 5
             }
             """;
-        Chart chart = Load(text);
-        Clip clip = Recorded("boss-clip-1", 0f, 9.5f);
+        var chart = Load(text);
+        var clip = Recorded("boss-clip-1", 0f, 9.5f);
 
         var kept = TrackEdits.KeepWhole(text, chart, "boss", clip, 0);
-        Chart after = Load(kept);
+        var after = Load(kept);
 
         Assert.Contains("// my chart", kept, StringComparison.Ordinal);
         Assert.Equal(new TrackClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
@@ -149,7 +149,7 @@ public class TrackTests
     public void AClipRecordedLateStartsAtZeroAndTheTrackPlacesIt()
     {
         const string text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ], "end": 5 }""";
-        Chart after = Load(TrackEdits.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
+        var after = Load(TrackEdits.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
 
         Assert.Equal(new TrackClip(40, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
         Assert.Equal(45, after.End);
@@ -177,10 +177,10 @@ public class TrackTests
     [Fact]
     public void AClipKeepsItsPathAndMovesOnDisk()
     {
-        Clip clip = Recorded("boss-clip-1", 2f, 4f);
+        var clip = Recorded("boss-clip-1", 2f, 4f);
         Clip withMoves = new(clip.Name, clip.Frames) { Moves = new[] { new ClipMove(2.5f, "Straight"), new ClipMove(3f, "Kick") } };
 
-        (Clip? read, var error) = ClipFile.Read(ClipFile.Write(withMoves), "x");
+        (var read, var error) = ClipFile.Read(ClipFile.Write(withMoves), "x");
 
         Assert.Null(error);
         Assert.Equal(withMoves.Moves, read!.Moves);
@@ -192,9 +192,9 @@ public class TrackTests
     [Fact]
     public void AnOldClipStillReads()
     {
-        Clip old = SyntheticClips.Sway("old", 1f);
+        var old = SyntheticClips.Sway("old", 1f);
 
-        (Clip? read, _) = ClipFile.Read(ClipFile.Write(old), "x");
+        (var read, _) = ClipFile.Read(ClipFile.Write(old), "x");
 
         Assert.Empty(read!.Moves);
         Assert.Null(read.Frames[0].Offset);
@@ -217,7 +217,7 @@ public class TrackTests
 
     private static Chart Load(string json)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
         return result.Chart ?? throw new InvalidOperationException(string.Join("; ", result.Errors));
     }
 
@@ -234,9 +234,30 @@ public class SectionTests
     private static readonly TrackClip[] Whole = { new(0, "clip-1", 0) };
 
     [Fact]
+    public void ASectionStartsOnTheMiddleThirdSnappedToBeats()
+    {
+        // 120 bpm: a beat every half second, so 10 s / 3 snaps to 3.5 and 20 s / 3 to 6.5.
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "bpm": 120, "end": 10 }""").Chart!;
+
+        Assert.Equal(new RecordingSection(3.5, 6.5), RecordingSection.MiddleThirdOf(chart));
+    }
+
+    [Fact]
+    public void NudgingMovesByBeatsAndKeepsTheSectionAtLeastABeatLong()
+    {
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "bpm": 120, "end": 10 }""").Chart!;
+        var section = new RecordingSection(3, 4);
+
+        Assert.Equal(new RecordingSection(2, 4), section.MoveStartByBeats(chart, -2));
+        Assert.Equal(new RecordingSection(3.5, 4), section.MoveStartByBeats(chart, 5));
+        Assert.Equal(new RecordingSection(3, 3.5), section.MoveEndByBeats(chart, -5));
+        Assert.Equal(new RecordingSection(0, 4), section.MoveStartByBeats(chart, -20));
+    }
+
+    [Fact]
     public void PunchingIntoOneClipCutsItAndResumesIt()
     {
-        IReadOnlyList<TrackClip> result = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
+        var result = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
 
         Assert.Equal(new[]
         {
@@ -249,8 +270,8 @@ public class SectionTests
     [Fact]
     public void PunchingAgainOverAnEarlierPunchReplacesWhatItCovers()
     {
-        IReadOnlyList<TrackClip> once = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
-        IReadOnlyList<TrackClip> twice = TrackEdits.PunchIn(once, "clip-3", 6, 10);
+        var once = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
+        var twice = TrackEdits.PunchIn(once, "clip-3", 6, 10);
 
         Assert.Equal(new[]
         {
@@ -272,10 +293,10 @@ public class SectionTests
     public void ASplicedTrackLoadsAndPlaysInOrder()
     {
         const string text = /*lang=json,strict*/ """{ "format": 2, "actors": [ { "id": "boss" } ], "tracks": [ { "actor": "boss", "clips": [ { "t": 0, "clip": "clip-1", "from": 0 } ] } ] }""";
-        Chart chart = ChartLoader.Load(text).Chart!;
+        var chart = ChartLoader.Load(text).Chart!;
         Clip clip = new("clip-2", new[] { Frame(0f), Frame(4f) });
 
-        Chart after = ChartLoader.Load(TrackEdits.KeepSection(text, chart, "boss", clip, 4, 8)).Chart!;
+        var after = ChartLoader.Load(TrackEdits.KeepSection(text, chart, "boss", clip, 4, 8)).Chart!;
         var plays = new ChartRunner(after).Schedule.OfType<PlayClip>().ToList();
 
         Assert.Equal(new[] { "clip-1", "clip-2", "clip-1" }, plays.Select(p => p.Clip));
@@ -285,7 +306,7 @@ public class SectionTests
     [Fact]
     public void StartingPartWayBringsForwardWhatIsInForce()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
             {
               "format": 2,
               "actors": [ { "id": "boss" } ],
@@ -322,11 +343,11 @@ public class SectionTests
               "events": [ { "t": 1, "move": "Straight" } ]
             }
             """;
-        Chart chart = ChartLoader.Load(text).Chart!;
-        (Lane lane, IReadOnlyList<ActorSpec> actors) = ChartSetup.Resize(chart.Lane, chart.Actors, 14f, 3.5f);
+        var chart = ChartLoader.Load(text).Chart!;
+        (var lane, var actors) = ChartSetup.Resize(chart.Lane, chart.Actors, 14f, 3.5f);
 
         var saved = ChartSetup.Write(text, new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), lane, actors);
-        Chart after = ChartLoader.Load(saved).Chart!;
+        var after = ChartLoader.Load(saved).Chart!;
 
         Assert.Contains("// keep", saved, StringComparison.Ordinal);
         Assert.Equal(new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), after.Arena);
@@ -338,9 +359,9 @@ public class SectionTests
     [Fact]
     public void ResizingIsClampedAndLeavesMidLaneActors()
     {
-        ActorSpec[] actors = new[] { new ActorSpec("a", "A", new Spot(0, 12), "you"), new ActorSpec("b", "B", new Spot(1, 6), "you") };
+        var actors = new[] { new ActorSpec("a", "A", new Spot(0, 12), "you"), new ActorSpec("b", "B", new Spot(1, 6), "you") };
 
-        (Lane lane, IReadOnlyList<ActorSpec> moved) = ChartSetup.Resize(new Lane(12, 3), actors, 100f, 0.1f);
+        (var lane, var moved) = ChartSetup.Resize(new Lane(12, 3), actors, 100f, 0.1f);
 
         Assert.Equal(new Lane(ChartSetup.MaxLength, ChartSetup.MinWidth), lane);
         Assert.Equal(ChartSetup.MaxLength, moved[0].At.Z);
@@ -371,7 +392,7 @@ public class TempoTests
     [Fact]
     public void ChartsTimeBeatsThroughTheirTempoChanges()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
             { "bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 8, "bpm": 60 } ], "events": [ { "beat": 10, "move": "Straight" } ] }
             """).Chart!;
 
@@ -401,11 +422,11 @@ public class LaneScaleTests
     public void ShorteningTheLaneTakesTheChartWithIt()
     {
         var text = ChartTemplate.Json("Scaled", "me");
-        Chart before = ChartLoader.Load(text).Chart!;
-        (Lane lane, IReadOnlyList<ActorSpec> actors) = ChartSetup.Resize(before.Lane, before.Actors, 9f, before.Lane.Width);
+        var before = ChartLoader.Load(text).Chart!;
+        (var lane, var actors) = ChartSetup.Resize(before.Lane, before.Actors, 9f, before.Lane.Width);
 
         var saved = ChartSetup.ScaleDepth(ChartSetup.Write(text, new ArenaSpec(ArenaKind.Pit, 1.7f, -7.2f, 354f), lane, actors), 9f / 12f, 9f);
-        ChartLoadResult after = ChartLoader.Load(saved);
+        var after = ChartLoader.Load(saved);
 
         Assert.True(after.Ok, string.Join("; ", after.Errors));
         Assert.All(after.Chart!.Events.OfType<ProjectileEvent>(), p => Assert.InRange(p.From.Z, 0.1f, 9f));
@@ -435,7 +456,7 @@ public class FacingTests
             new ClipFrame(1f, pose, pose, pose, Vector2.Zero, 30f),
         });
 
-        (Clip? read, _) = ClipFile.Read(ClipFile.Write(clip), "t");
+        (var read, _) = ClipFile.Read(ClipFile.Write(clip), "t");
 
         Assert.Equal(350f, read!.Frames[0].Yaw);
         Assert.Equal(10f, read.Sample(0.5f).Yaw!.Value, 2);
@@ -457,7 +478,7 @@ public class ZoneAndRulesTests
     [Fact]
     public void WithoutAZoneYouKeepTwoMetresFromTheFarEnd()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 } }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 } }""").Chart!;
 
         Assert.Equal(new Zone(10f, Zone.DefaultHeight), chart.Zone);
         Assert.Equal(SpawnRule.All, chart.Rules.Spawn);
@@ -467,7 +488,7 @@ public class ZoneAndRulesTests
     [Fact]
     public void AChartSetsItsZoneAndRules()
     {
-        Chart chart = ChartLoader.Load(/*lang=json,strict*/ """{ "zone": { "length": 6, "height": 2.5 }, "rules": { "spawn": "Discs" } }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "zone": { "length": 6, "height": 2.5 }, "rules": { "spawn": "Discs" } }""").Chart!;
 
         Assert.Equal(new Zone(6f, 2.5f), chart.Zone);
         Assert.Equal(SpawnRule.Discs, chart.Rules.Spawn);

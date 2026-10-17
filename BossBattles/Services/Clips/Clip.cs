@@ -67,8 +67,8 @@ public record Clip(string Name, IReadOnlyList<ClipFrame> Frames)
         if (time >= Duration) return Frames[^1];
 
         var after = FirstAfter(time);
-        ClipFrame a = Frames[after - 1];
-        ClipFrame b = Frames[after];
+        var a = Frames[after - 1];
+        var b = Frames[after];
         var t = (time - a.Time) / (b.Time - a.Time);
 
         return new ClipFrame(

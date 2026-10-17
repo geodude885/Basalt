@@ -27,7 +27,7 @@ internal class Boundary
     // Invisible wall!
     public void Wall(string name, Vector3 centre, Quaternion rotation, Vector3 size, int layer, bool zone = false)
     {
-        var wall = GameHelpers.Cube(name, centre, rotation, size);
+        var wall = GameHelpers.Shape(PrimitiveType.Cube, name, centre, rotation, size);
         wall.layer = layer;
         wall.GetComponent<Renderer>().enabled = false;
 

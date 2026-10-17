@@ -148,7 +148,7 @@ internal class BattleController
         bool mime = false)
     {
         Miming = mode == BattleMode.Record && mime;
-        ArenaKind arena = arenaOverride ?? chart.Arena.Map;
+        var arena = arenaOverride ?? chart.Arena.Map;
         if (Maps.Online)
         {
             Logger.Info("[Battle.NotStarted] not in a park or match - charts play in the Gym");
@@ -210,7 +210,7 @@ internal class BattleController
         _player.RestoreInvincibility();
         if (State == BattleState.Running && Mode != BattleMode.Record) BattlePlayer.FullHealth();
         Signals.End();
-        foreach (Actor actor in _actors) actor.Despawn();
+        foreach (var actor in _actors) actor.Despawn();
         _actors.Clear();
         _projectiles.Clear();
         _arena.Destroy();
@@ -277,7 +277,7 @@ internal class BattleController
                 if (Mode != BattleMode.Record) _player.KeepVulnerable();
                 Signals.Update(Chart!, ChartTime);
                 _sweeper.Update(Chart!.Rules.CleanupSeconds);
-                foreach (ChartCommand command in _runner!.Advance(Math.Max(0, ChartTime)))
+                foreach (var command in _runner!.Advance(Math.Max(0, ChartTime)))
                 {
                     Execute(command);
                     if (State != BattleState.Running) break;
@@ -322,7 +322,7 @@ internal class BattleController
         try
         {
             var yours = ActorRig.From(BattlePlayer.Controller!);
-            Anchor? frame = _fixedFrame ?? _arenaSpec.CreateLaneAnchor(CurrentArena, yours.Feet, yours.Facing);
+            var frame = _fixedFrame ?? _arenaSpec.CreateLaneAnchor(CurrentArena, yours.Feet, yours.Facing);
             if (frame == null)
             {
                 Stop("no lane could be laid out");
@@ -331,12 +331,12 @@ internal class BattleController
 
             _frame = frame.Value;
             StructureSweeper.ClearAll();
-            ActorSpec performer = Chart!.Actors.FirstOrDefault(a => a.Id == _recordActor) ?? Chart.DefaultActor;
+            var performer = Chart!.Actors.FirstOrDefault(a => a.Id == _recordActor) ?? Chart.DefaultActor;
 
             if (Mode == BattleMode.Record)
             {
                 // In the actor's place, facing down the lane as it will; a section starts where it stood then.
-                Vector3 spot = _recordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
+                var spot = _recordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
                 _player.Place(spot, Quaternion.Euler(0f, _frame.ActorYaw(performer.At.Facing), 0f));
             }
             else if (CurrentArena.IsMatchMap() || _arenaSpec.HasSpot || _fixedFrame != null)
@@ -357,11 +357,11 @@ internal class BattleController
                 _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
-            foreach (ActorSpec spec in Mode == BattleMode.Record ? Enumerable.Empty<ActorSpec>() : Chart.Actors)
+            foreach (var spec in Mode == BattleMode.Record ? Enumerable.Empty<ActorSpec>() : Chart.Actors)
             {
                 var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { SelfKnockbackMultiplier = 0f, Measurement = spec.Measurement };
                 _actors.Add(actor);
-                Vector3 spot = World(spec.At.X, 0f, spec.At.Z);
+                var spot = World(spec.At.X, 0f, spec.At.Z);
                 var yaw = _frame.ActorYaw(spec.At.Facing);
 
                 // Spawning puts the head on the floor, so the body falls until placed properly.
@@ -402,7 +402,7 @@ internal class BattleController
         _musicDeadline = _countdownEnds + MusicWaitSeconds;
         _arena.Boundary.LetActorsThrough(_actors.SelectMany(a => a.Colliders));
         _moves.Hold();
-        Signals.Prepare(Chart!);
+        Signals.PreloadChartPacks(Chart!);
         State = BattleState.Countdown;
     }
 
@@ -423,7 +423,7 @@ internal class BattleController
         if (_music.State == MusicState.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
         if (Chart.Music != null) _music.Play(Chart.Music.Start + StartAt, Chart.Music.Volume);
         _board.Show("<b>GO</b>", 1f);
-        foreach (Actor actor in _actors) actor.FullHeal();
+        foreach (var actor in _actors) actor.FullHeal();
         _sweeper.Reset();
         Signals.Begin(Chart);
 
@@ -456,7 +456,7 @@ internal class BattleController
                     if (Mode == BattleMode.Record) break;
 
                     // A clip holds its actor to the recorded path, so a move elsewhere would be dragged back.
-                    Actor? placed = ActorById(place.ActorId);
+                    var placed = ActorById(place.ActorId);
                     if (placed is { PlayingClip: true }) Logger.Info($"[Battle.PlaceDuringClip] {place.ActorId} is playing a clip at {place.Time:0.0}s - its \"at\" is skipped");
                     else placed?.Place(World(place.At.X, 0f, place.At.Z), _frame.ActorYaw(place.At.Facing));
                     break;
@@ -477,7 +477,7 @@ internal class BattleController
                     break;
 
                 case PlayClip play:
-                    Clip? clip = FindClip(play.Clip);
+                    var clip = FindClip(play.Clip);
                     if (clip == null) Logger.Warning($"[Battle.NoClip] no clip called \"{play.Clip}\" in the chart's clips");
                     else ActorById(play.ActorId)?.PlayClip(clip, play.From, play.To, _frame, () => ChartTime, play.Mime);
                     break;
@@ -507,7 +507,7 @@ internal class BattleController
     {
         if (State != BattleState.Running || _score == null) return;
 
-        BattleResult result = _score.Finish(survived, seconds, Chart!.End);
+        var result = _score.Finish(survived, seconds, Chart!.End);
         LastResult = result;
         State = BattleState.Finished;
         _music.FadeOut();
@@ -517,7 +517,7 @@ internal class BattleController
         Signals.Fire(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
         Signals.End();
 
-        BestScore? previous = _scoreKey == null ? null : Scores?.Best(_scoreKey);
+        var previous = _scoreKey == null ? null : Scores?.Best(_scoreKey);
         try
         {
             LastWasBest = _scoreKey != null && Scores != null && Scores.Record(_scoreKey, result, DateTime.Now);
@@ -533,7 +533,7 @@ internal class BattleController
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 
-        foreach (Actor actor in _actors) actor.Unplant();
+        foreach (var actor in _actors) actor.Unplant();
         Finished?.Invoke(result);
     }
 
@@ -545,7 +545,7 @@ internal class BattleController
 
     private Actor? ActorById(string id)
     {
-        Actor? actor = _actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
+        var actor = _actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
         if (actor == null || !actor.Exists) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
         return actor is { Exists: true } ? actor : null;
     }

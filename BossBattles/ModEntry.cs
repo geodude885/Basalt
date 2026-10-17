@@ -10,6 +10,7 @@ using MelonLoader.Utils;
 [assembly: MelonInfo(typeof(BossBattles.ModEntry), "BossBattles", "1.0.0", "ACutiePi")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 [assembly: MelonAdditionalDependencies("UIFramework")]
+[assembly: MelonOptionalDependencies("RumbleReShaded")]
 
 // MelonLoader would otherwise PatchAll this assembly before OnInitializeMelon.
 [assembly: HarmonyDontPatchAll]
@@ -51,7 +52,7 @@ public partial class ModEntry : MelonMod
         Logger.Debug($"[Init] actor patches: {ActorPatches.Apply(HarmonyInstance)} methods");
         Logger.Debug($"[Init] arena patches: {ArenaPatches.Apply(HarmonyInstance)} methods");
 
-        foreach ((var text, var name, var description, Action handler) in new (string, string, string, Action)[]
+        foreach ((var text, var name, var description, var handler) in new (string, string, string, Action)[]
         {
             ("Start", "Start battle", "Play the chosen chart in the chosen arena.", StartBattle),
             ("Stop", "Stop battle", "End the battle and remove its actors.", () => Mod.Battle.Stop("stopped from the menu")),
@@ -111,8 +112,6 @@ public partial class ModEntry : MelonMod
         Mod.Studio.OnSceneLoaded();
         Picker.Forget();
     }
-
-    public override void OnApplicationQuit() => Mod.Battle.Signals.End();
 
     private void ApplySettings()
     {

@@ -14,11 +14,11 @@ internal class StructureSweeper
     /// <summary>Breaks every structure a player spawned (scenery stays) with the game's own <c>Structure.Kill</c>.</summary>
     public static void ClearAll()
     {
-        CombatManager? combat = CombatManager.instance;
+        var combat = CombatManager.instance;
         if (combat == null) return;
 
         var cleared = 0;
-        foreach (Structure structure in combat.Structures.ToArray())
+        foreach (var structure in combat.Structures.ToArray())
         {
             if (structure == null || !structure.gameObject.activeInHierarchy) continue;
 
@@ -50,19 +50,19 @@ internal class StructureSweeper
         if (afterSeconds <= 0 || Time.time < _nextSweep) return;
         _nextSweep = Time.time + 0.25f;
 
-        CombatManager? combat = CombatManager.instance;
+        var combat = CombatManager.instance;
         if (combat == null) return;
 
         var seen = new HashSet<IntPtr>();
-        foreach (Structure structure in combat.Structures.ToArray())
+        foreach (var structure in combat.Structures.ToArray())
         {
             if (structure == null || !structure.gameObject.activeInHierarchy) continue;
-            Rigidbody body = structure.GetComponent<Rigidbody>();
+            var body = structure.GetComponent<Rigidbody>();
             if (body == null || body.isKinematic) continue;
 
             seen.Add(structure.Pointer);
-            Vector3 at = structure.transform.position;
-            if (!_still.TryGetValue(structure.Pointer, out (Vector3 At, float Since) still) || (at - still.At).sqrMagnitude > 0.05f * 0.05f)
+            var at = structure.transform.position;
+            if (!_still.TryGetValue(structure.Pointer, out var still) || (at - still.At).sqrMagnitude > 0.05f * 0.05f)
             {
                 _still[structure.Pointer] = (at, Time.time);
                 continue;
@@ -83,6 +83,6 @@ internal class StructureSweeper
             _still.Remove(structure.Pointer);
         }
 
-        foreach (IntPtr gone in _still.Keys.Where(k => !seen.Contains(k)).ToList()) _still.Remove(gone);
+        foreach (var gone in _still.Keys.Where(k => !seen.Contains(k)).ToList()) _still.Remove(gone);
     }
 }

@@ -64,7 +64,7 @@ internal static partial class SelfTest
     /// </summary>
     private static (Vector3 Start, Vector3 Direction)? FlatLane(Vector3 around, float length, float width)
     {
-        Vector3[] directions = Enumerable.Range(0, 8).Select(i => Quaternion.Euler(0f, 45f * i, 0f) * Vector3.forward).ToArray();
+        var directions = Enumerable.Range(0, 8).Select(i => Quaternion.Euler(0f, 45f * i, 0f) * Vector3.forward).ToArray();
 
         bool FlatAndClear(Vector3 start, Vector3 direction)
         {

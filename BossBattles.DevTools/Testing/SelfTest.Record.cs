@@ -188,7 +188,7 @@ internal static partial class SelfTest
         if (Mod.Studio.State != StudioState.Deciding || section == null || !Mod.Studio.IsSection)
         {
             problems.Add($"the section did not stop by itself and come up for review (studio {Mod.Studio.State})");
-            Mod.Studio.Back();
+            Mod.Studio.CloseSection();
             yield break;
         }
 
@@ -225,7 +225,7 @@ internal static partial class SelfTest
         _picker.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
-        if (_shots && Mod.Studio.SetupValues.Lane.Length > 0 && BattlePlayer.Controller is { } you)
+        if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Controller is { } you)
         {
             var rig = ActorRig.From(you);
             var eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);

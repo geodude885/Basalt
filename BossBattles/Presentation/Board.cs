@@ -17,7 +17,7 @@ internal class Board
     {
         if (!Ensure()) return;
 
-        Vector3 away = position - lookingFrom;
+        var away = position - lookingFrom;
         away.y = 0f;
         _holder!.transform.SetPositionAndRotation(position, Quaternion.LookRotation(away.sqrMagnitude > 1e-4f ? away : Vector3.forward));
     }

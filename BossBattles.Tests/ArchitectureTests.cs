@@ -25,12 +25,12 @@ public class ArchitectureTests
     {
         var offenders = new List<string>();
 
-        foreach (Type type in typeof(Services.Charts.ChartRunner).Assembly.GetTypes())
+        foreach (var type in typeof(Services.Charts.ChartRunner).Assembly.GetTypes())
         {
             if (type.Namespace is null) continue;
             if (!type.Namespace.StartsWith(ServicesNamespace, StringComparison.Ordinal)) continue;
 
-            foreach (Type referenced in HeldTypes(type))
+            foreach (var referenced in HeldTypes(type))
             {
                 var assembly = referenced.Assembly.GetName().Name;
                 if (assembly is null) continue;
@@ -57,8 +57,8 @@ public class ArchitectureTests
 
         if (type.BaseType is not null) yield return type.BaseType;
 
-        foreach (Type i in type.GetInterfaces()) yield return i;
-        foreach (FieldInfo f in type.GetFields(All)) yield return f.FieldType;
-        foreach (PropertyInfo p in type.GetProperties(All)) yield return p.PropertyType;
+        foreach (var i in type.GetInterfaces()) yield return i;
+        foreach (var f in type.GetFields(All)) yield return f.FieldType;
+        foreach (var p in type.GetProperties(All)) yield return p.PropertyType;
     }
 }

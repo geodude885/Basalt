@@ -28,7 +28,7 @@ public class ClipLibrary
         foreach (var file in Directory.EnumerateFiles(Folder, "*.json").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {
             var stem = Path.GetFileNameWithoutExtension(file);
-            (Clip? clip, var error) = ClipFile.Read(File.ReadAllText(file), stem);
+            (var clip, var error) = ClipFile.Read(File.ReadAllText(file), stem);
             if (clip == null)
             {
                 errors.Add($"{Path.GetFileName(file)}: {error}");
@@ -43,7 +43,7 @@ public class ClipLibrary
         _errors = errors;
     }
 
-    public Clip? Find(string name) => _clips.TryGetValue(name, out Clip? clip) ? clip : null;
+    public Clip? Find(string name) => _clips.TryGetValue(name, out var clip) ? clip : null;
 
     /// <summary>Saves a clip under a file name made from its name, never overwriting; returns the path.</summary>
     public string Save(Clip clip)

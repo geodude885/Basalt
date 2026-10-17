@@ -55,10 +55,10 @@ public class BallisticsTests
         var from = new Vector3(0, 1.4f, 10);
         var to = new Vector3(0.8f, 1.2f, 0);
 
-        Vector3 velocity = Ballistics.LaunchVelocity(from, to, speed, Gravity);
+        var velocity = Ballistics.LaunchVelocity(from, to, speed, Gravity);
         var time = Vector3.Distance(from, to) / speed;
 
-        Vector3 landed = from + (velocity * time) - (Vector3.UnitY * (0.5f * Gravity * time * time));
+        var landed = from + (velocity * time) - (Vector3.UnitY * (0.5f * Gravity * time * time));
         Assert.True(Vector3.Distance(to, landed) < 1e-3f, $"landed at {landed}, aimed at {to}");
     }
 

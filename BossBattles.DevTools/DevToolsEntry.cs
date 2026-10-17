@@ -24,7 +24,7 @@ public class DevToolsEntry : MelonMod
 
     public override void OnInitializeMelon()
     {
-        ModEntry? boss = ModEntry.Instance;
+        var boss = ModEntry.Instance;
         if (boss == null)
         {
             LoggerInstance.Error("BossBattles is not loaded - the dev tools are off");
@@ -67,7 +67,7 @@ public class DevToolsEntry : MelonMod
     {
         if (!Input.GetMouseButtonDown(0) || ModEntry.Instance is not { } boss || (_camera.Camera ?? Camera.main) is not { } camera) return;
 
-        Ray ray = camera.ScreenPointToRay(Input.mousePosition);
+        var ray = camera.ScreenPointToRay(Input.mousePosition);
         var unitBox = new Bounds(Vector3.zero, Vector3.one);
         var hit = boss.Picker.ShownButtons
             .Select(b => (b.Id, Hit: unitBox.IntersectRay(new Ray(b.Face.InverseTransformPoint(ray.origin), b.Face.InverseTransformVector(ray.direction)), out var distance), Distance: distance))

@@ -19,10 +19,10 @@ internal static partial class SelfTest
 
     private static IEnumerator RunLookTest(List<string> problems)
     {
-        Player you = BattlePlayer.Player!;
+        var you = BattlePlayer.Player!;
         var yours = you.Data.VisualData.ToPlayfabDataString();
         var plain = PlayerVisualData.Default.ToPlayfabDataString();
-        List<string> stones = Shiftstones.EquippedBy(you.Controller);
+        var stones = Shiftstones.EquippedBy(you.Controller);
         Logger.Info($"[SelfTest] look: yours \"{yours}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
 
         // 1. A chart made in game.
@@ -34,8 +34,8 @@ internal static partial class SelfTest
         }
 
         var file = Path.Combine(folder, ChartLibrary.FolderChartFile);
-        Chart? made = ChartLoader.Load(File.ReadAllText(file)).Chart;
-        ActorSpec? boss = made?.Actors.Count > 0 ? made.Actors[0] : null;
+        var made = ChartLoader.Load(File.ReadAllText(file)).Chart;
+        var boss = made?.Actors.Count > 0 ? made.Actors[0] : null;
         if (boss == null)
         {
             problems.Add("the new chart does not load");
@@ -55,13 +55,13 @@ internal static partial class SelfTest
 
         var text = File.ReadAllText(file);
         File.WriteAllText(file, text.Replace(yours, edited, StringComparison.Ordinal));
-        Chart? changed = ChartLoader.Load(File.ReadAllText(file)).Chart;
+        var changed = ChartLoader.Load(File.ReadAllText(file)).Chart;
         if (changed?.Actors[0].Look != edited) problems.Add("the edited look was not read back from the chart");
         else yield return PlayAndShoot(changed, folder, edited, "2-edited", problems);
 
         // 3. The default character entirely - a look nothing like yours, to see one can change at all.
         File.WriteAllText(file, File.ReadAllText(file).Replace(edited, plain, StringComparison.Ordinal));
-        Chart? plainChart = ChartLoader.Load(File.ReadAllText(file)).Chart;
+        var plainChart = ChartLoader.Load(File.ReadAllText(file)).Chart;
         if (plainChart != null) yield return PlayAndShoot(plainChart, folder, plain, "3-default", problems);
 
         try
@@ -119,7 +119,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         // This battle's actor - the last one, despawned, can still be listed.
-        Actor? actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists && !before.Contains(a));
+        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists && !before.Contains(a));
         if (actor?.Player == null)
         {
             problems.Add($"{shot}: no actor came up");
@@ -132,10 +132,10 @@ internal static partial class SelfTest
         else Logger.Info($"[SelfTest] look {shot}: the boss wears the chart's look");
 
         // Framed on the drawn body: an actor's head and controller transforms are not where it is drawn.
-        SkinnedMeshRenderer? mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
-        Vector3 chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
+        var mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
+        var chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
         Logger.Info($"[SelfTest] look {shot}: framing the body at {chest.Describe()}{(mesh == null ? " (no mesh found)" : "")}");
-        Vector3 towardYou = LaneOrigin is { } origin ? (origin - chest).Flat() : Vector3.forward;
+        var towardYou = LaneOrigin is { } origin ? (origin - chest).Flat() : Vector3.forward;
         _showCamera?.Invoke(chest + (towardYou * 1.8f) + (Vector3.up * 0.3f), chest);
         yield return new WaitForSeconds(0.3f);
 

@@ -6,7 +6,6 @@ using BossBattles.Arena;
 using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
-using Il2CppRUMBLE.Players;
 using UnityEngine;
 
 namespace BossBattles;
@@ -20,7 +19,7 @@ public partial class ModEntry
 
     private void StartBattle()
     {
-        ChartEntry? entry = Chosen();
+        var entry = Chosen();
         if (entry == null)
         {
             Logger.Warning($"[Battle.NoChart] no chart called \"{_settings.Chart.Value}\" in {_library.Folder}");
@@ -40,7 +39,7 @@ public partial class ModEntry
     private ChartEntry? Chosen()
     {
         // By file first: a chart that stops loading loses its name, and must stay chosen.
-        ChartEntry? entry = (_chosenFile == null ? null : _library.Entries.FirstOrDefault(e => string.Equals(e.File, _chosenFile, StringComparison.OrdinalIgnoreCase)))
+        var entry = (_chosenFile == null ? null : _library.Entries.FirstOrDefault(e => string.Equals(e.File, _chosenFile, StringComparison.OrdinalIgnoreCase)))
                             ?? _library.Find(_settings.Chart.Value)
                             ?? _library.Playable.FirstOrDefault()
                             ?? (_library.Entries.Count > 0 ? _library.Entries[0] : null);
@@ -60,7 +59,7 @@ public partial class ModEntry
         if (entries.Count == 0) return;
 
         var current = entries.IndexOf(Chosen()!);
-        ChartEntry next = entries[(((current + step) % entries.Count) + entries.Count) % entries.Count];
+        var next = entries[(((current + step) % entries.Count) + entries.Count) % entries.Count];
         Choose(next);
         Logger.Info($"chart: {next.Name}");
     }
@@ -70,11 +69,11 @@ public partial class ModEntry
         var written = _library.Reload();
         if (written > 0) Logger.Info($"wrote {written} starter chart(s) to {_library.Folder}");
 
-        foreach (ChartEntry entry in _library.Entries.Where(e => !e.Result.Ok))
+        foreach (var entry in _library.Entries.Where(e => !e.Result.Ok))
             Logger.Info($"chart {Path.GetFileName(entry.File)} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
 
         _settings.UpdateChartChoices(_library.Playable.Select(e => e.Name));
-        foreach (ChartEntry entry in _library.Entries.Where(e => e.Source == ChartSource.Package && e.Result.Ok))
+        foreach (var entry in _library.Entries.Where(e => e.Source == ChartSource.Package && e.Result.Ok))
             Logger.Debug($"[Charts.Package] {Path.GetFileName(entry.File)}: {entry.Name}");
     }
 
@@ -103,7 +102,7 @@ public partial class ModEntry
 
     private void RecordChosen(bool mime = false)
     {
-        ChartEntry? entry = Chosen();
+        var entry = Chosen();
         if (!Studio.CanEdit(entry))
         {
             Logger.Info(entry?.Source == ChartSource.Package
@@ -139,9 +138,9 @@ public partial class ModEntry
             var name = Enumerable.Range(1, int.MaxValue).Select(n => n == 1 ? "My Chart" : $"My Chart {n}")
                 .First(candidate => !_library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
-            Player? you = BattlePlayer.Player;
+            var you = BattlePlayer.Player;
             var look = you?.Data?.VisualData?.ToPlayfabDataString();
-            List<string>? stones = you?.Controller == null ? null : Shiftstones.EquippedBy(you.Controller);
+            var stones = you?.Controller == null ? null : Shiftstones.EquippedBy(you.Controller);
             var username = you?.Data?.GeneralData?.PublicUsername;
             var author = string.IsNullOrWhiteSpace(username) ? null : Regex.Replace(username, "<[^>]*>", "").Trim();
             var folder = ChartTemplate.Create(_library.Folder, name, author, look, stones);
@@ -164,7 +163,7 @@ public partial class ModEntry
     {
         try
         {
-            ChartEntry? entry = Chosen();
+            var entry = Chosen();
             var folder = entry != null && Studio.CanEdit(entry) ? entry.AssetFolder : _library.Folder;
             Open(folder);
             Logger.Info($"[Charts] {entry?.Name ?? "the charts"}: {folder} - open it in the Boss Battles Chart Editor, save, and the game reloads");
@@ -179,7 +178,7 @@ public partial class ModEntry
 
     private void ExportChosen()
     {
-        ChartEntry? entry = Chosen();
+        var entry = Chosen();
         if (entry == null)
         {
             Logger.Info("[Export] no chart to export");
@@ -189,7 +188,7 @@ public partial class ModEntry
         try
         {
             var output = Path.Combine(_folder, "Exports", ChartPackage.FileStem(entry.Name) + ChartPackage.Extension);
-            PackResult packed = ChartPackage.Pack(entry, output);
+            var packed = ChartPackage.Pack(entry, output);
             Logger.Info($"[Export] {entry.Name} -> {packed.Path} ({string.Join(", ", packed.Included)})" +
                     (packed.Missing.Count > 0 ? $" - missing: {string.Join(", ", packed.Missing)}" : ""));
         }
@@ -202,12 +201,12 @@ public partial class ModEntry
     /// <summary>Prints your spot as a chart's "arena" line.</summary>
     private static void WhereAmI()
     {
-        PlayerController? you = BattlePlayer.Controller;
+        var you = BattlePlayer.Controller;
         if (you == null) return;
 
-        ArenaKind map = Maps.Current;
+        var map = Maps.Current;
         var rig = ActorRig.From(you);
-        Vector3 at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
+        var at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
 
         static string F(float v)
         {

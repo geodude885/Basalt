@@ -54,6 +54,11 @@
 			<HintPath>$(ModsOutputPath)\UIFramework.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
+		<!-- Optional at runtime: only Presentation/ReShade touches it, and only once it is loaded. -->
+		<Reference Include="RumbleReShaded">
+			<HintPath>$(ModsOutputPath)\RumbleReShaded.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
 	</ItemGroup>
 
 	<!-- Copies the built mod into RUMBLE\Mods; warns instead of failing while the game holds the file. -->

@@ -54,16 +54,16 @@ public class ChartRunner
         var started = new List<ChartCommand>();
         var launchedLate = schedule.OfType<LaunchProjectile>().Where(l => l.Time >= startAt).Select(l => l.Id).ToHashSet();
 
-        EnterPhase? phase = schedule.OfType<EnterPhase>().LastOrDefault(p => p.Time <= startAt);
+        var phase = schedule.OfType<EnterPhase>().LastOrDefault(p => p.Time <= startAt);
         if (phase != null) started.Add(phase with { Time = startAt });
 
-        foreach (PlaceActor place in schedule.OfType<PlaceActor>().Where(p => p.Time <= startAt).GroupBy(p => p.ActorId).Select(g => g.Last()))
+        foreach (var place in schedule.OfType<PlaceActor>().Where(p => p.Time <= startAt).GroupBy(p => p.ActorId).Select(g => g.Last()))
             started.Add(place with { Time = startAt });
 
-        foreach (PlayClip clip in schedule.OfType<PlayClip>().Where(t => t.Time <= startAt && (t.To == null || t.Time + (t.To - t.From) > startAt)))
+        foreach (var clip in schedule.OfType<PlayClip>().Where(t => t.Time <= startAt && (t.To == null || t.Time + (t.To - t.From) > startAt)))
             started.Add(clip with { Time = startAt, From = clip.From + (startAt - clip.Time) });
 
-        foreach (SpawnProjectile spawn in schedule.OfType<SpawnProjectile>().Where(s => s.Time < startAt && launchedLate.Contains(s.Id)))
+        foreach (var spawn in schedule.OfType<SpawnProjectile>().Where(s => s.Time < startAt && launchedLate.Contains(s.Id)))
             started.Add(spawn with { Time = startAt });
 
         // Brought-forward state first, in the usual order, then everything still to come.
@@ -77,14 +77,14 @@ public class ChartRunner
 
         entries.AddRange(chart.Actors.Select((actor, i) => ((ChartCommand)new PlaceActor(0, actor.Id, actor.At), RankPlace, -chart.Actors.Count + i)));
 
-        foreach ((Phase phase, var i) in chart.Phases.Select((p, i) => (p, i)))
+        foreach ((var phase, var i) in chart.Phases.Select((p, i) => (p, i)))
         {
             entries.Add((new EnterPhase(phase.Start, phase), RankPhase, i));
             if (phase.At is Spot spot) entries.Add((new PlaceActor(phase.Start, phase.ActorId ?? chart.DefaultActor.Id, spot), RankPlace, i));
         }
 
         var projectileId = 0;
-        foreach (ChartEvent chartEvent in chart.Events)
+        foreach (var chartEvent in chart.Events)
         {
             switch (chartEvent)
             {
@@ -102,11 +102,11 @@ public class ChartRunner
             }
         }
 
-        foreach (Track track in chart.Tracks)
+        foreach (var track in chart.Tracks)
         {
             // Each clip plays until its own end or the next clip, whichever is first.
-            IEnumerable<double?> nextStarts = track.Clips.Skip(1).Select(t => (double?)t.Time).Append(null);
-            foreach ((TrackClip clip, var next) in track.Clips.Zip(nextStarts))
+            var nextStarts = track.Clips.Skip(1).Select(t => (double?)t.Time).Append(null);
+            foreach ((var clip, var next) in track.Clips.Zip(nextStarts))
             {
                 var to = clip.To;
                 if (next != null) to = Math.Min(to ?? double.MaxValue, clip.From + (next.Value - clip.Time));

@@ -28,7 +28,7 @@ public static class MovementInput
         movement.currentRawWalkInput = walk;
         movement.currentRawTurnInput = turn;
 
-        PlayerShiftstoneSystem? stones = movement.ParentController?.PlayerShiftstones;
+        var stones = movement.ParentController?.PlayerShiftstones;
         var walking = stones == null ? 1f : stones.GetTotalMultiplier(PlayerMultiplier.MultiplierType.WalkingSpeed, 1f, true, null);
         var sprinting = stones == null ? 1f : stones.GetTotalMultiplier(PlayerMultiplier.MultiplierType.SprintingSpeed, 1f, true, null);
 

@@ -14,7 +14,7 @@ public class ChartHeaderTests
     [Fact]
     public void ReadsInfoArenaAndMusic()
     {
-        Chart chart = Load(/*lang=json,strict*/ """
+        var chart = Load(/*lang=json,strict*/ """
             {
               "format": 1, "name": "Song", "author": "someone", "difficulty": "Hard", "description": "A song.",
               "arena": { "map": "Ring", "at": { "x": 1.5, "z": -6 }, "facing": 90 },
@@ -34,7 +34,7 @@ public class ChartHeaderTests
     [Fact]
     public void TheNewChartTemplatePlaysAsItIs()
     {
-        ChartLoadResult result = ChartLoader.Load(ChartTemplate.Json("Quote \" test", "someone"));
+        var result = ChartLoader.Load(ChartTemplate.Json("Quote \" test", "someone"));
 
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         Assert.Equal("Quote \" test", result.Chart!.Name);
@@ -45,7 +45,7 @@ public class ChartHeaderTests
     [Fact]
     public void WithoutAHeaderAChartIsPlayedHereInSilence()
     {
-        Chart chart = Load(/*lang=json,strict*/ """{ "name": "Plain" }""");
+        var chart = Load(/*lang=json,strict*/ """{ "name": "Plain" }""");
 
         Assert.Equal(ArenaSpec.Here, chart.Arena);
         Assert.Null(chart.Music);
@@ -55,7 +55,7 @@ public class ChartHeaderTests
     [Fact]
     public void AMapWithoutASpotIsLaidOutAutomatically()
     {
-        ArenaSpec arena = Load(/*lang=json,strict*/ """{ "arena": { "map": "pit" } }""").Arena;
+        var arena = Load(/*lang=json,strict*/ """{ "arena": { "map": "pit" } }""").Arena;
 
         Assert.Equal(ArenaKind.Pit, arena.Map);
         Assert.False(arena.HasSpot);
@@ -76,7 +76,7 @@ public class ChartHeaderTests
     [InlineData(/*lang=json,strict*/ """{ "cover": "cover.gif" }""", "must be one of")]
     public void BadHeadersAreReported(string json, string expected)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
 
         Assert.False(result.Ok);
         Assert.Contains(result.Errors, e => e.Contains(expected, StringComparison.Ordinal));
@@ -90,7 +90,7 @@ public class ChartHeaderTests
     {
         foreach ((var file, var json) in StarterCharts.All)
         {
-            Chart chart = ChartLoader.Load(json).Chart ?? throw new InvalidOperationException(file);
+            var chart = ChartLoader.Load(json).Chart ?? throw new InvalidOperationException(file);
             Assert.NotNull(chart.Info.Author);
             Assert.NotNull(chart.Info.Difficulty);
         }
@@ -98,7 +98,7 @@ public class ChartHeaderTests
 
     private static Chart Load(string json)
     {
-        ChartLoadResult result = ChartLoader.Load(json);
+        var result = ChartLoader.Load(json);
         return result.Chart ?? throw new InvalidOperationException(string.Join("; ", result.Errors));
     }
 }
@@ -145,7 +145,7 @@ public sealed class ChartPackageTests : IDisposable
         var library = new ChartLibrary(Charts, Cache);
         Assert.Equal(0, library.Reload());
 
-        ChartEntry entry = Assert.Single(library.Entries);
+        var entry = Assert.Single(library.Entries);
         Assert.True(entry.Result.Ok, string.Join("; ", entry.Result.Errors));
         Assert.Equal(ChartSource.Folder, entry.Source);
         Assert.Equal("my-song", entry.Stem);
@@ -162,7 +162,7 @@ public sealed class ChartPackageTests : IDisposable
         library.Reload();
 
         var package = Path.Combine(_root, "Exports", "Folder-Song" + ChartPackage.Extension);
-        PackResult packed = ChartPackage.Pack(library.Entries[0], package);
+        var packed = ChartPackage.Pack(library.Entries[0], package);
 
         Assert.Empty(packed.Missing);
         Assert.Equal(new[] { "chart.json", "song.wav", "cover.png", "clips/wave.json" }, packed.Included);
@@ -175,7 +175,7 @@ public sealed class ChartPackageTests : IDisposable
         var their = new ChartLibrary(theirs, Path.Combine(_root, "Theirs", "Cache"));
         Assert.Equal(0, their.Reload());
 
-        ChartEntry entry = Assert.Single(their.Entries);
+        var entry = Assert.Single(their.Entries);
         Assert.True(entry.Result.Ok, string.Join("; ", entry.Result.Errors));
         Assert.Equal(ChartSource.Package, entry.Source);
         Assert.Equal("Folder Song", entry.Name);
@@ -205,7 +205,7 @@ public sealed class ChartPackageTests : IDisposable
     {
         Directory.CreateDirectory(Charts);
         var package = Path.Combine(Charts, "zipped.bbchart");
-        using (ZipArchive zip = ZipFile.Open(package, ZipArchiveMode.Create))
+        using (var zip = ZipFile.Open(package, ZipArchiveMode.Create))
         {
             Write(zip, "My Chart/chart.json", /*lang=json,strict*/ """{ "name": "Zipped" }""");
             Write(zip, "My Chart/notes.txt", "hi");
@@ -214,7 +214,7 @@ public sealed class ChartPackageTests : IDisposable
         var library = new ChartLibrary(Charts, Cache);
         library.Reload();
 
-        ChartEntry entry = Assert.Single(library.Entries);
+        var entry = Assert.Single(library.Entries);
         Assert.Equal("Zipped", entry.Name);
         Assert.True(File.Exists(Path.Combine(entry.AssetFolder, "notes.txt")));
     }
@@ -226,7 +226,7 @@ public sealed class ChartPackageTests : IDisposable
     {
         Directory.CreateDirectory(Charts);
         var package = Path.Combine(Charts, "evil.bbchart");
-        using (ZipArchive zip = ZipFile.Open(package, ZipArchiveMode.Create))
+        using (var zip = ZipFile.Open(package, ZipArchiveMode.Create))
         {
             Write(zip, "chart.json", /*lang=json,strict*/ """{ "name": "Evil" }""");
             Write(zip, evil, "gotcha");
@@ -235,7 +235,7 @@ public sealed class ChartPackageTests : IDisposable
         var library = new ChartLibrary(Charts, Cache);
         library.Reload();
 
-        ChartEntry entry = Assert.Single(library.Entries);
+        var entry = Assert.Single(library.Entries);
         Assert.False(entry.Result.Ok);
         Assert.Contains("outside the package", entry.Result.Errors[0], StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(Cache, "evil.txt")));
@@ -246,7 +246,7 @@ public sealed class ChartPackageTests : IDisposable
     public void APackageWithoutAChartIsListedWithWhy()
     {
         Directory.CreateDirectory(Charts);
-        using (ZipArchive zip = ZipFile.Open(Path.Combine(Charts, "empty.bbchart"), ZipArchiveMode.Create))
+        using (var zip = ZipFile.Open(Path.Combine(Charts, "empty.bbchart"), ZipArchiveMode.Create))
             Write(zip, "readme.txt", "no chart here");
 
         var library = new ChartLibrary(Charts, Cache);
@@ -351,9 +351,9 @@ public class WavFileTests
     [Fact]
     public void WritesAndReadsBack()
     {
-        PcmAudio tone = TestAudio.Metronome(120, 1.0, 8000);
+        var tone = TestAudio.Metronome(120, 1.0, 8000);
 
-        PcmAudio read = Decode(TestAudio.Write(tone));
+        var read = Decode(TestAudio.Write(tone));
 
         Assert.Equal(1, read.Channels);
         Assert.Equal(8000, read.SampleRate);
@@ -371,7 +371,7 @@ public class WavFileTests
         File.WriteAllBytes(path, wav);
         try
         {
-            using IPcmSource source = AudioDecoder.Open(path);
+            using var source = AudioDecoder.Open(path);
             return TestAudio.DecodeAll(source);
         }
         finally

@@ -60,9 +60,9 @@ public static class ClipFile
         if (dto?.Frames == null || dto.Frames.Count == 0) return (null, "the clip has no frames");
 
         var frames = new List<ClipFrame>(dto.Frames.Count);
-        foreach ((FrameDto f, var i) in dto.Frames.Select((f, i) => (f, i)))
+        foreach ((var f, var i) in dto.Frames.Select((f, i) => (f, i)))
         {
-            if (!TryPose(f.H, out ClipPose head) || !TryPose(f.L, out ClipPose left) || !TryPose(f.R, out ClipPose right))
+            if (!TryPose(f.H, out var head) || !TryPose(f.L, out var left) || !TryPose(f.R, out var right))
             {
                 return (null, $"frames[{i}] needs h, l and r as [px, py, pz, qx, qy, qz, qw]");
             }
@@ -74,7 +74,7 @@ public static class ClipFile
                 f.F is { Length: 8 } ? new ClipFingers(f.F[4], f.F[5], f.F[6], f.F[7]) : null));
         }
 
-        List<MoveDto> moveDtos = dto.Moves ?? [];
+        var moveDtos = dto.Moves ?? [];
         if (moveDtos.Any(m => string.IsNullOrWhiteSpace(m.Move))) return (null, "a move needs a name");
         var moves = moveDtos.Select(m => new ClipMove(m.T, m.Move!)).ToList();
 

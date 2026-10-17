@@ -10,7 +10,7 @@ internal static class PatchGroup
     {
         var total = 0;
 
-        foreach (Type patch in group.GetNestedTypes())
+        foreach (var patch in group.GetNestedTypes())
         {
             Logger.Debug($"patching {group.Name}.{patch.Name}...");
             try

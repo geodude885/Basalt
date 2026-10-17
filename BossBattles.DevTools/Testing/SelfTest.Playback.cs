@@ -32,7 +32,7 @@ internal static partial class SelfTest
     {
         var library = new ChartLibrary(Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles", "Charts"));
         library.Reload();
-        ChartEntry? entry = library.Find(_playbackChart!)
+        var entry = library.Find(_playbackChart!)
                             ?? library.Entries.FirstOrDefault(e => string.Equals(e.Stem, _playbackChart, StringComparison.OrdinalIgnoreCase));
         if (entry?.Result.Chart is not { } chart)
         {
@@ -44,12 +44,12 @@ internal static partial class SelfTest
         var clips = new ClipLibrary(Path.Combine(entry.AssetFolder, "clips"));
         clips.Reload();
         var recorded = new List<(double Time, string Move)>();
-        foreach (Track track in chart.Tracks)
+        foreach (var track in chart.Tracks)
         {
-            IEnumerable<double> nextStarts = track.Clips.Skip(1).Select(t => t.Time).Append(double.MaxValue);
-            foreach ((TrackClip placed, var until) in track.Clips.Zip(nextStarts))
+            var nextStarts = track.Clips.Skip(1).Select(t => t.Time).Append(double.MaxValue);
+            foreach ((var placed, var until) in track.Clips.Zip(nextStarts))
             {
-                Clip? clip = clips.Find(placed.Clip);
+                var clip = clips.Find(placed.Clip);
                 if (clip == null)
                 {
                     problems.Add($"clip \"{placed.Clip}\" is not in {entry.AssetFolder}/clips");
@@ -91,7 +91,7 @@ internal static partial class SelfTest
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
             var t = Mod.Battle.ChartTime;
-            Actor? actor = Mod.Actors.All.FirstOrDefault(a => a.PlayingClip);
+            var actor = Mod.Actors.All.FirstOrDefault(a => a.PlayingClip);
             if (actor != null) samples.Add((t, FastestStructureOf(actor)));
 
             if (_shots && shotTimes.Count > 0 && t >= shotTimes.Peek())
@@ -111,15 +111,15 @@ internal static partial class SelfTest
     /// <summary>The fastest structure an actor's move last touched.</summary>
     private static float FastestStructureOf(Actor actor)
     {
-        IntPtr processor = actor.Player?.Controller?.PlayerProcessor?.Pointer ?? IntPtr.Zero;
-        CombatManager? combat = CombatManager.instance;
+        var processor = actor.Player?.Controller?.PlayerProcessor?.Pointer ?? IntPtr.Zero;
+        var combat = CombatManager.instance;
         if (processor == IntPtr.Zero || combat == null) return 0f;
 
         var fastest = 0f;
-        foreach (Structure s in combat.Structures)
+        foreach (var s in combat.Structures)
         {
             if (s == null || s.Processable?.LastStackConfiguration?.Processor?.Pointer != processor) continue;
-            Rigidbody body = s.GetComponent<Rigidbody>();
+            var body = s.GetComponent<Rigidbody>();
             if (body != null && !body.isKinematic) fastest = Math.Max(fastest, body.linearVelocity.magnitude);
         }
 

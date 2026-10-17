@@ -24,7 +24,7 @@ internal static class Paint
     /// <summary>A flat colour; null when no usable shader is loaded.</summary>
     public static Material? Colour(Color colour)
     {
-        Shader? shader = FindShader();
+        var shader = FindShader();
         if (shader == null) return null;
 
         var material = new Material(shader);
@@ -36,7 +36,7 @@ internal static class Paint
     /// <summary>A see-through, double-sided colour: URP Unlit on its transparent surface, even when opaque, so it can fade.</summary>
     public static Material? Glass(Color colour)
     {
-        Material? material = Colour(colour);
+        var material = Colour(colour);
         if (material == null) return material;
 
         if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
@@ -56,7 +56,7 @@ internal static class Paint
     {
         if (text.font != null) return;
 
-        TMP_FontAsset? font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
+        var font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
         if (font != null) text.font = font;
         else Logger.Warning("[Paint.NoFont] no TextMeshPro font loaded - text will be blank");
     }

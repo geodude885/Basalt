@@ -7,8 +7,8 @@ game-simulated player - standing in it, moving and using its moves. Survive to t
 boss is the bonus. Battles run solo, wherever you stand or in the Gym, Ring or Pit, optionally to
 music. Charts are shared as `.bbchart` packages.
 
-**Needs** MelonLoader 0.7.3 and UIFramework. **Optional:** RumbleReShaded 1.2+, for charts' shader
-looks.
+**Needs** MelonLoader 0.7.3 and UIFramework. **Optional:** RumbleReShaded 1.2.0-dev.2 or later, for charts' shader
+looks - older versions just skip them.
 
 ## Playing
 

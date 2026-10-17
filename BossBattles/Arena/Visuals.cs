@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace BossBattles.Arena;
 
-/// <summary>What the lane looks like: its lines, the backstop's frame and the wall panes, in colours a phase can fade between.</summary>
 internal class Visuals
 {
     public const float LineThickness = 0.04f;
@@ -17,6 +16,8 @@ internal class Visuals
     private static readonly Color EdgeColour = new(1f, 0.45f, 0.1f);
     private static readonly Color EndColour = new(1f, 0.85f, 0.2f);
     private static readonly Color ZoneColour = new(0.95f, 0.95f, 0.85f);
+    private static readonly Color ActorMarkerColour = new(0.25f, 0.5f, 0.95f);
+    private static readonly Vector3 ActorMarkerSize = new(0.35f, 0.9f, 0.35f);
 
     private readonly List<(Part Part, Renderer Renderer, Material Material)> _painted = [];
     private Dictionary<Part, Color> _now = [];
@@ -25,7 +26,6 @@ internal class Visuals
     private float _fadeStart;
     private float _fadeSeconds;
 
-    /// <summary>The parts a chart colours, so a phase can recolour them.</summary>
     public enum Part
     {
         Edge,
@@ -33,20 +33,20 @@ internal class Visuals
         Zone,
         Frame,
         Pane,
+        ActorMarker,
     }
 
-    /// <summary>The colours parts are painted in from now on, at once.</summary>
     public void Colour(LaneColours colours) => _now = Targets(colours);
 
-    /// <summary>A painted line nothing collides with.</summary>
     public void Line(Vector3 centre, Quaternion rotation, Vector3 size, Part part) =>
         Remember(Make("BossBattles_Lane", centre, rotation, size, Paint.Colour(_now[part])), part);
 
-    /// <summary>A see-through pane, hidden while the walls' colour is clear.</summary>
+    public void ActorMarker(Vector3 feet) =>
+        Remember(Make("BossBattles_ActorMarker", feet + (Vector3.up * ActorMarkerSize.y), Quaternion.identity, ActorMarkerSize, Paint.Colour(_now[Part.ActorMarker]), PrimitiveType.Cylinder), Part.ActorMarker);
+
     public void Pane(Vector3 centre, Quaternion rotation, Vector3 size) =>
         Remember(Make("BossBattles_Pane", centre, rotation, size, Paint.Glass(_now[Part.Pane])), Part.Pane);
 
-    /// <summary>Fades the lane to <paramref name="colours"/> over <paramref name="seconds"/>; 0 is at once.</summary>
     public void Recolour(LaneColours colours, float seconds)
     {
         if (_painted.Count == 0) return;
@@ -95,6 +95,7 @@ internal class Visuals
             [Part.Zone] = PickColour(colours.Zone, ZoneColour),
             [Part.Frame] = PickColour(colours.Backstop, edge),
             [Part.Pane] = PickColour(colours.Walls, new Color(0f, 0f, 0f, 0f)),
+            [Part.ActorMarker] = ActorMarkerColour,
         };
 
         static Color PickColour(Rgba? chart, Color fallback)
@@ -103,9 +104,9 @@ internal class Visuals
         }
     }
 
-    private static GameObject Make(string name, Vector3 centre, Quaternion rotation, Vector3 size, Material? material)
+    private static GameObject Make(string name, Vector3 centre, Quaternion rotation, Vector3 size, Material? material, PrimitiveType shape = PrimitiveType.Cube)
     {
-        var cube = GameHelpers.Cube(name, centre, rotation, size);
+        var cube = GameHelpers.Shape(shape, name, centre, rotation, size);
         UnityEngine.Object.Destroy(cube.GetComponent<Collider>());
         if (material != null) cube.GetComponent<Renderer>().material = material;
         return cube;

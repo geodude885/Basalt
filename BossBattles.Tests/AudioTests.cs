@@ -12,8 +12,8 @@ public class AudioDecoderTests
     [InlineData("tone.wav")]
     public void DecodesASecondOfStereoTone(string file)
     {
-        using IPcmSource source = AudioDecoder.Open(Fixture(file));
-        PcmAudio audio = TestAudio.DecodeAll(source);
+        using var source = AudioDecoder.Open(Fixture(file));
+        var audio = TestAudio.DecodeAll(source);
 
         Assert.Equal(2, audio.Channels);
         Assert.Equal(44100, audio.SampleRate);
@@ -29,7 +29,7 @@ public class AudioDecoderTests
     [Fact]
     public void ReadsInBlocks()
     {
-        using IPcmSource source = AudioDecoder.Open(Fixture("tone.wav"));
+        using var source = AudioDecoder.Open(Fixture("tone.wav"));
         var block = new float[1000];
         long total = 0;
         int read;

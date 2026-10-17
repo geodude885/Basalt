@@ -1,63 +1,74 @@
 using System.Collections;
+using System.Runtime.CompilerServices;
 using BossBattles.Battle;
 using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using MelonLoader;
+using RumbleReShaded.Api;
 using UnityEngine;
 
 namespace BossBattles.DevTools.Testing;
 
-/// <summary>
-/// With RumbleReShaded: a chart look must be on the pack's settings mid-run and every value back as
-/// the player had it after. RRS draws only on a VR camera, so the settings are checked, not the picture.
-/// </summary>
+// With RumbleReShaded: a chart look must be the pack's value in use mid-run, the player's own settings untouched,
+// and the pack handed back after. RRS draws only on a VR camera, so the values are checked, not the picture.
 internal static partial class SelfTest
 {
     private const string LookPack = "Grayscale";
-    private const string LookCategory = "RRS_Grayscale";
+    private const string LookParameter = "Strength";
     private const float LookStrength = 0.25f;
 
     private static string? _visualsProblem;
 
-    /// <summary>The chart with a look added, when RRS and its Grayscale pack are there to show it.</summary>
     private static Chart WithLook(Chart chart)
     {
-        if (!ReShade.Installed || MelonPreferences.GetEntry<float>(LookCategory, "_Strength") == null)
+        if (!ReShade.IsLoaded || !HasLookPack())
         {
             Logger.Info($"[SelfTest] no RumbleReShaded {LookPack} pack - chart looks not checked");
             return chart;
         }
 
-        var cue = new VisualCue(0.5, LookPack, new Dictionary<string, float> { ["Strength"] = LookStrength }, Off: false, Fade: 0.5);
+        var cue = new VisualCue(0.5, LookPack, new Dictionary<string, float> { [LookParameter] = LookStrength }, Off: false, Fade: 0.5);
         MelonCoroutines.Start(CheckLook());
         return chart with { Visuals = new[] { cue } };
     }
 
+    // Kept apart from WithLook so RumbleReShaded's types are only touched once it is known to be loaded.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool HasLookPack() => RRS.Packs.Any(p => p.Name == LookPack);
+
     private static IEnumerator CheckLook()
     {
-        MelonPreferences_Entry<bool>? master = MelonPreferences.GetEntry<bool>("RumbleReShaded", "Enabled");
-        MelonPreferences_Entry<bool> enabled = MelonPreferences.GetEntry<bool>(LookCategory, "Enabled");
-        MelonPreferences_Entry<float> strength = MelonPreferences.GetEntry<float>(LookCategory, "_Strength");
-        var masterWas = master?.Value ?? true;
-        var enabledWas = enabled.Value;
-        var strengthWas = strength.Value;
-        master?.Value = true;
+        (bool Enabled, float Value) PlayerSetting()
+        {
+            var pack = RRS.Packs.First(p => p.Name == LookPack);
+            return (pack.PlayerEnabled, pack.Parameters.First(p => p.Label == LookParameter).PlayerValue);
+        }
+
+        (bool Enabled, float Value) InUse()
+        {
+            var pack = RRS.Packs.First(p => p.Name == LookPack);
+            return (pack.Enabled, pack.Parameters.First(p => p.Label == LookParameter).Value);
+        }
+
+        var playerBefore = PlayerSetting();
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        var expected = strengthWas + ((LookStrength - strengthWas) * Mod.Battle.Signals.Strength);
-        if (!enabled.Value || Math.Abs(strength.Value - expected) > 0.01f)
-            _visualsProblem = $"chart look: {LookPack} was {(enabled.Value ? "on" : "off")} at strength {strength.Value:0.00} mid-run, not on at {expected:0.00}";
+        var midRun = InUse();
+        var expected = playerBefore.Value + ((LookStrength - playerBefore.Value) * Mod.Battle.Signals.Strength);
+        if (!midRun.Enabled || Math.Abs(midRun.Value - expected) > 0.01f)
+            _visualsProblem = $"chart look: {LookPack} was {(midRun.Enabled ? "on" : "off")} at {LookParameter} {midRun.Value:0.00} mid-run, not on at {expected:0.00}";
+        else if (PlayerSetting() != playerBefore)
+            _visualsProblem = $"chart look wrote the player's own {LookPack} settings";
         else
-            Logger.Info($"[SelfTest] chart look on: {LookPack} at {strength.Value:0.00} (yours {strengthWas:0.00}, {(enabledWas ? "on" : "off")})");
+            Logger.Info($"[SelfTest] chart look on: {LookPack} at {midRun.Value:0.00} (yours {playerBefore.Value:0.00}, {(playerBefore.Enabled ? "on" : "off")}, untouched)");
 
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return null;
 
-        if (enabled.Value != enabledWas || Math.Abs(strength.Value - strengthWas) > 1e-4f)
-            _visualsProblem ??= $"chart look not undone: {LookPack} {(enabled.Value ? "on" : "off")} at {strength.Value:0.00}, yours was {(enabledWas ? "on" : "off")} at {strengthWas:0.00}";
-
-        master?.Value = masterWas;
+        var afterRun = InUse();
+        if (afterRun.Enabled != playerBefore.Enabled || Math.Abs(afterRun.Value - playerBefore.Value) > 1e-4f)
+            _visualsProblem ??= $"chart look not handed back: {LookPack} {(afterRun.Enabled ? "on" : "off")} at {afterRun.Value:0.00}, yours is {(playerBefore.Enabled ? "on" : "off")} at {playerBefore.Value:0.00}";
     }
 }

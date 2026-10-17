@@ -67,7 +67,7 @@ public static class ChartLoader
             return new ChartLoadResult(null, new[] { $"made for a newer BossBattles (chart format {dto.Format}; this one reads up to {NewestFormat}) - update the mod" });
 
         var errors = new List<string>();
-        Chart chart = Build(dto, errors);
+        var chart = Build(dto, errors);
         return errors.Count == 0 ? new ChartLoadResult(chart, errors) : new ChartLoadResult(null, errors);
     }
 
@@ -77,13 +77,13 @@ public static class ChartLoader
         if (lane.Length <= 2f) errors.Add($"lane.length must be over 2 m (got {Format(lane.Length)})");
         if (lane.Width <= 0f) errors.Add($"lane.width must be over 0 (got {Format(lane.Width)})");
 
-        TempoMap? tempo = ReadTempo(dto.Bpm, errors);
+        var tempo = ReadTempo(dto.Bpm, errors);
 
-        List<ActorSpec> actors = Actors(dto, lane, errors);
+        var actors = Actors(dto, lane, errors);
         var context = new Context(lane, tempo, actors.Select(a => a.Id).ToHashSet(StringComparer.Ordinal), actors[0].Id, errors);
 
-        List<Phase> phases = Phases(dto, context);
-        List<ChartEvent> events = Events(dto, context);
+        var phases = Phases(dto, context);
+        var events = Events(dto, context);
 
         var lastEvent = events.Count == 0 ? 0 : events.Max(e => e.Time);
         var end = dto.End ?? (lastEvent + DefaultEndPadding);
@@ -110,7 +110,7 @@ public static class ChartLoader
     {
         if (arena == null) return ArenaSpec.Here;
 
-        ArenaKind map = ArenaKind.Here;
+        var map = ArenaKind.Here;
         if (arena.Map != null && !Enum.TryParse(arena.Map, ignoreCase: true, out map))
         {
             errors.Add($"arena.map \"{arena.Map}\" is not one of {string.Join(", ", Enum.GetNames<ArenaKind>().Select(n => n.ToLowerInvariant()))}");
@@ -148,7 +148,7 @@ public static class ChartLoader
         Rgba? Read(string? text, string name)
         {
             if (text == null) return null;
-            if (Rgba.TryParse(text, out Rgba colour)) return colour;
+            if (Rgba.TryParse(text, out var colour)) return colour;
             errors.Add($"{path}.{name} \"{text}\" is not a colour - use \"#RRGGBB\", \"#RRGGBBAA\" with opacity, or \"none\"");
             return null;
         }
@@ -161,7 +161,7 @@ public static class ChartLoader
         var cues = new List<VisualCue>();
         if (visuals == null) return cues;
 
-        foreach ((VisualDto v, var i) in visuals.Select((v, i) => (v, i)))
+        foreach ((var v, var i) in visuals.Select((v, i) => (v, i)))
         {
             var path = $"visuals[{i}]";
             var before = context.Errors.Count;
@@ -185,7 +185,7 @@ public static class ChartLoader
     {
         if (rules == null) return Rules.Default;
 
-        SpawnRule spawn = SpawnRule.All;
+        var spawn = SpawnRule.All;
         if (rules.Spawn != null && !Enum.TryParse(rules.Spawn, ignoreCase: true, out spawn))
         {
             errors.Add($"rules.spawn \"{rules.Spawn}\" is not one of all, discs, none");
@@ -206,14 +206,14 @@ public static class ChartLoader
             context.Errors.Add($"tracks need \"format\": {TracksFormat} or later - set it at the top of the chart");
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach ((TrackDto track, var i) in dto.Tracks.Select((t, i) => (t, i)))
+        foreach ((var track, var i) in dto.Tracks.Select((t, i) => (t, i)))
         {
             var path = $"tracks[{i}]";
             var actor = track.Actor == null ? context.DefaultActorId : ActorRef(track.Actor, $"{path}.actor", context);
             if (!seen.Add(actor)) context.Errors.Add($"{path}: \"{actor}\" already has a track - one per actor");
 
             var clips = new List<TrackClip>();
-            foreach ((TrackClipDto clip, var j) in (track.Clips ?? []).Select((t, j) => (t, j)))
+            foreach ((var clip, var j) in (track.Clips ?? []).Select((t, j) => (t, j)))
             {
                 var clipPath = $"{path}.clips[{j}]";
 
@@ -298,7 +298,7 @@ public static class ChartLoader
 
         var changes = new List<TempoChange>();
         var index = 0;
-        foreach (JsonElement change in value.EnumerateArray())
+        foreach (var change in value.EnumerateArray())
         {
             var path = $"bpm[{index++}]";
             if (change.ValueKind != JsonValueKind.Object
@@ -341,14 +341,14 @@ public static class ChartLoader
         var actors = new List<ActorSpec>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach ((ActorDto actor, var i) in dto.Actors.Select((a, i) => (a, i)))
+        foreach ((var actor, var i) in dto.Actors.Select((a, i) => (a, i)))
         {
             var path = $"actors[{i}]";
 
             var id = string.IsNullOrWhiteSpace(actor.Id) ? (i == 0 ? DefaultActorId : $"actor{i + 1}") : actor.Id;
             if (!seen.Add(id)) errors.Add($"{path}.id \"{id}\" is used twice");
 
-            Spot at = actor.At == null ? new Spot(0f, lane.Length) : ReadSpot(actor.At, $"{path}.at", lane, errors);
+            var at = actor.At == null ? new Spot(0f, lane.Length) : ReadSpot(actor.At, $"{path}.at", lane, errors);
             var look = string.IsNullOrWhiteSpace(actor.Look) ? DefaultLook : actor.Look;
 
             actors.Add(new ActorSpec(id, string.IsNullOrWhiteSpace(actor.Name) ? id : actor.Name, at, look)
@@ -396,7 +396,7 @@ public static class ChartLoader
         if (dto.Phases == null || dto.Phases.Count == 0) return [new("Battle", 0, 1, null, null)];
 
         var phases = new List<Phase>();
-        foreach ((PhaseDto phase, var i) in dto.Phases.Select((p, i) => (p, i)))
+        foreach ((var phase, var i) in dto.Phases.Select((p, i) => (p, i)))
         {
             var path = $"phases[{i}]";
 
@@ -425,7 +425,7 @@ public static class ChartLoader
         var events = new List<ChartEvent>();
         if (dto.Events == null) return events;
 
-        foreach ((EventDto e, var i) in dto.Events.Select((e, i) => (e, i)))
+        foreach ((var e, var i) in dto.Events.Select((e, i) => (e, i)))
         {
             var path = $"events[{i}]";
 
@@ -443,7 +443,7 @@ public static class ChartLoader
 
             if (e.Projectile != null)
             {
-                ProjectileEvent? projectile = Projectile(e.Projectile, time.Value, i, $"{path}.projectile", context);
+                var projectile = Projectile(e.Projectile, time.Value, i, $"{path}.projectile", context);
                 if (projectile != null) events.Add(projectile);
             }
             else if (e.Move != null)
@@ -462,12 +462,12 @@ public static class ChartLoader
 
     private static ProjectileEvent? Projectile(ProjectileDto p, double time, int order, string path, Context context)
     {
-        List<string> errors = context.Errors;
+        var errors = context.Errors;
         var before = errors.Count;
 
         if (string.IsNullOrWhiteSpace(p.Structure)) errors.Add($"{path}.structure is required, e.g. \"Disc\"");
 
-        Vector3 from = Vector3.Zero;
+        var from = Vector3.Zero;
         if (p.From?.X == null || p.From.Y == null || p.From.Z == null)
         {
             errors.Add($"{path}.from needs x, y and z");
@@ -485,7 +485,7 @@ public static class ChartLoader
             if (from.Y < 0f) errors.Add($"{path}.from.y ({Format(from.Y)}) is below the floor");
         }
 
-        Aim aim = Aim.Player;
+        var aim = Aim.Player;
         if (p.To is JsonElement to)
         {
             if (to.ValueKind == JsonValueKind.String && string.Equals(to.GetString(), "player", StringComparison.OrdinalIgnoreCase))
@@ -493,8 +493,8 @@ public static class ChartLoader
                 aim = Aim.Player;
             }
             else if (to.ValueKind == JsonValueKind.Object
-                     && to.TryGetProperty("x", out JsonElement x) && x.TryGetSingle(out var tx)
-                     && to.TryGetProperty("y", out JsonElement y) && y.TryGetSingle(out var ty))
+                     && to.TryGetProperty("x", out var x) && x.TryGetSingle(out var tx)
+                     && to.TryGetProperty("y", out var y) && y.TryGetSingle(out var ty))
             {
                 aim = Aim.Point(tx, ty);
             }

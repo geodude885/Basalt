@@ -2,7 +2,6 @@ using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Environment;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
-using Il2CppRUMBLE.Pools;
 using UnityEngine;
 
 namespace BossBattles.Battle;
@@ -29,20 +28,20 @@ internal partial class Projectiles
 
     public void Spawn(int id, ProjectileEvent projectile, Anchor frame)
     {
-        Vector3 origin = frame.ToWorld(projectile.From).ToUnity();
-        Vector3 towardYou = -frame.Forward.ToUnity();
+        var origin = frame.ToWorld(projectile.From).ToUnity();
+        var towardYou = -frame.Forward.ToUnity();
 
         // The floor before the pool fetch, which stands the structure at its origin in the ray's way.
         var floor = GameHelpers.HeightUnder(origin) ?? (origin.y - 1f);
-        PooledMonoBehaviour pooled = PoolManager.instance.GetPooledObject(projectile.Structure, origin, Quaternion.LookRotation(towardYou));
+        var pooled = PoolManager.instance.GetPooledObject(projectile.Structure, origin, Quaternion.LookRotation(towardYou));
         if (pooled == null)
         {
             Logger.Warning($"[Projectile.NoPool] #{id}: no pool called \"{projectile.Structure}\" - check the chart's structure names (Disc, Ball, Pillar, Wall, RockCube, BoulderBall, SmallRock, LargeRock)");
             return;
         }
 
-        Structure structure = pooled.GetComponent<Structure>();
-        Rigidbody body = pooled.GetComponent<Rigidbody>();
+        var structure = pooled.GetComponent<Structure>();
+        var body = pooled.GetComponent<Rigidbody>();
         if (body != null)
         {
             body.linearVelocity = Vector3.zero;
@@ -53,7 +52,7 @@ internal partial class Projectiles
         Mod.Actors.IgnoreStructure(pooled.gameObject, projectile.Telegraph + ActorGraceAfterLaunch);
 
         var facing = Quaternion.LookRotation(towardYou);
-        Collider? shape = pooled.GetComponentInChildren<Collider>();
+        var shape = pooled.GetComponentInChildren<Collider>();
         var height = shape != null ? Math.Max(0.2f, shape.bounds.size.y) : 0.5f;
 
         // What the game spawns on the ground rests on the floor, whatever height the chart gave.
@@ -71,7 +70,7 @@ internal partial class Projectiles
         MoveEffects.Spawn(projectile.Structure, new Vector3(origin.x, floor, origin.z), facing);
 
         // The game removes structures outside the scene's structure boundary the moment they move.
-        SceneBoundary bounds = SceneBoundary.CurrentActiveStructuresSceneBoundary;
+        var bounds = SceneBoundary.CurrentActiveStructuresSceneBoundary;
         if (bounds != null && !bounds.Contains(origin))
             Logger.Info($"[Projectile.OutOfBounds] #{id} {projectile.Structure} at {origin.Describe()} is outside the scene's structure boundary - the game will remove it");
 
@@ -81,16 +80,16 @@ internal partial class Projectiles
 
     public void Launch(int id, ProjectileEvent projectile, Vector3 target)
     {
-        if (!_live.Remove(id, out Projectile? live) || live.Body == null) return;
+        if (!_live.Remove(id, out var live) || live.Body == null) return;
 
-        Vector3 from = live.Hold;
+        var from = live.Hold;
         if (live.Grounded)
         {
             LaunchGrounded(id, projectile, live, target);
             return;
         }
 
-        Vector3 velocity = Ballistics.LaunchVelocity(
+        var velocity = Ballistics.LaunchVelocity(
             from.ToNumerics(), target.ToNumerics(), projectile.Speed, -Physics.gravity.y).ToUnity();
 
         live.Body.transform.position = from;
@@ -111,7 +110,7 @@ internal partial class Projectiles
         CheckFlights();
         UpdateSlides();
 
-        foreach (Projectile live in _live.Values)
+        foreach (var live in _live.Values)
         {
             if (live.Body == null) continue;
 
@@ -131,13 +130,13 @@ internal partial class Projectiles
     /// <summary>Lets go of anything still telegraphing or sliding.</summary>
     public void Clear()
     {
-        foreach (Projectile live in _live.Values)
+        foreach (var live in _live.Values)
         {
             live.Body?.isKinematic = false;
         }
 
         _live.Clear();
-        foreach (Slide slide in _sliding)
+        foreach (var slide in _sliding)
         {
             slide.Body?.constraints = slide.Before;
         }
@@ -160,7 +159,7 @@ internal partial class Projectiles
         Physics.SyncTransforms();
 
         var lowest = float.MaxValue;
-        foreach (Collider c in structure.GetComponentsInChildren<Collider>())
+        foreach (var c in structure.GetComponentsInChildren<Collider>())
         {
             if (c != null && c.enabled && !c.isTrigger) lowest = Math.Min(lowest, c.bounds.min.y);
         }
@@ -190,7 +189,7 @@ internal partial class Projectiles
     {
         if (_checks.Count == 0) return;
 
-        foreach (FlightCheck check in _checks.Where(c => Time.time - c.LaunchedAt >= FlightCheckSeconds).ToList())
+        foreach (var check in _checks.Where(c => Time.time - c.LaunchedAt >= FlightCheckSeconds).ToList())
         {
             _checks.Remove(check);
             if (check.Transform == null) continue;

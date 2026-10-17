@@ -22,11 +22,11 @@ internal partial class Projectiles
 
     private void LaunchGrounded(int id, ProjectileEvent projectile, Projectile live, Vector3 target)
     {
-        Rigidbody body = live.Body!;
-        Vector3 from = live.Hold;
+        var body = live.Body!;
+        var from = live.Hold;
         var flat = new Vector3(target.x - from.x, 0f, target.z - from.z);
-        Vector3 direction = flat.sqrMagnitude > 1e-4f ? flat.normalized : live.HoldRotation * Vector3.forward;
-        Vector3 velocity = direction * projectile.Speed;
+        var direction = flat.sqrMagnitude > 1e-4f ? flat.normalized : live.HoldRotation * Vector3.forward;
+        var velocity = direction * projectile.Speed;
 
         // The state first: setting it switches the kinematic and gravity flags, wiping a velocity set before.
         body.transform.position = from;
@@ -35,7 +35,7 @@ internal partial class Projectiles
         body.isKinematic = false;
 
         // Set, not added to: a settled grounded body is left with FreezeAll.
-        RigidbodyConstraints before = body.constraints;
+        var before = body.constraints;
         body.constraints = SlideConstraints;
         body.linearVelocity = velocity;
         MoveEffects.Punch(from, Quaternion.LookRotation(direction));
@@ -56,9 +56,9 @@ internal partial class Projectiles
     {
         if (_sliding.Count == 0) return;
 
-        foreach (Slide slide in _sliding.ToList())
+        foreach (var slide in _sliding.ToList())
         {
-            Rigidbody body = slide.Body;
+            var body = slide.Body;
             var gone = body == null || !body.gameObject.activeInHierarchy;
             var touched = gone ? null : Touched(slide, body!);
             if (touched == Paused) continue;
@@ -96,7 +96,7 @@ internal partial class Projectiles
     /// <summary>Why a slide should stop being driven, <see cref="Paused"/> to leave it this frame, or null to keep going.</summary>
     private string? Touched(Slide slide, Rigidbody body)
     {
-        Structure.PhysicsState? state = slide.Structure?.currentPhysicsState;
+        var state = slide.Structure?.currentPhysicsState;
         if (state == Structure.PhysicsState.Frozen)
         {
             slide.PausedAt ??= Time.time;

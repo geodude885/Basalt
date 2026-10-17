@@ -1,6 +1,5 @@
 using System.Collections;
 using Il2CppRUMBLE.Players;
-using Il2CppRUMBLE.Players.Subsystems;
 using MelonLoader;
 using UnityEngine;
 
@@ -51,7 +50,7 @@ internal partial class Actor
         if (!Exists) return;
 
         _planted = false;
-        foreach (Rigidbody? body in PlantedBodies())
+        foreach (var body in PlantedBodies())
         {
             body?.constraints &= ~PlantConstraints;
         }
@@ -65,9 +64,9 @@ internal partial class Actor
         _colliders ??= _player!.Controller.GetComponentsInChildren<Collider>(true);
         Collider[] structureColliders = structure.GetComponentsInChildren<Collider>(true);
 
-        foreach (Collider mine in _colliders)
+        foreach (var mine in _colliders)
         {
-            foreach (Collider theirs in structureColliders) Physics.IgnoreCollision(mine, theirs, true);
+            foreach (var theirs in structureColliders) Physics.IgnoreCollision(mine, theirs, true);
         }
 
         MelonCoroutines.Start(RestoreCollisionWhenClear(_colliders, structureColliders, structure.transform, seconds));
@@ -86,7 +85,7 @@ internal partial class Actor
 
     private void KeepPlanted()
     {
-        foreach (Rigidbody? body in PlantedBodies())
+        foreach (var body in PlantedBodies())
         {
             if (body == null || (body.constraints & PlantConstraints) == PlantConstraints) continue;
             body.constraints |= PlantConstraints;
@@ -95,7 +94,7 @@ internal partial class Actor
 
     private Rigidbody?[] PlantedBodies()
     {
-        PlayerPhysics? physics = _player?.Controller?.PlayerPhysics;
+        var physics = _player?.Controller?.PlayerPhysics;
         return physics == null ? Array.Empty<Rigidbody?>() : new[] { physics.PhysicsRigidbody, physics.VRrigidbody };
     }
 
@@ -109,7 +108,7 @@ internal partial class Actor
             var above = _rig.Feet.y - floor;
             if (above is < 0.05f or > 2.5f) yield break;
 
-            foreach (Rigidbody? body in PlantedBodies())
+            foreach (var body in PlantedBodies())
             {
                 if (body == null) continue;
                 body.position += Vector3.down * above;
@@ -125,16 +124,16 @@ internal partial class Actor
         var until = Time.time + seconds;
         while (Time.time < until && structure != null && Exists)
         {
-            Vector3 body = _player!.Controller.transform.position;
+            var body = _player!.Controller.transform.position;
             var apart = new Vector2(structure.position.x - body.x, structure.position.z - body.z);
             if (apart.magnitude > ClearOfActor) break;
             yield return null;
         }
 
-        foreach (Collider a in mine)
+        foreach (var a in mine)
         {
             if (a == null) continue;
-            foreach (Collider b in theirs)
+            foreach (var b in theirs)
             {
                 if (b != null) Physics.IgnoreCollision(a, b, false);
             }

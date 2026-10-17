@@ -37,7 +37,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(NoLethalHits), () =>
             {
-                Actor? actor = Mod.Actors.Find(__instance.ParentController);
+                var actor = Mod.Actors.Find(__instance.ParentController);
                 if (actor == null || amount < actor.Player!.Data.HealthPoints) return;
 
                 actor.FullHeal();
@@ -83,7 +83,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(ActorHealthAsRemote), () =>
             {
-                PlayerController? controller = __instance.ParentController;
+                var controller = __instance.ParentController;
                 if (controller == null || Mod.Actors.Find(controller)?.Exists != true) return;
                 if (controller.controllerType != ControllerType.Local) return;
 
@@ -100,7 +100,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(ActorHealthAsRemote), () =>
             {
-                PlayerController? controller = __instance.ParentController;
+                var controller = __instance.ParentController;
                 controller?.controllerType = ControllerType.Local;
             });
         }
@@ -114,17 +114,17 @@ public static class ActorPatches
         {
             if (newHealth >= previousHealth) return;
 
-            PlayerController? controller = __instance.ParentController;
+            var controller = __instance.ParentController;
             if (controller == null) return;
 
-            Actor? actor = Mod.Actors.Find(controller);
+            var actor = Mod.Actors.Find(controller);
             if (actor != null)
             {
                 Mod.Battle.OnActorDamaged(actor, previousHealth - newHealth);
                 return;
             }
 
-            Player? you = BattlePlayer.Player;
+            var you = BattlePlayer.Player;
             if (you != null && controller.assignedPlayer != null && controller.assignedPlayer.Pointer == you.Pointer)
                 Mod.Battle.OnPlayerDamaged(previousHealth - newHealth, newHealth);
         });
@@ -142,7 +142,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(Knockback), () =>
             {
-                Actor? actor = Mod.Actors.Find(controller);
+                var actor = Mod.Actors.Find(controller);
                 if (actor == null) return;
 
                 if (actor.SelfKnockbackMultiplier <= 0f)
@@ -258,7 +258,7 @@ public static class ActorPatches
         {
             if (!ActorSoundScope.Active || __result == null) return;
 
-            AudioSource? source = __result.AudioSource;
+            var source = __result.AudioSource;
             if (source == null || source.spatialBlend >= 1f) return;
 
             Logger.Debug($"[Actor.SoundMadePositional] {(call == null ? "?" : call.name)} spatialBlend {source.spatialBlend:F2} -> 1");

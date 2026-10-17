@@ -82,7 +82,7 @@ internal class Music
             return;
         }
 
-        DateTime written = File.GetLastWriteTimeUtc(path);
+        var written = File.GetLastWriteTimeUtc(path);
         if (_cached is { } cached && string.Equals(cached.Path, path, StringComparison.OrdinalIgnoreCase) && cached.Written == written && cached.Clip != null)
         {
             _clip = cached.Clip;
@@ -225,7 +225,7 @@ internal class Music
     {
         try
         {
-            using IPcmSource source = AudioDecoder.Open(path);
+            using var source = AudioDecoder.Open(path);
             var mono = source.Channels > 1 && source.Frames * source.Channels > MonoAbove;
             job.Channels = mono ? 1 : source.Channels;
             job.SampleRate = source.SampleRate;
@@ -287,7 +287,7 @@ internal class Music
 
             // "Music" exactly when there is one: "Environmental music" is the maps' ambience.
             var groups = Resources.FindObjectsOfTypeAll<AudioMixerGroup>().Where(g => g != null).ToList();
-            AudioMixerGroup? music = groups.FirstOrDefault(g => string.Equals(g.name, "Music", StringComparison.OrdinalIgnoreCase))
+            var music = groups.FirstOrDefault(g => string.Equals(g.name, "Music", StringComparison.OrdinalIgnoreCase))
                                      ?? groups.FirstOrDefault(g => g.name.Contains("Music", StringComparison.OrdinalIgnoreCase));
             if (music != null) _source.outputAudioMixerGroup = music;
             Logger.Debug($"[Music.Output] {(music == null ? "straight to the output" : $"through mixer group {music.name}")}; groups: {string.Join(", ", groups.Select(g => g.name))}");

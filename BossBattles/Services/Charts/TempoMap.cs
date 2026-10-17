@@ -16,7 +16,7 @@ public class TempoMap
 
         _changes = changes.ToArray();
         var starts = new List<double> { 0 };
-        foreach ((TempoChange before, TempoChange after) in _changes.Zip(_changes.Skip(1)))
+        foreach ((var before, var after) in _changes.Zip(_changes.Skip(1)))
             starts.Add(starts[^1] + ((after.Beat - before.Beat) * 60.0 / before.Bpm));
         _startSeconds = starts.ToArray();
     }

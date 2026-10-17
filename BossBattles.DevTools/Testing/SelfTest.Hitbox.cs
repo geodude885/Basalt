@@ -1,8 +1,6 @@
 using System.Collections;
-using BossBattles.Actors;
 using BossBattles.Battle;
 using Il2CppRUMBLE.Managers;
-using Il2CppRUMBLE.Pools;
 using UnityEngine;
 
 namespace BossBattles.DevTools.Testing;
@@ -20,8 +18,8 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        Actor? actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists);
-        SkinnedMeshRenderer? mesh = actor?.Player?.Controller?.GetComponentInChildren<SkinnedMeshRenderer>();
+        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists);
+        var mesh = actor?.Player?.Controller?.GetComponentInChildren<SkinnedMeshRenderer>();
         if (actor == null || mesh == null || LaneOrigin is not { } origin)
         {
             _hitboxProblem = "hitbox check: no actor to throw at";
@@ -31,13 +29,13 @@ internal static partial class SelfTest
         var results = new List<string>();
         foreach (var recentProjectile in new[] { false, true })
         {
-            Vector3 chest = mesh.bounds.center + (Vector3.up * 0.2f);
-            Vector3 towardYou = (origin - chest).Flat();
-            Vector3 from = chest + (towardYou * 4f);
-            Vector3 along = (chest - from).normalized;
+            var chest = mesh.bounds.center + (Vector3.up * 0.2f);
+            var towardYou = (origin - chest).Flat();
+            var from = chest + (towardYou * 4f);
+            var along = (chest - from).normalized;
 
-            PooledMonoBehaviour? pooled = PoolManager.instance.GetPooledObject("Ball", from, Quaternion.identity);
-            Rigidbody? body = pooled?.GetComponent<Rigidbody>();
+            var pooled = PoolManager.instance.GetPooledObject("Ball", from, Quaternion.identity);
+            var body = pooled?.GetComponent<Rigidbody>();
             if (pooled == null || body == null)
             {
                 _hitboxProblem = "hitbox check: no ball";

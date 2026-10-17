@@ -25,7 +25,7 @@ public class SpotBook
 
         try
         {
-            Dictionary<string, SavedSpot>? read = JsonSerializer.Deserialize<Dictionary<string, SavedSpot>>(File.ReadAllText(_file), Options);
+            var read = JsonSerializer.Deserialize<Dictionary<string, SavedSpot>>(File.ReadAllText(_file), Options);
             if (read != null) _spots = new Dictionary<string, SavedSpot>(read, StringComparer.Ordinal);
         }
         catch (Exception e) when (e is IOException or JsonException)
@@ -34,7 +34,7 @@ public class SpotBook
         }
     }
 
-    public SavedSpot? Get(string name) => _spots.TryGetValue(name, out SavedSpot? spot) ? spot : null;
+    public SavedSpot? Get(string name) => _spots.TryGetValue(name, out var spot) ? spot : null;
 
     public void Set(string name, SavedSpot spot)
     {

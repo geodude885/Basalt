@@ -2,7 +2,6 @@ using System.Collections;
 using System.Globalization;
 using System.Text;
 using Il2CppRUMBLE.Managers;
-using Il2CppRUMBLE.Pools;
 using MelonLoader.Utils;
 using UnityEngine;
 
@@ -26,21 +25,21 @@ internal static partial class SelfTest
 
         foreach (var name in Measured)
         {
-            PooledMonoBehaviour pooled = PoolManager.instance.GetPooledObject(name, spot, Quaternion.LookRotation(Vector3.back));
+            var pooled = PoolManager.instance.GetPooledObject(name, spot, Quaternion.LookRotation(Vector3.back));
             if (pooled == null)
             {
                 problems.Add($"no pool called {name}");
                 continue;
             }
 
-            Rigidbody body = pooled.GetComponent<Rigidbody>();
+            var body = pooled.GetComponent<Rigidbody>();
             body?.isKinematic = true;
             pooled.transform.SetPositionAndRotation(spot, Quaternion.LookRotation(Vector3.back));
             yield return null;
             Physics.SyncTransforms();
 
             Bounds? all = null;
-            foreach (Collider c in pooled.GetComponentsInChildren<Collider>())
+            foreach (var c in pooled.GetComponentsInChildren<Collider>())
             {
                 if (c == null || !c.enabled || c.isTrigger) continue;
                 if (all is { } b)

@@ -39,13 +39,17 @@ public static class TrackEdits
         return $"{prefix}{highest + 1}";
     }
 
-    /// <summary>The chart text with <paramref name="clip"/>, playing from chart time <paramref name="at"/>, as the whole of <paramref name="actorId"/>'s track.</summary>
-    public static string KeepWhole(string chartText, Chart chart, string actorId, Clip clip, double at, bool mime = false)
-    {
-        var tracks = chart.Tracks.Where(t => t.ActorId != actorId).ToList();
-        tracks.Add(new Track(actorId, new[] { new TrackClip(Round(at), clip.Name, Round(clip.Start)) { Mime = mime } }));
-        return WriteTracks(chartText, chart, tracks, at + clip.Duration - clip.Start);
-    }
+    public static string KeepWhole(string chartText, Chart chart, string actorId, Clip clip, double at, bool mime = false) =>
+        WriteTracks(chartText, chart, TracksWithActorTrackReplaced(chart, actorId, WholeClipTrack(clip, at, mime)), at + clip.Duration - clip.Start);
+
+    public static IReadOnlyList<TrackClip> WholeClipTrack(Clip clip, double startsAtChartTime, bool mime) =>
+        new[] { new TrackClip(Round(startsAtChartTime), clip.Name, Round(clip.Start)) { Mime = mime } };
+
+    public static IReadOnlyList<TrackClip> PunchedInTrack(Chart chart, string actorId, string clipName, double from, double to, bool mime) =>
+        PunchIn(chart.Tracks.FirstOrDefault(t => t.ActorId == actorId)?.Clips ?? Array.Empty<TrackClip>(), clipName, from, to, mime);
+
+    public static List<Track> TracksWithActorTrackReplaced(Chart chart, string actorId, IReadOnlyList<TrackClip> actorClips) =>
+        chart.Tracks.Where(t => t.ActorId != actorId).Append(new Track(actorId, actorClips)).ToList();
 
     /// <summary>
     /// The actor's clips with chart time <paramref name="from"/> to <paramref name="to"/> replaced by <paramref name="name"/>,
@@ -55,8 +59,8 @@ public static class TrackEdits
     {
         var result = new List<TrackClip>();
 
-        IEnumerable<double?> nextStarts = clips.Skip(1).Select(t => (double?)t.Time).Append(null);
-        foreach ((TrackClip segment, var next) in clips.Zip(nextStarts).TakeWhile(pair => pair.First.Time < from))
+        var nextStarts = clips.Skip(1).Select(t => (double?)t.Time).Append(null);
+        foreach ((var segment, var next) in clips.Zip(nextStarts).TakeWhile(pair => pair.First.Time < from))
         {
             // Cut off at the punch-in if it would play past it.
             var length = from - segment.Time;
@@ -68,7 +72,7 @@ public static class TrackEdits
         result.Add(new TrackClip(Round(from), name, 0, Round(to - from)) { Mime = mime });
 
         // What was playing at the punch-out picks up where it would have been.
-        TrackClip? covering = clips.LastOrDefault(s => s.Time <= to);
+        var covering = clips.LastOrDefault(s => s.Time <= to);
         if (covering != null && covering.Time < to && (covering.To == null || covering.From + (to - covering.Time) < covering.To))
             result.Add(covering with { Time = Round(to), From = Round(covering.From + (to - covering.Time)) });
 
@@ -76,14 +80,8 @@ public static class TrackEdits
         return result;
     }
 
-    /// <summary>The chart text after punching <paramref name="clip"/> into <paramref name="actorId"/>'s track from <paramref name="from"/> to <paramref name="to"/>.</summary>
-    public static string KeepSection(string chartText, Chart chart, string actorId, Clip clip, double from, double to, bool mime = false)
-    {
-        IReadOnlyList<TrackClip> before = chart.Tracks.FirstOrDefault(t => t.ActorId == actorId)?.Clips ?? Array.Empty<TrackClip>();
-        var tracks = chart.Tracks.Where(t => t.ActorId != actorId).ToList();
-        tracks.Add(new Track(actorId, PunchIn(before, clip.Name, from, to, mime)));
-        return WriteTracks(chartText, chart, tracks, to);
-    }
+    public static string KeepSection(string chartText, Chart chart, string actorId, Clip clip, double from, double to, bool mime = false) =>
+        WriteTracks(chartText, chart, TracksWithActorTrackReplaced(chart, actorId, PunchedInTrack(chart, actorId, clip.Name, from, to, mime)), to);
 
     /// <summary>The chart text with <paramref name="tracks"/> written, the format raised and the end covering <paramref name="lastClipEnd"/>.</summary>
     public static string WriteTracks(string chartText, Chart chart, IReadOnlyList<Track> tracks, double lastClipEnd)
@@ -107,7 +105,7 @@ public static class TrackEdits
         try
         {
             using var document = JsonDocument.Parse(chartText, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            foreach (JsonProperty property in document.RootElement.EnumerateObject())
+            foreach (var property in document.RootElement.EnumerateObject())
             {
                 if (string.Equals(property.Name, "format", StringComparison.OrdinalIgnoreCase) && property.Value.TryGetInt32(out var format)) return format;
             }

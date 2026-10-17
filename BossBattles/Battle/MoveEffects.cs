@@ -1,7 +1,6 @@
 using Il2CppRUMBLE.Audio;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
-using Il2CppRUMBLE.Players;
 using UnityEngine;
 
 namespace BossBattles.Battle;
@@ -34,7 +33,7 @@ internal static class MoveEffects
     public static void Spawn(string structure, Vector3 floor, Quaternion facing)
     {
         if (!Ensure()) return;
-        if (!_spawns!.TryGetValue(structure, out Effects? effects))
+        if (!_spawns!.TryGetValue(structure, out var effects))
         {
             // Scenery rocks have no spawn move: they sound like a ball.
             _spawns.TryGetValue("Ball", out effects);
@@ -69,10 +68,10 @@ internal static class MoveEffects
 
         try
         {
-            AudioManager? audio = AudioManager.instance;
+            var audio = AudioManager.instance;
             if (audio != null)
             {
-                foreach (AudioCall call in effects.Sounds.Where(c => c != null)) audio.Play(call, at, false);
+                foreach (var call in effects.Sounds.Where(c => c != null)) audio.Play(call, at, false);
             }
 
             foreach (var visual in effects.Visuals) PoolManager.instance?.GetPooledObject(visual, at, facing);
@@ -87,13 +86,13 @@ internal static class MoveEffects
     {
         if (_spawns != null) return true;
 
-        PlayerController? you = BattlePlayer.Controller;
+        var you = BattlePlayer.Controller;
         if (you == null) return false;
 
         try
         {
             var spawns = new Dictionary<string, Effects>(StringComparer.OrdinalIgnoreCase);
-            foreach (Stack stack in you.PlayerProcessor.availableStacks.ToArray())
+            foreach (var stack in you.PlayerProcessor.availableStacks.ToArray())
             {
                 if (stack == null) continue;
 
@@ -102,7 +101,7 @@ internal static class MoveEffects
                 var visuals = new List<string>();
                 var kinds = new List<string>();
                 var grounded = false;
-                foreach (Process process in stack.Processes.ToArray())
+                foreach (var process in stack.Processes.ToArray())
                 {
                     if (process.StructureSpawnModifier is { } spawnStep)
                     {
@@ -112,7 +111,7 @@ internal static class MoveEffects
                         spawned ??= PrefabName(spawnStep.TryCast<SpawnStructureModifier>());
                     }
 
-                    foreach (Binding binding in process.Bindings.ToArray())
+                    foreach (var binding in process.Bindings.ToArray())
                     {
                         kinds.Add(binding.GetIl2CppType().Name);
                         spawned ??= PrefabName(binding.TryCast<SpawnStructureModifier>());

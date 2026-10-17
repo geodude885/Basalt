@@ -1,4 +1,5 @@
 using System.Collections;
+using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppPhoton.Pun;
@@ -16,14 +17,12 @@ namespace BossBattles.Actors;
 /// <summary>
 /// A simulated player. Created as a Local player, drawn as a Remote one, so it has a body and its sounds play in the world.
 /// </summary>
-internal sealed partial class Actor
+internal partial class Actor
 {
     public string Id { get; }
     public string Name { get; }
     public string PlayerCustomisation { get; }
     public IReadOnlyList<string>? Stones { get; }
-
-    /// <summary>The body size to build; null for yours.</summary>
     public BodySize? Measurement { get; init; }
 
     public bool Exists => _player != null && _player.Controller != null;
@@ -66,7 +65,7 @@ internal sealed partial class Actor
             return;
         }
 
-        if (PlayerManager.instance?.localPlayer?.Controller == null)
+        if (BattlePlayer.Controller == null)
         {
             Logger.Info($"[Actor.SpawnSkipped] {this}: no local player to model it on");
             return;
@@ -82,7 +81,7 @@ internal sealed partial class Actor
         {
             PlayerManager.instance?.AllPlayers?.Remove(_player);
             if (_player.Controller != null) UnityEngine.Object.Destroy(_player.Controller.gameObject);
-            Logger.Info($"[Actor.Despawned] {this}: {StringHelpers.Player(_player)}");
+            Logger.Info($"[Actor.Despawned] {this}: {_player.Describe()}");
         }
 
         Forget();
@@ -98,7 +97,7 @@ internal sealed partial class Actor
     {
         if (!Exists || _rig == null) return;
 
-        // Calls are briefly run as Remote (ActorPatches); one that never flipped back would stop the simulation.
+        // Ensure actor got flipped back to local simulation
         PlayerController controller = _player!.Controller;
         if (controller.controllerType != ControllerType.Local)
         {
@@ -118,7 +117,7 @@ internal sealed partial class Actor
 
         foreach (Transform part in _playerUi)
         {
-            // Hides the nameplate and health bars by scale, not deactivation. NameBending can throw on an inactive plate.
+            // Hides the nameplate and health bars by scaleing to 0. NameBending can throw on an inactive plate.
             if (part != null && part.localScale != Vector3.zero) part.localScale = Vector3.zero;
         }
     }
@@ -160,7 +159,7 @@ internal sealed partial class Actor
 
     private Player Create(Vector3 floorPosition, Quaternion facing)
     {
-        Player local = PlayerManager.instance.localPlayer;
+        Player local = BattlePlayer.Player!;
 
         var shiftstones = new Il2CppStructArray<short>(2);
         shiftstones[0] = -1;
@@ -197,10 +196,10 @@ internal sealed partial class Actor
         GameObject body = controller.gameObject;
         body.name = $"BossBattles_Actor_{Id}";
 
-        DisableAll<PlayerResetSystem>(body);
-        DisableAll<PlayerHaptics>(body);
-        DisableAll<PlayerLIV>(body);
-        DisableAll<PlayerCollisionFade>(body);
+        body.DisableAll<PlayerResetSystem>();
+        body.DisableAll<PlayerHaptics>();
+        body.DisableAll<PlayerLIV>();
+        body.DisableAll<PlayerCollisionFade>();
         foreach (Camera camera in body.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
         foreach (AudioListener listener in body.GetComponentsInChildren<AudioListener>(true)) listener.enabled = false;
         foreach (TrackedPoseDriver driver in body.GetComponentsInChildren<TrackedPoseDriver>(true)) driver.enabled = false;
@@ -214,13 +213,13 @@ internal sealed partial class Actor
         player.Data.VisualData = ResolveLook();
         PresentAsRemote(controller);
 
-        CopyShiftstones(controller, PlayerManager.instance.localPlayer.Controller);
+        CopyShiftstones(controller, BattlePlayer.Controller!);
         _playerUi = PlayerUiPaths.Select(path => body.transform.Find(path)).Where(part => part != null).ToArray();
 
         _rig = ActorRig.From(controller);
-        _pose = ActorPose.DefaultPose(ActorRig.From(PlayerManager.instance.localPlayer.Controller));
+        _pose = ActorPose.DefaultPose(ActorRig.From(BattlePlayer.Controller!));
 
-        Logger.Info($"[Actor.Spawned] {this}: type {controller.ControllerType}, look \"{PlayerCustomisation}\", at {StringHelpers.Vector(floorPosition)}; " +
+        Logger.Info($"[Actor.Spawned] {this}: type {controller.ControllerType}, look \"{PlayerCustomisation}\", at {floorPosition.Describe()}; " +
             $"moves: {string.Join(", ", controller.PlayerProcessor.availableStacks.ToArray().Select(s => s.CachedName))}");
     }
 
@@ -263,7 +262,7 @@ internal sealed partial class Actor
 
     private PlayerVisualData ResolveLook()
     {
-        var yours = PlayerVisualData.FromPlayfabDataString(PlayerManager.instance.localPlayer.Data.VisualData.ToPlayfabDataString());
+        var yours = PlayerVisualData.FromPlayfabDataString(BattlePlayer.Player!.Data.VisualData.ToPlayfabDataString());
 
         switch (PlayerCustomisation.Trim().ToLowerInvariant())
         {
@@ -320,7 +319,7 @@ internal sealed partial class Actor
 
         try
         {
-            List<string?> pools = Stones?.Select(Shiftstones.GetPoolName).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
+            List<string?> pools = Stones?.Select(Shiftstones.ToIdOrDefault).ToList() ?? Shiftstones.EquippedBy(from).Select(p => (string?)p).ToList();
             foreach ((var pool, var slot) in pools.Select((p, slot) => (p, slot)))
             {
                 if (pool == null)
@@ -352,11 +351,6 @@ internal sealed partial class Actor
         Logger.Debug($"[Actor.Shiftstones] {this}: {(report.Count == 0 ? "none equipped" : string.Join(", ", report))}");
     }
 
-    private static void DisableAll<T>(GameObject body)
-        where T : Behaviour
-    {
-        foreach (T behaviour in body.GetComponentsInChildren<T>(true)) behaviour.enabled = false;
-    }
 
     private void Forget()
     {

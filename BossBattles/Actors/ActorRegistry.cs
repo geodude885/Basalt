@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace BossBattles.Actors;
 
-internal sealed class ActorRegistry
+internal class ActorRegistry
 {
     private readonly List<Actor> _actors = [];
 
@@ -27,14 +27,13 @@ internal sealed class ActorRegistry
         foreach (Actor actor in _actors.ToArray()) actor.LateUpdate();
     }
 
-    /// <summary>For a scene change: the bodies went with the scene.</summary>
     public void ForgetSceneObjects()
     {
         foreach (Actor actor in _actors) actor.ForgetSceneObjects();
         _actors.Clear();
     }
 
-    /// <inheritdoc cref="Actor.IgnoreStructure"/>
+    // For stopping a structure colliding with the actors until it is clear of them.
     public void IgnoreStructure(GameObject structure, float seconds)
     {
         foreach (Actor actor in _actors) actor.IgnoreStructure(structure, seconds);

@@ -1,11 +1,10 @@
-using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Players;
-using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 
 namespace BossBattles.Actors;
 
-internal sealed record ActorRig(Transform Vr, Transform Head, Transform LeftHand, Transform RightHand)
+// Just the colliders on an actor
+internal record ActorRig(Transform Vr, Transform Head, Transform LeftHand, Transform RightHand)
 {
     public static ActorRig From(PlayerController controller) =>
         new(controller.PlayerVR.Origin,
@@ -15,17 +14,10 @@ internal sealed record ActorRig(Transform Vr, Transform Head, Transform LeftHand
 
     public Vector3 Feet => new(Head.position.x, Vr.position.y, Head.position.z);
 
-    public Vector3 Facing => VectorHelpers.Flat(Head.forward);
-
-    public static ClipFingers Fingers(PlayerHandPresence.HandPresenceInput input) =>
-        new(input.indexInput, input.gripInput, input.thumbInput, input.swayInput);
-
-    public static ClipPose LocalPose(Transform part) => new(
-        new System.Numerics.Vector3(part.localPosition.x, part.localPosition.y, part.localPosition.z),
-        new System.Numerics.Quaternion(part.localRotation.x, part.localRotation.y, part.localRotation.z, part.localRotation.w));
+    public Vector3 Facing => Head.forward.Flat();
 }
 
-internal sealed record ActorPose(
+internal record ActorPose(
     (Vector3 Position, Quaternion Rotation) Head,
     (Vector3 Position, Quaternion Rotation) LeftHand,
     (Vector3 Position, Quaternion Rotation) RightHand)

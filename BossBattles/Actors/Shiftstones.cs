@@ -6,32 +6,29 @@ namespace BossBattles.Actors;
 
 internal static class Shiftstones
 {
-    private static List<(string Pool, string Display)>? _catalog;
+    private static List<(string Id, string Display)>? _catalog;
 
-    /// <summary>The pool for a chart's stone name, or null.</summary>
-    public static string? GetPoolName(string name)
+    // Try parse any name to loaded shiftstone pool name
+    public static string? ToIdOrDefault(string name)
     {
-        var wanted = StringHelpers.Squash(name);
+        var wanted = name.Squash();
         var names = new[] { wanted, wanted + "stone" };
-        return Catalog().FirstOrDefault(s => names.Contains(StringHelpers.Squash(s.Pool)) || names.Contains(StringHelpers.Squash(s.Display))).Pool;
+        return Catalog().FirstOrDefault(s => names.Contains(s.Id.Squash()) || names.Contains(s.Display.Squash())).Id;
     }
 
-    /// <summary>The stones a player has equipped, by pool name.</summary>
+    // A player's equipped shiftstone ids
     public static List<string> EquippedBy(PlayerController player)
-    {
-        var names = player.PlayerShiftstones.GetEquippedShiftstones()
+        => player.PlayerShiftstones.GetEquippedShiftstones()
             .Where(stone => stone != null)
             .Select(stone => stone.gameObject.name.Replace("(Clone)", "", StringComparison.Ordinal).Trim())
             .ToList();
 
-        return names;
-    }
-
-    private static IReadOnlyList<(string Pool, string Display)> Catalog()
+    // All loaded shiftstones
+    private static IReadOnlyList<(string Id, string Display)> Catalog()
     {
         if (_catalog != null) return _catalog;
 
-        List<(string Pool, string Display)> found;
+        List<(string Id, string Display)> found;
         try
         {
             found = PoolManager.instance.resourcesToPool.ToArray()
@@ -47,7 +44,7 @@ internal static class Shiftstones
         }
 
         _catalog = found;
-        Logger.Debug($"[Actor.StoneCatalog] {string.Join(", ", found.Select(f => $"{f.Pool} ({f.Display})"))}");
+        Logger.Debug($"[Actor.StoneCatalog] {string.Join(", ", found.Select(f => $"{f.Id} ({f.Display})"))}");
         return _catalog;
     }
 }

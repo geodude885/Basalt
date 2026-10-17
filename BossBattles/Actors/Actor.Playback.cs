@@ -1,24 +1,25 @@
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
+using Il2CppRUMBLE.Input;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
 namespace BossBattles.Actors;
 
-internal sealed partial class Actor
+internal partial class Actor
 {
     private Playing? _clip;
     private (ClipFingers Left, ClipFingers Right)? _fingers;
 
     public bool PlayingClip => Exists && _clip != null;
 
-    // Bool for handedness hmmm
-    public ClipFingers Fingers(bool left) => _fingers is { } fingerPosition ? (left ? fingerPosition.Left : fingerPosition.Right) : default;
+    public ClipFingers Fingers(InputManager.Hand hand)
+        => _fingers is { } fingerPosition ? (hand == InputManager.Hand.Left ? fingerPosition.Left : fingerPosition.Right) : default;
 
     public void SetPose(ActorPose pose) => _pose = pose;
 
     /// <summary>Plays <paramref name="clip"/> from clip time <paramref name="from"/> to <paramref name="to"/>, or its end.</summary>
-    public void PlayClip(Clip clip, double from, double? to, Anchor lane, Func<double> clock, bool mime = false)
+    public void PlayClip(Clip clip, double from, double? to, Anchor origin, Func<double> clock, bool mime = false)
     {
         if (!Exists || clip.Frames.Count == 0) return;
 
@@ -26,7 +27,7 @@ internal sealed partial class Actor
 
         var nextMove = 0;
         while (nextMove < clip.Moves.Count && clip.Moves[nextMove].Time < from) nextMove++;
-        _clip = new Playing(clip, from, clock(), to, lane, clock) { NextMove = nextMove, Mime = mime };
+        _clip = new Playing(clip, from, clock(), to, origin, clock) { NextMove = nextMove, Mime = mime };
 
         try
         {
@@ -114,13 +115,13 @@ internal sealed partial class Actor
             if (!playing.Mime) RunMove(move);
         }
 
-        if (frame.Offset is { } offset) FollowPath(playing.Lane, offset);
-        if (frame.Yaw is { } yaw) FollowFacing(playing.Lane, yaw);
+        if (frame.Offset is { } offset) MoveTowards(playing.Lane, offset);
+        if (frame.Yaw is { } yaw) TurnTowards(playing.Lane, yaw);
     }
 
-    private void FollowPath(Anchor lane, System.Numerics.Vector2 spot)
+    private void MoveTowards(Anchor origin, System.Numerics.Vector2 spot)
     {
-        Vector3 wanted = StringHelpers.ToUnity(lane.ToWorld(new System.Numerics.Vector3(spot.X, 0f, spot.Y)));
+        Vector3 wanted = origin.ToWorld(new System.Numerics.Vector3(spot.X, 0f, spot.Y)).ToUnity();
         Vector3 actual = _rig!.Feet;
         var shift = new Vector3(wanted.x - actual.x, 0f, wanted.z - actual.z);
 
@@ -138,16 +139,16 @@ internal sealed partial class Actor
         }
     }
 
-    private void FollowFacing(Anchor lane, float laneYaw)
+    private void TurnTowards(Anchor origin, float laneYaw)
     {
-        var wanted = lane.ToWorldYaw(laneYaw);
+        var wanted = origin.ToWorldYaw(laneYaw);
         var angle = Mathf.DeltaAngle(_rig!.Vr.eulerAngles.y, wanted);
         if (Mathf.Abs(angle) < 1f) return;
 
         _player!.Controller.PlayerMovement.Rotate(angle, false);
     }
 
-    private sealed record Playing(Clip Clip, double From, double StartedAt, double? To, Anchor Lane, Func<double> Clock)
+    private record Playing(Clip Clip, double From, double StartedAt, double? To, Anchor Lane, Func<double> Clock)
     {
         public int NextMove { get; set; }
 

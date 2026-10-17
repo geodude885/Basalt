@@ -6,12 +6,12 @@ using UnityEngine;
 
 namespace BossBattles.Actors;
 
-internal sealed partial class Actor
+internal partial class Actor
 {
     public const short MaxHealth = 20;
 
 
-    /// <summary>How far a structure must be from the actor before it can hit the actor.</summary>
+    // How far a structure must be from the actor before it can hit the actor.
     private const float ClearOfActor = 1.6f;
 
     private const RigidbodyConstraints PlantConstraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
@@ -35,7 +35,7 @@ internal sealed partial class Actor
         var eyeHeight = _rig == null ? 0f : _rig.Head.position.y - _rig.Vr.position.y;
         _player!.Controller.PlayerMovement.Reposition(floorPosition + (Vector3.up * eyeHeight), Quaternion.Euler(0f, yawDegrees, 0f));
         Plant();
-        Logger.Debug($"[Actor.Placed] {this} at {StringHelpers.Vector(floorPosition)} facing {yawDegrees:F0}");
+        Logger.Debug($"[Actor.Placed] {this} at {floorPosition.Describe()} facing {yawDegrees:F0}");
         MelonCoroutines.Start(PutOnFloor(_player, floorPosition.y));
     }
 
@@ -57,9 +57,7 @@ internal sealed partial class Actor
         }
     }
 
-    /// <summary>
-    /// Stops a structure colliding with the actor until it is clear of it.
-    /// </summary>
+    // Stops a structure colliding with the actor until it is clear of it.
     public void IgnoreStructure(GameObject structure, float seconds)
     {
         if (!Exists) return;

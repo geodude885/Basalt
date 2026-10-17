@@ -6,7 +6,7 @@ using Il2CppRUMBLE.Input;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 
-namespace BossBattles.Authoring;
+namespace BossBattles.Editing;
 
 // Records both player motion and moves
 internal class ClipRecorder

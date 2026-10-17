@@ -1,4 +1,4 @@
-using BossBattles.Authoring;
+using BossBattles.Editing;
 using BossBattles.Patches;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Placement;

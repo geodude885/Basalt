@@ -75,8 +75,8 @@ internal static class TestBench
     {
         if (Actor is not { } actor) return;
 
-        if (actor.Planted) actor.Unplant();
-        else actor.Plant();
+        if (actor.Planted) actor.AllowFreePlacement();
+        else actor.KeepInPlace();
         Logger.Info(actor.Planted ? "[Test.Plant] planted" : "[Test.Plant] unplanted");
     }
 

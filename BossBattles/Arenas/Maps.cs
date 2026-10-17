@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using SceneManager = Il2CppRUMBLE.Managers.SceneManager;
 
-namespace BossBattles.Arena;
+namespace BossBattles.Arenas;
 
 internal static class Maps
 {

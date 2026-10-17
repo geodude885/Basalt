@@ -2,8 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
-using BossBattles.Arena;
-using BossBattles.Authoring;
+using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using UnityEngine;
@@ -103,7 +102,7 @@ public partial class ModEntry
     private void RecordChosen(bool mime = false)
     {
         var entry = Chosen();
-        if (!Studio.CanEdit(entry))
+        if (entry is not { CanEdit: true })
         {
             Logger.Info(entry?.Source == ChartSource.Package
                 ? $"[Studio] {entry.Name} is a package - unzip it into a folder in the chart folder to record into it"
@@ -111,7 +110,7 @@ public partial class ModEntry
             return;
         }
 
-        Mod.Studio.StartRecording(entry!, _settings.ArenaOverride, mime);
+        Mod.Studio.StartRecording(entry, _settings.ArenaOverride, mime);
     }
 
     /// <summary>Runs a studio save, reloads the charts it changed, and says what happened.</summary>
@@ -164,7 +163,7 @@ public partial class ModEntry
         try
         {
             var entry = Chosen();
-            var folder = entry != null && Studio.CanEdit(entry) ? entry.AssetFolder : _library.Folder;
+            var folder = entry is { CanEdit: true } ? entry.AssetFolder : _library.Folder;
             Open(folder);
             Logger.Info($"[Charts] {entry?.Name ?? "the charts"}: {folder} - open it in the Boss Battles Chart Editor, save, and the game reloads");
         }

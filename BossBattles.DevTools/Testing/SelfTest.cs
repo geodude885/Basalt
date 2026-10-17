@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
-using BossBattles.Arena;
+using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;

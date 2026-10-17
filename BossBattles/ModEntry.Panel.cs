@@ -1,6 +1,6 @@
-using BossBattles.Arena;
-using BossBattles.Authoring;
+using BossBattles.Arenas;
 using BossBattles.Battle;
+using BossBattles.Editing;
 using BossBattles.Services.Charts;
 using BossBattles.UI;
 using UnityEngine;
@@ -51,8 +51,8 @@ public partial class ModEntry
                     new PickerButton("map", "MAP", Blue, studio.LaneSetup.SwitchToNextMap),
                     new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneSetup.StartLaneWhereYouStand),
                     new PickerButton("actorhere", "ACTOR HERE", Blue, studio.LaneSetup.MoveFirstActorWhereYouStand),
-                    new PickerButton("save", "SAVE", Green, () => Saved(studio.SaveSetup)),
-                    new PickerButton("cancel", "CANCEL", Red, studio.CancelSetup),
+                    new PickerButton("save", "SAVE", Green, () => Saved(studio.SaveChartOptions)),
+                    new PickerButton("cancel", "CANCEL", Red, studio.ExitChartOptions),
                 };
 
             case StudioState.ChoosingSection:
@@ -79,13 +79,13 @@ public partial class ModEntry
         if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new PickerButton("gym", "GYM", Orange, Mod.Battle.ReturnToGym));
 
         var chosen = Chosen();
-        if (_settings.Editing.Value && Studio.CanEdit(chosen))
+        if (_settings.Editing.Value && chosen is { CanEdit: true })
         {
-            buttons.Add(new PickerButton("setup", "SETUP", Blue, () => studio.BeginSetup(chosen!)));
+            buttons.Add(new PickerButton("setup", "SETUP", Blue, () => studio.OpenChartOptions(chosen)));
             buttons.Add(new PickerButton("record", "RECORD", Red, () => RecordChosen()));
             buttons.Add(new PickerButton("mime", "MIME", Orange, () => RecordChosen(mime: true)));
-            if (Studio.HasTrack(chosen)) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseRecordingSection(chosen!, _settings.ArenaOverride)));
-            if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => Saved(() => Studio.Undo(chosen!))));
+            if (chosen.HasActorTrack) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseRecordingSection(chosen, _settings.ArenaOverride)));
+            if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => Saved(() => Studio.Undo(chosen))));
         }
 
         return buttons;
@@ -98,21 +98,21 @@ public partial class ModEntry
         {
             case StudioState.Recording:
                 (var seconds, var moves) = studio.Progress;
-                var what = studio.IsSection ? $"{studio.Section.From:0.0}s to {studio.Section.To:0.0}s - stops by itself" : "STOP when done";
+                var what = studio.IsSectionOrWholeClip ? $"{studio.SelectedSection.From:0.0}s to {studio.SelectedSection.To:0.0}s - stops by itself" : "STOP when done";
                 return studio.Mime
                     ? new PickerCard($"<color=#ffa040><b>MIMING</b></color>\n<b>{studio.ActorName}</b>\n<size=60%>{seconds:0.0}s</size>\n<size=45%>throw the chart's shots by hand - nothing spawns. {what}</size>")
                     : new PickerCard($"<color=#ff5050><b>RECORDING</b></color>\n<b>{studio.ActorName}</b>\n<size=60%>{seconds:0.0}s  |  {moves} move{(moves == 1 ? "" : "s")}</size>\n<size=45%>{what}</size>");
 
             case StudioState.Deciding when studio.NewClip is { } clip:
-                var span = studio.IsSection ? $"{studio.Section.From:0.0}s to {studio.Section.To:0.0}s" : $"{clip.Duration - clip.Start:0.0}s";
+                var span = studio.IsSectionOrWholeClip ? $"{studio.SelectedSection.From:0.0}s to {studio.SelectedSection.To:0.0}s" : $"{clip.Duration - clip.Start:0.0}s";
                 return new PickerCard(
-                    $"<size=45%>{(studio.IsSection ? "SECTION" : "CLIP")}</size>\n<b>{clip.Name}</b>\n<size=55%>{span}  |  {clip.Moves.Count} move{(clip.Moves.Count == 1 ? "" : "s")}</size>\n" +
+                    $"<size=45%>{(studio.IsSectionOrWholeClip ? "SECTION" : "CLIP")}</size>\n<b>{clip.Name}</b>\n<size=55%>{span}  |  {clip.Moves.Count} move{(clip.Moves.Count == 1 ? "" : "s")}</size>\n" +
                     $"<size=45%>keep it in {studio.Entry?.Name}, record again, watch it again, or throw it away</size>");
 
             case StudioState.Setup:
                 var arena = studio.LaneSetup.ArenaSpec;
                 var lane = studio.LaneSetup.Lane;
-                var actor = studio.LaneSetup.FirstActor;
+                var actor = studio.LaneSetup.Actors.FirstOrDefault();
                 var where = arena.Map == ArenaKind.Here ? "here - wherever the player stands"
                     : arena.HasSpot ? $"{arena.Map}, from {arena.X:0.##}, {arena.Z:0.##} facing {arena.Facing:0}"
                     : $"{arena.Map}, from where you stand";
@@ -123,8 +123,8 @@ public partial class ModEntry
 
             case StudioState.ChoosingSection:
                 return new PickerCard(
-                    $"<size=45%>RE-RECORD</size>\n<b>{studio.ActorName}</b>\n<size=55%>{studio.Section.From:0.0}s to {studio.Section.To:0.0}s</size>\n" +
-                    $"<size=45%><mspace=0.55em>{Timeline(studio.Section.From, studio.Section.To, studio.Chart?.End ?? studio.Section.To)}</mspace></size>\n" +
+                    $"<size=45%>RE-RECORD</size>\n<b>{studio.ActorName}</b>\n<size=55%>{studio.SelectedSection.From:0.0}s to {studio.SelectedSection.To:0.0}s</size>\n" +
+                    $"<size=45%><mspace=0.55em>{Timeline(studio.SelectedSection.From, studio.SelectedSection.To, studio.Chart?.End ?? studio.SelectedSection.To)}</mspace></size>\n" +
                     $"<size=38%>PREVIEW plays it; RECORD starts {Studio.EaseInSeconds:0} s before, where the actor stood</size>");
         }
 

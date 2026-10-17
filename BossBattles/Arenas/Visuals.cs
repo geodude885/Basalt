@@ -2,7 +2,7 @@ using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using UnityEngine;
 
-namespace BossBattles.Arena;
+namespace BossBattles.Arenas;
 
 internal class Visuals
 {

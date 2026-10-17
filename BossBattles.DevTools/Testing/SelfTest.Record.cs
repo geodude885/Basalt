@@ -1,8 +1,8 @@
 using System.Collections;
 using BossBattles.Actors;
-using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.DevTools.Flatscreen;
+using BossBattles.Editing;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Il2CppRUMBLE.Players;
@@ -152,7 +152,7 @@ internal static partial class SelfTest
     private static IEnumerator RunSectionTest(string file, List<string> problems)
     {
         var entry = Reloaded(file);
-        if (!Studio.HasTrack(entry))
+        if (entry is not { HasActorTrack: true })
         {
             problems.Add("after keeping, the chart has no track to re-record");
             yield break;
@@ -163,7 +163,7 @@ internal static partial class SelfTest
         if (!_picker!.ButtonIds.Contains("fromlater")) problems.Add($"choosing a section shows {string.Join(", ", _picker.ButtonIds)}");
         _picker.Press("fromlater");
         yield return new WaitForSeconds(0.4f);
-        (var from, var to) = Mod.Studio.Section;
+        (var from, var to) = Mod.Studio.SelectedSection;
         Logger.Info($"[SelfTest] section {from:0.0}-{to:0.0}s");
         if (_shots && _picker.Root is { } card) ShootPanel(card, "7-section");
 
@@ -185,7 +185,7 @@ internal static partial class SelfTest
         while (Mod.Studio.State is StudioState.Recording or StudioState.Reviewing && Time.realtimeSinceStartup < deadline) yield return null;
 
         var section = Mod.Studio.NewClip;
-        if (Mod.Studio.State != StudioState.Deciding || section == null || !Mod.Studio.IsSection)
+        if (Mod.Studio.State != StudioState.Deciding || section == null || !Mod.Studio.IsSectionOrWholeClip)
         {
             problems.Add($"the section did not stop by itself and come up for review (studio {Mod.Studio.State})");
             Mod.Studio.CloseSection();
@@ -218,7 +218,7 @@ internal static partial class SelfTest
         var entry = Reloaded(file);
         var before = entry.Result.Chart!.Lane;
 
-        Mod.Studio.BeginSetup(entry);
+        Mod.Studio.OpenChartOptions(entry);
         yield return new WaitForSeconds(1f);
         _picker!.Press("longer");
         _picker.Press("longer");

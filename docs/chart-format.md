@@ -172,8 +172,9 @@ change them as the battle goes - see `phases[].colours`.
 
 Shader looks, for players with [RumbleReShaded](https://github.com/Pepuldope/RumbleReShaded) (RRS)
 installed - everyone else plays the chart as it is. Each cue names an installed RRS **pack** and sets
-its sliders; the look fades in over `fade` seconds and holds until the next cue for that pack. When
-the battle ends or stops, every pack goes back to the player's own settings.
+its sliders; the look fades in over `fade` seconds and holds until the next cue for that pack. Looks
+are temporary overrides: the player's own pack settings are never changed, and every pack is theirs
+again when the battle ends or stops.
 
 ```json
 "visuals": [

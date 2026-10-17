@@ -28,24 +28,26 @@ internal partial class Actor
     {
         if (!Exists) return;
 
-        Unplant();
+        AllowFreePlacement();
 
         // Reposition places the head, not the feet.
         var eyeHeight = _rig == null ? 0f : _rig.Head.position.y - _rig.Vr.position.y;
         _player!.Controller.PlayerMovement.Reposition(floorPosition + (Vector3.up * eyeHeight), Quaternion.Euler(0f, yawDegrees, 0f));
-        Plant();
+
+        KeepInPlace();
+
         Logger.Debug($"[Actor.Placed] {this} at {floorPosition.Describe()} facing {yawDegrees:F0}");
         MelonCoroutines.Start(PutOnFloor(_player, floorPosition.y));
     }
 
-    public void Plant()
+    public void KeepInPlace()
     {
         if (!Exists) return;
         _planted = true;
         KeepPlanted();
     }
 
-    public void Unplant()
+    public void AllowFreePlacement()
     {
         if (!Exists) return;
 
@@ -69,7 +71,7 @@ internal partial class Actor
             foreach (var theirs in structureColliders) Physics.IgnoreCollision(mine, theirs, true);
         }
 
-        MelonCoroutines.Start(RestoreCollisionWhenClear(_colliders, structureColliders, structure.transform, seconds));
+        MelonCoroutines.Start(RestoreCollisionWhenClearOfColliders(_colliders, structureColliders, structure.transform, seconds));
     }
 
     public void FullHeal()
@@ -95,7 +97,7 @@ internal partial class Actor
     private Rigidbody?[] PlantedBodies()
     {
         var physics = _player?.Controller?.PlayerPhysics;
-        return physics == null ? Array.Empty<Rigidbody?>() : new[] { physics.PhysicsRigidbody, physics.VRrigidbody };
+        return physics == null ? Array.Empty<Rigidbody?>() : [physics.PhysicsRigidbody, physics.VRrigidbody];
     }
 
     private IEnumerator PutOnFloor(Player player, float floor)
@@ -119,7 +121,7 @@ internal partial class Actor
         }
     }
 
-    private IEnumerator RestoreCollisionWhenClear(Collider[] mine, Collider[] theirs, Transform structure, float seconds)
+    private IEnumerator RestoreCollisionWhenClearOfColliders(Collider[] mine, Collider[] structureColliders, Transform structure, float seconds)
     {
         var until = Time.time + seconds;
         while (Time.time < until && structure != null && Exists)
@@ -133,7 +135,7 @@ internal partial class Actor
         foreach (var a in mine)
         {
             if (a == null) continue;
-            foreach (var b in theirs)
+            foreach (var b in structureColliders)
             {
                 if (b != null) Physics.IgnoreCollision(a, b, false);
             }

@@ -1,6 +1,6 @@
 using System.Collections;
 using BossBattles.Actors;
-using BossBattles.Arena;
+using BossBattles.Arenas;
 using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
@@ -45,7 +45,7 @@ internal class BattleController
     /// <summary>A long MP3 can take a while to decode; the countdown waits this long for it.</summary>
     private const float MusicWaitSeconds = 90f;
 
-    private readonly Arena.Arena _arena = new();
+    private readonly Arena _arena = new();
     private readonly Projectiles _projectiles = new();
     private readonly Board _board = new();
     private readonly List<Actor> _actors = [];
@@ -533,7 +533,7 @@ internal class BattleController
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 
-        foreach (var actor in _actors) actor.Unplant();
+        foreach (var actor in _actors) actor.AllowFreePlacement();
         Finished?.Invoke(result);
     }
 

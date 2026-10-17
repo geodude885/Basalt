@@ -1,5 +1,5 @@
 using BossBattles.Actors;
-using BossBattles.Arena;
+using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.Presentation;
 using BossBattles.Services.Charts;

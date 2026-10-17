@@ -1,7 +1,7 @@
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
-namespace BossBattles.Arena;
+namespace BossBattles.Arenas;
 
 // Lane collision only
 internal class Boundary

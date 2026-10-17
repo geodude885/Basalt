@@ -1,8 +1,8 @@
 using BossBattles.Services.Charts;
 using UnityEngine;
-using Part = BossBattles.Arena.Visuals.Part;
+using Part = BossBattles.Arenas.Visuals.Part;
 
-namespace BossBattles.Arena;
+namespace BossBattles.Arenas;
 
 internal class Arena
 {

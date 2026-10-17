@@ -1,10 +1,10 @@
 using BossBattles.Actors;
-using BossBattles.Authoring;
 using BossBattles.Battle;
+using BossBattles.Editing;
 
 namespace BossBattles;
 
-/// <summary>State the whole mod shares.</summary>
+// State the whole mod shares
 internal static class Mod
 {
     public static ActorRegistry Actors { get; } = new();

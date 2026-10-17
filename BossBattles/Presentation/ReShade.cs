@@ -14,7 +14,7 @@ namespace BossBattles.Presentation;
 /// as <c>_RRS_bossbattles_*</c> shader globals (RRS's own <c>SetGlobal</c> publishes names no shader
 /// can declare). See docs/chart-format.md.</para>
 /// </summary>
-internal sealed class ReShade
+internal class ReShade
 {
     private static bool _searched;
     private static MethodInfo? _fire;
@@ -265,17 +265,17 @@ internal sealed class ReShade
         }
     }
 
-    private sealed record Pack(object Handle, string Name, string Id, MelonPreferences_Entry<bool> Enabled, List<Param> Params)
+    private record Pack(object Handle, string Name, string Id, MelonPreferences_Entry<bool> Enabled, List<Param> Params)
     {
         /// <summary>A parameter by label or shader property, ignoring case, spaces and underscores.</summary>
         public Param? Find(string key)
         {
-            var wanted = StringHelpers.Squash(key);
-            return Params.FirstOrDefault(p => StringHelpers.Squash(p.Label) == wanted || StringHelpers.Squash(p.Property) == wanted);
+            var wanted = key.Squash();
+            return Params.FirstOrDefault(p => p.Label.Squash() == wanted || p.Property.Squash() == wanted);
         }
     }
 
-    private sealed record Param(string Property, string Label, float Min, float Max, MelonPreferences_Entry<float> Entry);
+    private record Param(string Property, string Label, float Min, float Max, MelonPreferences_Entry<float> Entry);
 
-    private sealed record Original((MelonPreferences_Entry<bool> Entry, bool Value) Enabled, Dictionary<MelonPreferences_Entry<float>, float> Values);
+    private record Original((MelonPreferences_Entry<bool> Entry, bool Value) Enabled, Dictionary<MelonPreferences_Entry<float>, float> Values);
 }

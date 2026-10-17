@@ -3,7 +3,7 @@ using BossBattles.Services.Audio;
 namespace BossBattles.DevTools.Testing;
 
 /// <summary>Decoded PCM audio: interleaved samples in -1..1.</summary>
-public sealed record PcmAudio(float[] Samples, int Channels, int SampleRate)
+public record PcmAudio(float[] Samples, int Channels, int SampleRate)
 {
     public double Seconds => Samples.Length / (double)(Channels * SampleRate);
 }

@@ -1,4 +1,5 @@
 using BossBattles.Actors;
+using BossBattles.Battle;
 using BossBattles.Services.Clips;
 using HarmonyLib;
 using Il2CppRUMBLE.Audio;
@@ -123,7 +124,7 @@ public static class ActorPatches
                 return;
             }
 
-            Player? you = PlayerManager.instance?.localPlayer;
+            Player? you = BattlePlayer.Player;
             if (you != null && controller.assignedPlayer != null && controller.assignedPlayer.Pointer == you.Pointer)
                 Mod.Battle.OnPlayerDamaged(previousHealth - newHealth, newHealth);
         });
@@ -197,7 +198,7 @@ public static class ActorPatches
         public static bool Prefix(PlayerHandPresence __instance, InputManager.Hand hand, ref PlayerHandPresence.HandPresenceInput __result)
         {
             ClipFingers? fingers = null;
-            PatchGuard.Run(nameof(ActorFingers), () => fingers = Mod.Actors.Find(__instance.ParentController)?.Fingers(hand == InputManager.Hand.Left));
+            PatchGuard.Run(nameof(ActorFingers), () => fingers = Mod.Actors.Find(__instance.ParentController)?.Fingers(hand));
             if (fingers is not { } held) return true;
 
             __result = new PlayerHandPresence.HandPresenceInput { indexInput = held.Index, gripInput = held.Grip, thumbInput = held.Thumb, swayInput = held.Sway };

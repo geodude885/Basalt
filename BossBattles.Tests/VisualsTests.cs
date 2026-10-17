@@ -3,7 +3,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class VisualsTests
+public class VisualsTests
 {
     // The player's own value of every parameter, for the timeline to fade from and back to.
     private static float Yours(string pack, string key) => 1f;
@@ -115,7 +115,7 @@ public sealed class VisualsTests
     }
 }
 
-public sealed class LaneColourTests
+public class LaneColourTests
 {
     [Theory]
     [InlineData("#ff8000", 1f, 128f / 255f, 0f, 1f)]
@@ -151,7 +151,7 @@ public sealed class LaneColourTests
     }
 }
 
-public sealed class PhaseColourTests
+public class PhaseColourTests
 {
     [Fact]
     public void APhaseLaysItsColoursOverTheCharts()
@@ -191,7 +191,7 @@ public sealed class PhaseColourTests
     }
 }
 
-public sealed class ActorLookTests
+public class ActorLookTests
 {
     [Fact]
     public void ShiftstonesAreYoursUnlessNamed()
@@ -240,7 +240,7 @@ public sealed class ActorLookTests
     }
 }
 
-public sealed class ProjectileReachTests
+public class ProjectileReachTests
 {
     [Fact]
     public void ShotsMayStartOutsideTheLaneButNotTooFar()
@@ -272,7 +272,7 @@ public sealed class ProjectileReachTests
     }
 }
 
-public sealed class MimeClipTests
+public class MimeClipTests
 {
     [Fact]
     public void AMimedClipIsReadAndPlayedMimed()
@@ -311,7 +311,7 @@ public sealed class MimeClipTests
     }
 }
 
-public sealed class GroundedAndCleanupTests
+public class GroundedAndCleanupTests
 {
     [Fact]
     public void PillarsCubesAndWallsAreGroundedUnlessToldOtherwise()

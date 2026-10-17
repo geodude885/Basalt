@@ -1,4 +1,5 @@
-using BossBattles.Arenas;
+using BossBattles.Arena;
+using BossBattles.Battle;
 using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine;
 namespace BossBattles.Authoring;
 
 /// <summary>Lane setup: a preview lane you walk around, resized and moved from the panel, then written into the chart.</summary>
-internal sealed partial class Studio
+internal partial class Studio
 {
     private ArenaSpec _setupArena = ArenaSpec.Here;
     private Lane _setupLane;
@@ -31,7 +32,7 @@ internal sealed partial class Studio
         _setupDirty = true;
         State = StudioState.Setup;
 
-        if (!Arena.InScene(_setupArena.Map)) Arena.Load(_setupArena.Map);
+        if (!_setupArena.Map.IsLoaded()) _setupArena.Map.Load();
     }
 
     public void Resize(float lengthChange, float widthChange)
@@ -44,9 +45,9 @@ internal sealed partial class Studio
     /// <summary>Your spot, facing the way you face, becomes the lane's start - on whichever map you are.</summary>
     public void LaneHere()
     {
-        if (You() is not { } rig) return;
+        if (BattlePlayer.Rig is not { } rig) return;
 
-        ArenaKind map = Arena.CurrentMap();
+        ArenaKind map = Maps.Current;
         _setupFrom = (rig.Feet, rig.Facing);
         if (map == ArenaKind.Here)
         {
@@ -54,8 +55,8 @@ internal sealed partial class Studio
         }
         else
         {
-            Vector3 at = rig.Feet - (Arena.MapOrigin(map) ?? Vector3.zero);
-            _setupArena = new ArenaSpec(map, MathF.Round(at.x, 2), MathF.Round(at.z, 2), MathF.Round(VectorHelpers.Bearing(rig.Facing)));
+            Vector3 at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
+            _setupArena = new ArenaSpec(map, MathF.Round(at.x, 2), MathF.Round(at.z, 2), MathF.Round(rig.Facing.Bearing()));
         }
 
         _setupDirty = true;
@@ -64,9 +65,9 @@ internal sealed partial class Studio
     /// <summary>The actor's spot becomes where you stand; the lane grows to reach it if needed.</summary>
     public void ActorHere()
     {
-        if (You() is not { } rig || _setupFrame is not { } frame || _setupActors.Count == 0) return;
+        if (BattlePlayer.Rig is not { } rig || _setupFrame is not { } frame || _setupActors.Count == 0) return;
 
-        System.Numerics.Vector3 at = frame.ToLocal(StringHelpers.ToNumerics(rig.Feet));
+        System.Numerics.Vector3 at = frame.ToLocal(rig.Feet.ToNumerics());
         var z = Math.Max(0.5f, at.Z);
         if (z > _setupLane.Length) _setupLane = new Lane(Math.Min(ChartSetup.MaxLength, MathF.Ceiling(z)), _setupLane.Width);
 
@@ -82,7 +83,7 @@ internal sealed partial class Studio
         _setupArena = new ArenaSpec(next);
         _setupFrom = null;
         _setupDirty = true;
-        if (!Arena.InScene(next)) Arena.Load(next);
+        if (!next.IsLoaded()) next.Load();
     }
 
     /// <summary>Writes the lane setup into the chart; returns what happened.</summary>
@@ -120,11 +121,11 @@ internal sealed partial class Studio
 
     private void BuildPreview()
     {
-        if (You() is not { } rig) return;
-        if (_setupArena.Map != ArenaKind.Here && !Arena.InScene(_setupArena.Map)) return;
+        if (BattlePlayer.Rig is not { } rig) return;
+        if (_setupArena.Map != ArenaKind.Here && !_setupArena.Map.IsLoaded()) return;
 
         _setupFrom ??= (rig.Feet, rig.Facing);
-        Anchor? frame = Arena.Frame(_setupArena.Map, _setupArena, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
+        Anchor? frame = _setupArena.CreateLaneAnchor(_setupArena.Map, _setupFrom.Value.Floor, _setupFrom.Value.Facing);
         if (frame == null) return;
 
         _setupFrame = frame;
@@ -137,7 +138,7 @@ internal sealed partial class Studio
         }
 
         _markers.Clear();
-        _markers.AddRange(_setupActors.Select(actor => Marker(StringHelpers.ToUnity(frame.Value.ToWorld(new System.Numerics.Vector3(actor.At.X, 0f, actor.At.Z))))));
+        _markers.AddRange(_setupActors.Select(actor => Marker(frame.Value.ToWorld(new System.Numerics.Vector3(actor.At.X, 0f, actor.At.Z)).ToUnity())));
     }
 
     /// <summary>A post where an actor will stand.</summary>

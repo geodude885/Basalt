@@ -3,7 +3,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class ChartRunnerTests
+public class ChartRunnerTests
 {
     private static Chart Load(string json)
     {

@@ -8,7 +8,7 @@ namespace BossBattles.Battle;
 /// Grounded projectiles, thrown along the floor in the game's sliding grounded state and driven at
 /// the chart's speed until they arrive or anything else acts on them. Hitstop pauses the drive.
 /// </summary>
-internal sealed partial class Projectiles
+internal partial class Projectiles
 {
     /// <summary>How long past reaching its target a grounded projectile is still driven.</summary>
     private const float SlideOvershootSeconds = 0.4f;
@@ -49,7 +49,7 @@ internal sealed partial class Projectiles
             Structure = live.Structure,
         });
         _checks.Add(new FlightCheck(id, projectile.Structure, body.transform, from, Time.time, projectile.Speed));
-        Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} grounded along the floor -> {StringHelpers.Vector(target)} at {projectile.Speed:F1} m/s, state {live.Structure?.currentPhysicsState}");
+        Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} grounded along the floor -> {target.Describe()} at {projectile.Speed:F1} m/s, state {live.Structure?.currentPhysicsState}");
     }
 
     private void UpdateSlides()
@@ -144,7 +144,7 @@ internal sealed partial class Projectiles
         }
     }
 
-    private sealed record Slide(int Id, Rigidbody Body, Vector3 Velocity, float Until, RigidbodyConstraints Before)
+    private record Slide(int Id, Rigidbody Body, Vector3 Velocity, float Until, RigidbodyConstraints Before)
     {
 
         public float Until { get; set; } = Until;

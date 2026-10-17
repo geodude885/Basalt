@@ -1,5 +1,5 @@
 using BossBattles.Actors;
-using Il2CppRUMBLE.Managers;
+using BossBattles.Battle;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
@@ -51,7 +51,7 @@ internal static class TestBench
             return;
         }
 
-        PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+        PlayerController? you = BattlePlayer.Controller;
         if (you == null) return;
 
         var yours = ActorRig.From(you);
@@ -93,7 +93,7 @@ internal static class TestBench
     /// <summary>Mirrors you, or reads the keys; plain keys drive the actor, Ctrl+ keys are the tools'.</summary>
     public static void Update()
     {
-        if (Actor is not { } actor || PlayerManager.instance?.localPlayer?.Controller is not { } you) return;
+        if (Actor is not { } actor || BattlePlayer.Controller is not { } you) return;
 
         var yours = ActorRig.From(you);
         if (_mirroring)

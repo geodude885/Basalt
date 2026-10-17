@@ -4,7 +4,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class AudioDecoderTests
+public class AudioDecoderTests
 {
     [Theory]
     [InlineData("tone.mp3")]

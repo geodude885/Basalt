@@ -1,12 +1,13 @@
 using System.Numerics;
 using BossBattles.DevTools.Testing;
+using BossBattles.Services;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class ChartDocumentTests
+public class ChartDocumentTests
 {
     private const string Chart = /*lang=json*/ """
         {
@@ -76,7 +77,7 @@ public sealed class ChartDocumentTests
     public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => ChartDocument.SetRaw("[1]", "end", "1"));
 }
 
-public sealed class TrackTests
+public class TrackTests
 {
     [Fact]
     public void TracksLoadAndPlayEachClipUntilTheNext()
@@ -228,7 +229,7 @@ public sealed class TrackTests
     }
 }
 
-public sealed class SectionTests
+public class SectionTests
 {
     private static readonly TrackClip[] Whole = { new(0, "clip-1", 0) };
 
@@ -353,7 +354,7 @@ public sealed class SectionTests
     }
 }
 
-public sealed class TempoTests
+public class TempoTests
 {
     [Fact]
     public void BeatsCrossTempoChanges()
@@ -394,7 +395,7 @@ public sealed class TempoTests
         Assert.Contains(ChartLoader.Load(json).Errors, e => e.Contains(expected, StringComparison.Ordinal));
 }
 
-public sealed class LaneScaleTests
+public class LaneScaleTests
 {
     [Fact]
     public void ShorteningTheLaneTakesTheChartWithIt()
@@ -414,7 +415,7 @@ public sealed class LaneScaleTests
     }
 }
 
-public sealed class FacingTests
+public class FacingTests
 {
     [Theory]
     [InlineData(350f, 10f, 0.5f, 0f)]
@@ -422,7 +423,7 @@ public sealed class FacingTests
     [InlineData(90f, 180f, 0.5f, 135f)]
     [InlineData(0f, 270f, 0.5f, 315f)]
     public void FacingsInterpolateTheShortWayRound(float from, float to, float t, float expected) =>
-        Assert.Equal(expected, Clip.LerpDegrees(from, to, t) % 360f, 2);
+        Assert.Equal(expected, Degrees.Lerp(from, to, t) % 360f, 2);
 
     [Fact]
     public void AClipKeepsItsFacingsOnDisk()
@@ -451,7 +452,7 @@ public sealed class FacingTests
     }
 }
 
-public sealed class ZoneAndRulesTests
+public class ZoneAndRulesTests
 {
     [Fact]
     public void WithoutAZoneYouKeepTwoMetresFromTheFarEnd()

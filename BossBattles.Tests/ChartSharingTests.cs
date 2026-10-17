@@ -9,7 +9,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class ChartHeaderTests
+public class ChartHeaderTests
 {
     [Fact]
     public void ReadsInfoArenaAndMusic()
@@ -103,7 +103,7 @@ public sealed class ChartHeaderTests
     }
 }
 
-public sealed class ChartPathTests
+public class ChartPathTests
 {
     [Theory]
     [InlineData("song.ogg", true)]
@@ -346,7 +346,7 @@ public sealed class ScoreBookTests : IDisposable
     private static BattleResult Result(int score, string rank) => new("Song", true, 30, 0, 0, 0, 10, score, rank);
 }
 
-public sealed class WavFileTests
+public class WavFileTests
 {
     [Fact]
     public void WritesAndReadsBack()

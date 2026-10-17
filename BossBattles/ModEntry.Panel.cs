@@ -1,4 +1,4 @@
-using BossBattles.Arenas;
+using BossBattles.Arena;
 using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
@@ -9,7 +9,7 @@ using UnityEngine;
 namespace BossBattles;
 
 /// <summary>What the chart picker shows: the chosen chart between battles, and the studio's controls while recording.</summary>
-public sealed partial class ModEntry
+public partial class ModEntry
 {
     private static readonly Color Orange = new(1f, 0.45f, 0.1f);
     private static readonly Color Green = new(0.2f, 0.75f, 0.3f);
@@ -22,7 +22,7 @@ public sealed partial class ModEntry
         StudioState.Setup or StudioState.ChoosingSection => true,
         StudioState.Reviewing or StudioState.PreviewingSection => false,
         StudioState.Deciding => Mod.Battle.State is BattleState.Idle or BattleState.Finished,
-        _ => Picker.Open && !Arena.Online && Mod.Battle.State is BattleState.Idle or BattleState.Finished,
+        _ => Picker.Open && !Maps.Online && Mod.Battle.State is BattleState.Idle or BattleState.Finished,
     };
 
     private IReadOnlyList<PickerButton> PanelButtons()
@@ -77,7 +77,7 @@ public sealed partial class ModEntry
             new("next", "NEXT", Orange, () => StepChart(1)),
         };
 
-        if (!Arena.InScene(ArenaKind.Gym)) buttons.Add(new PickerButton("gym", "GYM", Orange, Mod.Battle.ReturnToGym));
+        if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new PickerButton("gym", "GYM", Orange, Mod.Battle.ReturnToGym));
 
         ChartEntry? chosen = Chosen();
         if (_settings.Editing.Value && Studio.CanEdit(chosen))

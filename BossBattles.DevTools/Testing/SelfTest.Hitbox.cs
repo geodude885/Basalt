@@ -32,7 +32,7 @@ internal static partial class SelfTest
         foreach (var recentProjectile in new[] { false, true })
         {
             Vector3 chest = mesh.bounds.center + (Vector3.up * 0.2f);
-            Vector3 towardYou = VectorHelpers.Flat(origin - chest);
+            Vector3 towardYou = (origin - chest).Flat();
             Vector3 from = chest + (towardYou * 4f);
             Vector3 along = (chest - from).normalized;
 

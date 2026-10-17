@@ -122,13 +122,13 @@ public static class TrackEdits
 
     private static double Round(double seconds) => Math.Round(seconds, 3);
 
-    private sealed class TrackDto
+    private class TrackDto
     {
         public string Actor { get; set; } = "";
         public List<TrackClipDto> Clips { get; set; } = [];
     }
 
-    private sealed class TrackClipDto
+    private class TrackClipDto
     {
         public double T { get; set; }
         public string Clip { get; set; } = "";

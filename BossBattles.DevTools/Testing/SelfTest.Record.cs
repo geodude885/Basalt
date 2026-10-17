@@ -5,7 +5,6 @@ using BossBattles.Battle;
 using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using MelonLoader.Utils;
 using UnityEngine;
@@ -58,7 +57,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
 
         // The Ring loaded: your player is a new one.
-        if (PlayerManager.instance?.localPlayer?.Controller is not { } you)
+        if (BattlePlayer.Controller is not { } you)
         {
             Finish(["no local player while recording"]);
             yield break;
@@ -173,7 +172,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + 60f;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < from + 0.2) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        if (PlayerManager.instance?.localPlayer?.Controller is { } you)
+        if (BattlePlayer.Controller is { } you)
         {
             Vector3 at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
             Logger.Info($"[SelfTest] section recording from lane x {at.x:0.00}, z {at.z:0.00}");
@@ -226,7 +225,7 @@ internal static partial class SelfTest
         _picker.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
-        if (_shots && Mod.Studio.SetupValues.Lane.Length > 0 && PlayerManager.instance?.localPlayer?.Controller is { } you)
+        if (_shots && Mod.Studio.SetupValues.Lane.Length > 0 && BattlePlayer.Controller is { } you)
         {
             var rig = ActorRig.From(you);
             Vector3 eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);
@@ -315,7 +314,7 @@ internal static partial class SelfTest
     {
         Vector3 World(float x, float y, float z)
         {
-            return StringHelpers.ToUnity(lane.ToWorld(new System.Numerics.Vector3(x, y, z)));
+            return lane.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();
         }
 
         _showCamera?.Invoke(World(2.2f, 2.2f, at.z - 3.5f), World(at.x, 1.1f, at.z));

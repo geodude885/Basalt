@@ -1,5 +1,4 @@
-using BossBattles.Arenas;
-using Il2CppRUMBLE.Managers;
+using BossBattles.Battle;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
@@ -22,10 +21,10 @@ internal static partial class SelfTest
     private static int LastCleared =>
         Lines.LastOrDefault(l => l.Line.StartsWith("[Battle.Cleared]", StringComparison.Ordinal)).Line is { } line && int.TryParse(line.Split(' ')[1], out var cleared) ? cleared : 0;
 
-    private static PlayerController? You => PlayerManager.instance?.localPlayer?.Controller;
+    private static PlayerController? You => BattlePlayer.Controller;
 
     private static Vector3? LanePoint(float x, float y, float z) =>
-        Mod.Battle.Lane is { } frame ? StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(x, y, z))) : null;
+        Mod.Battle.Lane is { } frame ? frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity() : null;
 
     /// <summary>Up behind you over the backstop, looking down the lane.</summary>
     private static void ShowOverview()
@@ -72,15 +71,15 @@ internal static partial class SelfTest
             var right = Vector3.Cross(Vector3.up, direction);
             var level = Enumerable.Range(-2, (int)length + 4)
                 .SelectMany(z => new[] { -(width / 2f) - 0.5f, 0f, (width / 2f) + 0.5f }.Select(x => start + (right * x) + (direction * z)))
-                .All(point => Arena.TryFloorHeight(point, out var floor) && Mathf.Abs(floor - start.y) < 0.08f);
+                .All(point => GameHelpers.HeightUnder(point) is { } floor && Mathf.Abs(floor - start.y) < 0.08f);
 
-            return level && LaneCheckHeights.All(height => !Physics.RaycastAll(start + (Vector3.up * height) - (direction * 2f), direction, length + 3f).Any(hit => Arena.IsGround(hit.collider)));
+            return level && LaneCheckHeights.All(height => !Physics.RaycastAll(start + (Vector3.up * height) - (direction * 2f), direction, length + 3f).Any(hit => hit.collider.ProbablyGround()));
         }
 
         return Enumerable.Range(-10, 21)
             .SelectMany(x => Enumerable.Range(-10, 21).Select(z => around + new Vector3(x * 4f, 0f, z * 4f)))
             .OrderBy(spot => (spot - around).sqrMagnitude)
-            .Select(spot => Arena.TryFloorHeight(spot, out var floor) ? new Vector3(spot.x, floor, spot.z) : (Vector3?)null)
+            .Select(spot => GameHelpers.HeightUnder(spot) is { } floor ? new Vector3(spot.x, floor, spot.z) : (Vector3?)null)
             .OfType<Vector3>()
             .SelectMany(start => directions.Select(direction => (Start: start, Direction: direction)))
             .Where(lane => FlatAndClear(lane.Start, lane.Direction))
@@ -91,7 +90,7 @@ internal static partial class SelfTest
     /// <summary>Tops your health up while a long test chart plays, so it runs to the end.</summary>
     private static void KeepYouAlive()
     {
-        if (!_keepYouAlive || PlayerManager.instance?.localPlayer is not { Controller: not null } you) return;
+        if (!_keepYouAlive || BattlePlayer.Player is not { Controller: not null } you) return;
 
         var hp = you.Data.HealthPoints;
         if (hp < PlayerHealth.MAX_PLAYER_HEALTH) you.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, hp, false);

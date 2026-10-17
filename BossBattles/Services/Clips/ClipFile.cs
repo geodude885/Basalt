@@ -98,20 +98,20 @@ public static class ClipFile
         return true;
     }
 
-    private sealed class ClipDto
+    private class ClipDto
     {
         public string? Name { get; set; }
         public List<MoveDto>? Moves { get; set; }
         public List<FrameDto>? Frames { get; set; }
     }
 
-    private sealed class MoveDto
+    private class MoveDto
     {
         public float T { get; set; }
         public string? Move { get; set; }
     }
 
-    private sealed class FrameDto
+    private class FrameDto
     {
         public float T { get; set; }
         public float[]? H { get; set; }

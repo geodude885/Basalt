@@ -2,7 +2,6 @@ using System.Collections;
 using BossBattles.Actors;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using MelonLoader.Utils;
 using UnityEngine;
@@ -20,7 +19,7 @@ internal static partial class SelfTest
 
     private static IEnumerator RunLookTest(List<string> problems)
     {
-        Player you = PlayerManager.instance.localPlayer;
+        Player you = BattlePlayer.Player!;
         var yours = you.Data.VisualData.ToPlayfabDataString();
         var plain = PlayerVisualData.Default.ToPlayfabDataString();
         List<string> stones = Shiftstones.EquippedBy(you.Controller);
@@ -135,8 +134,8 @@ internal static partial class SelfTest
         // Framed on the drawn body: an actor's head and controller transforms are not where it is drawn.
         SkinnedMeshRenderer? mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
         Vector3 chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
-        Logger.Info($"[SelfTest] look {shot}: framing the body at {StringHelpers.Vector(chest)}{(mesh == null ? " (no mesh found)" : "")}");
-        Vector3 towardYou = LaneOrigin is { } origin ? VectorHelpers.Flat(origin - chest) : Vector3.forward;
+        Logger.Info($"[SelfTest] look {shot}: framing the body at {chest.Describe()}{(mesh == null ? " (no mesh found)" : "")}");
+        Vector3 towardYou = LaneOrigin is { } origin ? (origin - chest).Flat() : Vector3.forward;
         _showCamera?.Invoke(chest + (towardYou * 1.8f) + (Vector3.up * 0.3f), chest);
         yield return new WaitForSeconds(0.3f);
 

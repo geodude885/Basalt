@@ -45,7 +45,7 @@ public static class AudioDecoder
         }
     }
 
-    private sealed class Mp3Source : IPcmSource
+    private class Mp3Source : IPcmSource
     {
         private readonly MpegFile _file;
 
@@ -66,7 +66,7 @@ public static class AudioDecoder
         public void Dispose() => _file.Dispose();
     }
 
-    private sealed class OggSource : IPcmSource
+    private class OggSource : IPcmSource
     {
         private readonly VorbisReader _reader;
 
@@ -88,7 +88,7 @@ public static class AudioDecoder
 }
 
 /// <summary>A WAV read a block at a time: PCM 8/16/24/32-bit or 32-bit float.</summary>
-internal sealed class WavSource : IPcmSource
+internal class WavSource : IPcmSource
 {
     private const ushort PcmFormat = 1;
     private const ushort FloatFormat = 3;

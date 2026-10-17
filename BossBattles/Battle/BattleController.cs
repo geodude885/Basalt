@@ -1,6 +1,6 @@
 using System.Collections;
 using BossBattles.Actors;
-using BossBattles.Arenas;
+using BossBattles.Arena;
 using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
@@ -32,7 +32,7 @@ public enum BattleMode
 /// executes each <see cref="ChartCommand"/> the <see cref="ChartRunner"/> hands back. You win by
 /// lasting to the end; your health reaching 0 loses.
 /// </summary>
-internal sealed class BattleController
+internal class BattleController
 {
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;
@@ -45,7 +45,7 @@ internal sealed class BattleController
     /// <summary>A long MP3 can take a while to decode; the countdown waits this long for it.</summary>
     private const float MusicWaitSeconds = 90f;
 
-    private readonly LaneVisuals _lane = new();
+    private readonly Arena.Arena _arena = new();
     private readonly Projectiles _projectiles = new();
     private readonly Board _board = new();
     private readonly List<Actor> _actors = [];
@@ -92,7 +92,7 @@ internal sealed class BattleController
 
     public bool Miming { get; private set; }
 
-    public bool StayInMap => State != BattleState.Idle && Arena.IsMatchMap(CurrentArena);
+    public bool StayInMap => State != BattleState.Idle && CurrentArena.IsMatchMap();
 
     public ChartSignals Signals { get; } = new();
 
@@ -119,7 +119,7 @@ internal sealed class BattleController
     private bool LaidOut => State is not (BattleState.Idle or BattleState.LoadingArena) && Chart != null;
 
     /// <summary>A world point in lane coordinates: x across, z along, in metres.</summary>
-    public Vector3 ToLane(Vector3 world) => StringHelpers.ToUnity(_frame.ToLocal(StringHelpers.ToNumerics(world)));
+    public Vector3 ToLane(Vector3 world) => _frame.ToLocal(world.ToNumerics()).ToUnity();
 
     public void Banner(string text, float seconds) => _board.Show(text, seconds);
 
@@ -149,7 +149,7 @@ internal sealed class BattleController
     {
         Miming = mode == BattleMode.Record && mime;
         ArenaKind arena = arenaOverride ?? chart.Arena.Map;
-        if (Arena.Online)
+        if (Maps.Online)
         {
             Logger.Info("[Battle.NotStarted] not in a park or match - charts play in the Gym");
             return;
@@ -198,8 +198,8 @@ internal sealed class BattleController
 
         // LoadingArena even when already there: actors are only placed while a battle is being set up.
         State = BattleState.LoadingArena;
-        if (Arena.InScene(arena)) Prepare();
-        else Arena.Load(arena);
+        if (arena.IsLoaded()) Prepare();
+        else arena.Load();
     }
 
     public void Stop(string reason)
@@ -213,7 +213,7 @@ internal sealed class BattleController
         foreach (Actor actor in _actors) actor.Despawn();
         _actors.Clear();
         _projectiles.Clear();
-        _lane.Destroy();
+        _arena.Destroy();
         _board.Hide();
         _music.Clear();
         _moves.Release();
@@ -225,7 +225,7 @@ internal sealed class BattleController
     public void ReturnToGym()
     {
         Stop("returning to the Gym");
-        Arena.LoadGym();
+        Maps.LoadGym();
     }
 
     public void OnSceneLoaded(string scene)
@@ -236,10 +236,10 @@ internal sealed class BattleController
         MoveEffects.Forget();
         _actors.Clear();
         _projectiles.Forget();
-        _lane.Forget();
+        _arena.Forget();
         _board.Forget();
 
-        if (State == BattleState.LoadingArena && string.Equals(scene, Arena.SceneFor(CurrentArena), StringComparison.Ordinal))
+        if (State == BattleState.LoadingArena && string.Equals(scene, CurrentArena.Scene(), StringComparison.Ordinal))
         {
             MelonCoroutines.Start(PrepareAfterSettling(_session));
             return;
@@ -322,7 +322,7 @@ internal sealed class BattleController
         try
         {
             var yours = ActorRig.From(BattlePlayer.Controller!);
-            Anchor? frame = _fixedFrame ?? Arena.Frame(CurrentArena, _arenaSpec, yours.Feet, yours.Facing);
+            Anchor? frame = _fixedFrame ?? _arenaSpec.CreateLaneAnchor(CurrentArena, yours.Feet, yours.Facing);
             if (frame == null)
             {
                 Stop("no lane could be laid out");
@@ -339,12 +339,12 @@ internal sealed class BattleController
                 Vector3 spot = _recordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
                 _player.Place(spot, Quaternion.Euler(0f, _frame.ActorYaw(performer.At.Facing), 0f));
             }
-            else if (Arena.IsMatchMap(CurrentArena) || _arenaSpec.HasSpot || _fixedFrame != null)
+            else if (CurrentArena.IsMatchMap() || _arenaSpec.HasSpot || _fixedFrame != null)
             {
-                _player.Place(StringHelpers.ToUnity(_frame.Position), Quaternion.LookRotation(StringHelpers.ToUnity(_frame.Forward)));
+                _player.Place(_frame.Position.ToUnity(), Quaternion.LookRotation(_frame.Forward.ToUnity()));
             }
 
-            _lane.Build(_frame, Chart.Lane, ShowBackstop, walls: true, zone: Mode == BattleMode.Record ? null : Chart.Zone,
+            _arena.Build(_frame, Chart.Lane, ShowBackstop, walls: true, zone: Mode == BattleMode.Record ? null : Chart.Zone,
                 colours: Chart.ColoursIn(Chart.Phases.LastOrDefault(p => p.Start <= StartAt)), panes: Chart.EverShowsWalls);
             if (Mode == BattleMode.Record)
             {
@@ -353,7 +353,7 @@ internal sealed class BattleController
             }
             else
             {
-                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), StringHelpers.ToUnity(_frame.Position));
+                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), _frame.Position.ToUnity());
                 _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
@@ -388,8 +388,8 @@ internal sealed class BattleController
 
     private void KeepLane()
     {
-        _lane.Tick();
-        _lane.LetStructuresThrough();
+        _arena.Visuals.Tick();
+        _arena.Boundary.LetStructuresThrough();
         _player.KeepInLane(_frame, Chart!, zoned: Mode != BattleMode.Record);
     }
 
@@ -400,7 +400,7 @@ internal sealed class BattleController
 
         _countdownEnds = Time.time + CountdownSeconds;
         _musicDeadline = _countdownEnds + MusicWaitSeconds;
-        _lane.LetActorsThrough(_actors.SelectMany(a => a.Colliders));
+        _arena.Boundary.LetActorsThrough(_actors.SelectMany(a => a.Colliders));
         _moves.Hold();
         Signals.Prepare(Chart!);
         State = BattleState.Countdown;
@@ -449,7 +449,7 @@ internal sealed class BattleController
                     if (enter.Time > 0 && ShowPhaseBanners) _board.Show($"<b>{enter.Phase.Name}</b>{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
                     Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
                     if (enter.Time > 0) Signals.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
-                    _lane.Recolour(Chart!.ColoursIn(enter.Phase), enter.Time > 0 && enter.Time > StartAt ? PhaseColourFadeSeconds : 0f);
+                    _arena.Visuals.Recolour(Chart!.ColoursIn(enter.Phase), enter.Time > 0 && enter.Time > StartAt ? PhaseColourFadeSeconds : 0f);
                     break;
 
                 case PlaceActor place:
@@ -496,9 +496,11 @@ internal sealed class BattleController
     private Vector3 AimPoint(Aim aim)
     {
         // Miming, you stand at the boss's end: "the player" is the lane's near end.
-        if (aim.AtPlayer && Miming) return World(0f, 1.3f, 0f);
-        if (aim.AtPlayer && BattlePlayer.Controller is { } you) return ActorRig.From(you).Head.position + (Vector3.down * 0.25f);
-        return World(aim.X, aim.Y, 0f);
+        return aim.AtPlayer && Miming
+            ? World(0f, 1.3f, 0f)
+            : aim.AtPlayer && BattlePlayer.Controller is { } you
+            ? ActorRig.From(you).Head.position + (Vector3.down * 0.25f)
+            : World(aim.X, aim.Y, 0f);
     }
 
     private void Finish(bool survived, double seconds)
@@ -548,5 +550,5 @@ internal sealed class BattleController
         return actor is { Exists: true } ? actor : null;
     }
 
-    private Vector3 World(float x, float y, float z) => StringHelpers.ToUnity(_frame.ToWorld(new System.Numerics.Vector3(x, y, z)));
+    private Vector3 World(float x, float y, float z) => _frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();
 }

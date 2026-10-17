@@ -4,7 +4,7 @@ namespace BossBattles.Services.Charts;
 /// Plays a chart against a clock: <see cref="Advance"/> returns every command due since the last
 /// call. At the same moment, phases come first, then placements, then the rest in chart order.
 /// </summary>
-public sealed class ChartRunner
+public class ChartRunner
 {
     private const int RankPhase = 0;
     private const int RankPlace = 1;

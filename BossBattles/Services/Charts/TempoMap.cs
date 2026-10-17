@@ -4,7 +4,7 @@ namespace BossBattles.Services.Charts;
 public readonly record struct TempoChange(double Beat, double Bpm);
 
 /// <summary>A chart's tempo, one bpm or a list of changes, turning beats into seconds and back.</summary>
-public sealed class TempoMap
+public class TempoMap
 {
     private readonly TempoChange[] _changes;
     private readonly double[] _startSeconds;

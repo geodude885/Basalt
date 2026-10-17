@@ -17,7 +17,7 @@ using MelonLoader.Utils;
 namespace BossBattles;
 
 /// <summary>The mod's entry point: settings and wiring.</summary>
-public sealed partial class ModEntry : MelonMod
+public partial class ModEntry : MelonMod
 {
     private readonly Settings _settings = new();
     private ChartLibrary _library = null!;

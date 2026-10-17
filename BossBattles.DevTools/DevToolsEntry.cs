@@ -11,7 +11,7 @@ using UnityEngine;
 namespace BossBattles.DevTools;
 
 /// <summary>Developer tools for BossBattles: the self-tests, a keyboard-driven test actor, and flatscreen play.</summary>
-public sealed class DevToolsEntry : MelonMod
+public class DevToolsEntry : MelonMod
 {
     private const string Keys =
         "Ctrl+F desktop camera | Ctrl+T test actor | Ctrl+9 test actor mirror/bot | Ctrl+P plant | " +

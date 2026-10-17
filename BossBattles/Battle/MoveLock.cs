@@ -1,5 +1,4 @@
 using BossBattles.Services.Charts;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
@@ -9,7 +8,7 @@ using Stack = Il2CppRUMBLE.MoveSystem.Stack;
 namespace BossBattles.Battle;
 
 /// <summary>Your moves in a battle: off through the countdown, and the spawn moves a chart's rule clips away.</summary>
-internal sealed class MoveLock
+internal class MoveLock
 {
     private static readonly string[] SpawnMoves = { "Disc", "SpawnBall", "SpawnCube", "SpawnPillar", "SpawnWall" };
 
@@ -20,7 +19,7 @@ internal sealed class MoveLock
     /// <summary>Your gesture recognition off, the same switch an actor's clip uses.</summary>
     public void Hold()
     {
-        PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+        PlayerController? you = BattlePlayer.Controller;
         if (you == null || _heldFor != null) return;
 
         try

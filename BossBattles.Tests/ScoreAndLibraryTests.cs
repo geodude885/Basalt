@@ -4,7 +4,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class ScoreKeeperTests
+public class ScoreKeeperTests
 {
     [Fact]
     public void ACleanSurvivalIsAnS()

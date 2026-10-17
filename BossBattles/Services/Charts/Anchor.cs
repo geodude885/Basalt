@@ -8,15 +8,13 @@ namespace BossBattles.Services.Charts;
 /// </summary>
 public readonly record struct Anchor(Vector3 Position, float Yaw)
 {
-    private float Radians => Yaw * MathF.PI / 180f;
+    public Vector3 Forward => Flat(Yaw);
 
-    public Vector3 Forward => new(MathF.Sin(Radians), 0f, MathF.Cos(Radians));
-
-    public Vector3 Right => new(MathF.Cos(Radians), 0f, -MathF.Sin(Radians));
+    public Vector3 Right => Flat(Yaw + 90f);
 
     /// <summary>An anchor facing <paramref name="direction"/>; its tilt is ignored, and no direction faces +Z.</summary>
     public static Anchor Facing(Vector3 position, Vector3 direction) =>
-        new(position, (direction.X * direction.X) + (direction.Z * direction.Z) < 1e-6f ? 0f : Normalise(MathF.Atan2(direction.X, direction.Z) * 180f / MathF.PI));
+        new(position, Degrees.Bearing(direction.X, direction.Z));
 
     public Vector3 ToWorld(Vector3 local) => Position + (Right * local.X) + (Vector3.UnitY * local.Y) + (Forward * local.Z);
 
@@ -27,16 +25,16 @@ public readonly record struct Anchor(Vector3 Position, float Yaw)
     }
 
     /// <summary>A world yaw as degrees from facing the way the anchor does.</summary>
-    public float ToLocalYaw(float worldYaw) => Normalise(worldYaw - Yaw);
+    public float ToLocalYaw(float worldYaw) => Degrees.Wrap(worldYaw - Yaw);
 
-    public float ToWorldYaw(float localYaw) => Normalise(localYaw + Yaw);
+    public float ToWorldYaw(float localYaw) => Degrees.Wrap(localYaw + Yaw);
 
     /// <summary>World yaw for an actor spot's facing, with the anchor at your end of a lane: 0 looks back at you, positive to its right.</summary>
     public float ActorYaw(float facing) => ToWorldYaw(180f + facing);
 
-    private static float Normalise(float degrees)
+    private static Vector3 Flat(float bearing)
     {
-        degrees %= 360f;
-        return degrees < 0f ? degrees + 360f : degrees;
+        (var x, var z) = Degrees.Direction(bearing);
+        return new Vector3(x, 0f, z);
     }
 }

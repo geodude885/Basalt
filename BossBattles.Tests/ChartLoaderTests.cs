@@ -5,7 +5,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class ChartLoaderTests
+public class ChartLoaderTests
 {
     private const string Sample = /*lang=json*/ """
         {

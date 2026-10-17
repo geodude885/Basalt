@@ -1,6 +1,5 @@
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
@@ -8,7 +7,7 @@ using UnityEngine;
 namespace BossBattles.Presentation;
 
 /// <summary>A chart's RumbleReShaded looks, and the battle's state and events for packs to read.</summary>
-internal sealed class ChartSignals
+internal class ChartSignals
 {
     private readonly ReShade _reshade = new();
     private long _lastBeat = -1;
@@ -41,7 +40,7 @@ internal sealed class ChartSignals
 
         ReShade.SetGlobal("running", 1f);
         ReShade.SetGlobal("time", (float)time);
-        Player? you = PlayerManager.instance?.localPlayer;
+        Player? you = BattlePlayer.Player;
         if (you?.Data != null) ReShade.SetGlobal("health", you.Data.HealthPoints / (float)PlayerHealth.MAX_PLAYER_HEALTH);
 
         if (chart.Tempo is not { } tempo) return;

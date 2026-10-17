@@ -6,7 +6,7 @@ namespace BossBattles.Services.Charts;
 /// A loaded, validated chart, built by <see cref="ChartLoader"/>. Lane coordinates: x across from the
 /// centre line, y up, z along from your end (0) to <see cref="Lane.Length"/>; times are seconds.
 /// </summary>
-public sealed record Chart(
+public record Chart(
     string Name,
     Lane Lane,
     IReadOnlyList<ActorSpec> Actors,
@@ -70,7 +70,7 @@ public enum SpawnRule
     None,
 }
 
-public sealed record Rules(SpawnRule Spawn)
+public record Rules(SpawnRule Spawn)
 {
     public const double DefaultCleanupSeconds = 3;
 
@@ -81,20 +81,20 @@ public sealed record Rules(SpawnRule Spawn)
 }
 
 /// <summary>An actor's recorded performance: clips, each playing until the next starts or its own end.</summary>
-public sealed record Track(string ActorId, IReadOnlyList<TrackClip> Clips);
+public record Track(string ActorId, IReadOnlyList<TrackClip> Clips);
 
 /// <summary>
 /// A clip on a track, played from chart time <see cref="Time"/>: the clip from <see cref="From"/> to
 /// <see cref="To"/> or its end. Clips keep chart time, so a whole clip is <c>{ t: 0, from: 0 }</c>.
 /// </summary>
-public sealed record TrackClip(double Time, string Clip, double From = 0, double? To = null)
+public record TrackClip(double Time, string Clip, double From = 0, double? To = null)
 {
     /// <summary>Mimed: the actor moves as recorded but runs none of its moves.</summary>
     public bool Mime { get; init; }
 }
 
 /// <summary>A chart's description for the picker; every part optional.</summary>
-public sealed record ChartInfo(string? Author, string? Description, string? Difficulty)
+public record ChartInfo(string? Author, string? Description, string? Difficulty)
 {
     public static ChartInfo None { get; } = new(null, null, null);
 }
@@ -119,7 +119,7 @@ public enum ArenaKind
 /// centre (Gym: world origin), the lane running along compass <see cref="Facing"/> (default north). Without a
 /// spot the lane starts where you stand, the way you face.
 /// </summary>
-public sealed record ArenaSpec(ArenaKind Map, float? X = null, float? Z = null, float? Facing = null)
+public record ArenaSpec(ArenaKind Map, float? X = null, float? Z = null, float? Facing = null)
 {
     public static ArenaSpec Here { get; } = new(ArenaKind.Here);
 
@@ -127,12 +127,12 @@ public sealed record ArenaSpec(ArenaKind Map, float? X = null, float? Z = null, 
 }
 
 /// <summary>A song beside the chart; <see cref="Start"/> is how far into it chart time 0 is.</summary>
-public sealed record MusicSpec(string File, double Start = 0, float Volume = 1f);
+public record MusicSpec(string File, double Start = 0, float Volume = 1f);
 
 public readonly record struct Lane(float Length, float Width);
 
 /// <summary>An actor in the lane. <see cref="Look"/> is "you", "default", "defaultFemale", or a look string as the game stores it.</summary>
-public sealed record ActorSpec(string Id, string Name, Spot At, string Look)
+public record ActorSpec(string Id, string Name, Spot At, string Look)
 {
     /// <summary>Up to two stones by name; null for the player's own.</summary>
     public IReadOnlyList<string>? Shiftstones { get; init; }
@@ -148,7 +148,7 @@ public readonly record struct BodySize(float Height, float ArmSpan);
 public readonly record struct Spot(float X, float Z, float Facing = 0f);
 
 /// <summary>A timed section of the battle, scoring <see cref="ScoreMultiplier"/>; it may move one actor.</summary>
-public sealed record Phase(string Name, double Start, double ScoreMultiplier, string? ActorId, Spot? At)
+public record Phase(string Name, double Start, double ScoreMultiplier, string? ActorId, Spot? At)
 {
     /// <summary>The lane's colours from this phase on, over the chart's own; null keeps them.</summary>
     public LaneColours? Colours { get; init; }
@@ -161,7 +161,7 @@ public abstract record ChartEvent(double Time, int Order);
 /// A structure that appears at <see cref="From"/> <see cref="Telegraph"/> seconds early, then flies
 /// at <see cref="Speed"/> towards <see cref="To"/>; <see cref="By"/> credits it to an actor.
 /// </summary>
-public sealed record ProjectileEvent(
+public record ProjectileEvent(
     double Time,
     int Order,
     string Structure,
@@ -188,9 +188,9 @@ public sealed record ProjectileEvent(
 }
 
 /// <summary>An actor performs one of its moves by stack name, e.g. "Straight".</summary>
-public sealed record MoveEvent(double Time, int Order, string ActorId, string Stack) : ChartEvent(Time, Order);
+public record MoveEvent(double Time, int Order, string ActorId, string Stack) : ChartEvent(Time, Order);
 
-public sealed record PlaceEvent(double Time, int Order, string ActorId, Spot At) : ChartEvent(Time, Order);
+public record PlaceEvent(double Time, int Order, string ActorId, Spot At) : ChartEvent(Time, Order);
 
 /// <summary>A point on your end of the lane, or wherever you are.</summary>
 public readonly record struct Aim(bool AtPlayer, float X, float Y)

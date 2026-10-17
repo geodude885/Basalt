@@ -100,15 +100,15 @@ public static class ChartSetup
 
     private static float Round(float value) => MathF.Round(value, 2);
 
-    private sealed record LaneDto(float Length, float Width);
+    private record LaneDto(float Length, float Width);
 
-    private sealed record ArenaDto(string Map, PointDto? At, float? Facing);
+    private record ArenaDto(string Map, PointDto? At, float? Facing);
 
-    private sealed record PointDto(float X, float Z, float? Facing);
+    private record PointDto(float X, float Z, float? Facing);
 
-    private sealed record ActorDto(string Id, string Name, PointDto At, string Look, IReadOnlyList<string>? Shiftstones, MeasurementDto? Measurement);
+    private record ActorDto(string Id, string Name, PointDto At, string Look, IReadOnlyList<string>? Shiftstones, MeasurementDto? Measurement);
 
-    private sealed record MeasurementDto(float Height, float ArmSpan);
+    private record MeasurementDto(float Height, float ArmSpan);
 
     /// <summary>A number as a chart writes it.</summary>
     public static string Format(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);

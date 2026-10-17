@@ -2,18 +2,17 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
-using BossBattles.Arenas;
+using BossBattles.Arena;
 using BossBattles.Authoring;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
 namespace BossBattles;
 
 /// <summary>Choosing, starting, making, recording into and sharing charts.</summary>
-public sealed partial class ModEntry
+public partial class ModEntry
 {
     private long _chartsFingerprint;
     private string? _chosenFile;
@@ -140,7 +139,7 @@ public sealed partial class ModEntry
             var name = Enumerable.Range(1, int.MaxValue).Select(n => n == 1 ? "My Chart" : $"My Chart {n}")
                 .First(candidate => !_library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
-            Player? you = PlayerManager.instance?.localPlayer;
+            Player? you = BattlePlayer.Player;
             var look = you?.Data?.VisualData?.ToPlayfabDataString();
             List<string>? stones = you?.Controller == null ? null : Shiftstones.EquippedBy(you.Controller);
             var username = you?.Data?.GeneralData?.PublicUsername;
@@ -203,12 +202,12 @@ public sealed partial class ModEntry
     /// <summary>Prints your spot as a chart's "arena" line.</summary>
     private static void WhereAmI()
     {
-        PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+        PlayerController? you = BattlePlayer.Controller;
         if (you == null) return;
 
-        ArenaKind map = Arena.CurrentMap();
+        ArenaKind map = Maps.Current;
         var rig = ActorRig.From(you);
-        Vector3 at = rig.Feet - (Arena.MapOrigin(map) ?? Vector3.zero);
+        Vector3 at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
 
         static string F(float v)
         {
@@ -217,6 +216,6 @@ public sealed partial class ModEntry
 
         Logger.Info(map == ArenaKind.Here
             ? $"[Where] {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} is not a chart map (gym, ring, pit)"
-            : $"[Where] \"arena\": {{ \"map\": \"{map.ToString().ToLowerInvariant()}\", \"at\": {{ \"x\": {F(at.x)}, \"z\": {F(at.z)} }}, \"facing\": {VectorHelpers.Bearing(rig.Facing).ToString("0", CultureInfo.InvariantCulture)} }}");
+            : $"[Where] \"arena\": {{ \"map\": \"{map.ToString().ToLowerInvariant()}\", \"at\": {{ \"x\": {F(at.x)}, \"z\": {F(at.z)} }}, \"facing\": {rig.Facing.Bearing().ToString("0", CultureInfo.InvariantCulture)} }}");
     }
 }

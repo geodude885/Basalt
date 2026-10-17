@@ -7,7 +7,7 @@ namespace BossBattles.DevTools.Flatscreen;
 /// scroll zooms, middle drag pans. A camera of its own, rendering only to the desktop window, so it
 /// never fights the player rig.
 /// </summary>
-public sealed class DesktopCamera
+public class DesktopCamera
 {
     private const float OrbitDegreesPerPixel = 0.25f;
     private const float ZoomPerScrollStep = 0.15f;

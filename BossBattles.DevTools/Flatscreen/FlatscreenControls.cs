@@ -1,6 +1,6 @@
+using BossBattles.Battle;
 using BossBattles.DevTools.Testing;
 using HarmonyLib;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
@@ -92,7 +92,7 @@ public static class FlatscreenControls
 
                 if (!Enabled || !IsFlatscreen) return true;
 
-                PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+                PlayerController? you = BattlePlayer.Controller;
                 if (you == null || controller.Pointer != you.Pointer) return true;
 
                 MovementInput.Apply(__instance, _walk, _turn);

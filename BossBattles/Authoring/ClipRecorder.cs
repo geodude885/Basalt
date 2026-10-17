@@ -15,7 +15,7 @@ namespace BossBattles.Authoring;
 /// track's business. Moves come from the player's stack processor's <c>OnStackExecutionStart</c>; the converted
 /// delegate is kept so leaving removes the same object.
 /// </summary>
-internal sealed class ClipRecorder
+internal class ClipRecorder
 {
     private const float SampleRate = 30f;
 
@@ -86,16 +86,17 @@ internal sealed class ClipRecorder
 
         var rig = ActorRig.From(_subject);
         PlayerHandPresence hands = _subject.PlayerHandPresence;
-        Vector3 spot = _anchor.ToLocal(StringHelpers.ToNumerics(rig.Feet));
+        Vector3 spot = _anchor.ToLocal(rig.Feet.ToNumerics());
+
         _frames.Add(new ClipFrame(
             (float)_clipTime,
-            ActorRig.LocalPose(rig.Head),
-            ActorRig.LocalPose(rig.LeftHand),
-            ActorRig.LocalPose(rig.RightHand),
+            ClipPose.From(rig.Head),
+            ClipPose.From(rig.LeftHand),
+            ClipPose.From(rig.RightHand),
             new Vector2(spot.X, spot.Z),
             _anchor.ToLocalYaw(rig.Vr.eulerAngles.y),
-            ActorRig.Fingers(hands.GetHandPresenceInputForHand(InputManager.Hand.Left, false)),
-            ActorRig.Fingers(hands.GetHandPresenceInputForHand(InputManager.Hand.Right, false))));
+            ClipFingers.From(hands.GetHandPresenceInputForHand(InputManager.Hand.Left, false)),
+            ClipFingers.From(hands.GetHandPresenceInputForHand(InputManager.Hand.Right, false))));
     }
 
     /// <summary>Abandons a recording without a clip.</summary>

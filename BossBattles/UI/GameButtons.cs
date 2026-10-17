@@ -64,7 +64,7 @@ internal static class GameButtons
             _template.name = "BossBattles_ButtonTemplate";
             _template.SetActive(false);
             UnityEngine.Object.DontDestroyOnLoad(_template);
-            Logger.Debug($"[GameButtons.Template] copied {PathOf(next.transform.parent)} (scale {StringHelpers.Vector(next.transform.parent.lossyScale)})");
+            Logger.Debug($"[GameButtons.Template] copied {PathOf(next.transform.parent)} (scale {next.transform.parent.lossyScale.Describe()})");
             return true;
         }
         catch (Exception e)

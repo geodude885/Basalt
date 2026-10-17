@@ -1,10 +1,6 @@
-using BossBattles.Actors;
-using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
-using Il2CppRUMBLE.Managers;
-using Il2CppRUMBLE.Players;
 using UnityEngine;
 
 namespace BossBattles.Authoring;
@@ -39,7 +35,7 @@ internal enum StudioState
 /// <c>tracks</c>; a section can be recorded again and spliced in. Each save keeps the previous chart
 /// in <c>chart.json.bak</c> for <see cref="Undo"/>, and only the edited values of its text change.
 /// </summary>
-internal sealed partial class Studio
+internal partial class Studio
 {
     /// <summary>A recording stops by itself after this long.</summary>
     public const double MaxSeconds = 600;
@@ -52,7 +48,7 @@ internal sealed partial class Studio
     private readonly ClipRecorder _recorder = new();
     /// <summary>Chart time the recording began: the clip's time 0.</summary>
     private double _recordedAt;
-    private readonly LaneVisuals _preview = new();
+    private readonly Arena.Arena _preview = new();
     private readonly List<GameObject> _markers = [];
     private ArenaKind? _arenaOverride;
     private Anchor? _lane;
@@ -164,7 +160,7 @@ internal sealed partial class Studio
             : TrackEdits.KeepWhole(chartText, Chart, _actorId, clip, _recordedAt, Mime);
 
         // The actor takes the recorder's body size, so the poses fit it on anyone's machine.
-        if (PlayerManager.instance?.localPlayer?.Data?.PlayerMeasurement is { Length: > 0f } yours)
+        if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } yours)
         {
             var size = new BodySize(yours.Length, yours.ArmSpan);
             kept = ChartSetup.WriteActors(kept, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
@@ -320,7 +316,7 @@ internal sealed partial class Studio
 
         if (!_recorder.Recording)
         {
-            if (PlayerManager.instance?.localPlayer?.Controller is not { } you || Mod.Battle.Lane is not { } lane) return;
+            if (BattlePlayer.Controller is not { } you || Mod.Battle.Lane is not { } lane) return;
             _lane = lane;
             _recorder.Start(you, lane);
             _recordedAt = now;
@@ -380,8 +376,6 @@ internal sealed partial class Studio
         ? Math.Round(tempo.Seconds(Math.Round(tempo.Beat(seconds))), 3)
         : Math.Round(Math.Round(seconds / 0.5) * 0.5, 3);
 
-    private static ActorRig? You() =>
-        PlayerManager.instance?.localPlayer?.Controller is PlayerController you ? ActorRig.From(you) : null;
 
     private string ClipsFolder() => Path.Combine(Entry!.AssetFolder, ChartPackage.ClipsFolder);
 }

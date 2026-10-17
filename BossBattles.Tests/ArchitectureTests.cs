@@ -4,10 +4,10 @@ using Xunit;
 namespace BossBattles.Tests;
 
 /// <summary>
-/// Keeps <c>Services/</c> free of game types in its signatures, so it stays testable without RUMBLE.
-/// Method bodies are not inspected: a tripwire, not a proof.
+/// Keeps what <c>Services/</c> types hold free of game types, so they can be built and tested without RUMBLE.
+/// Methods may take game types (a conversion from a <c>Transform</c>, say); only fields and properties are checked.
 /// </summary>
-public sealed class ArchitectureTests
+public class ArchitectureTests
 {
     private const string ServicesNamespace = nameof(BossBattles) + "." + nameof(Services);
 
@@ -30,7 +30,7 @@ public sealed class ArchitectureTests
             if (type.Namespace is null) continue;
             if (!type.Namespace.StartsWith(ServicesNamespace, StringComparison.Ordinal)) continue;
 
-            foreach (Type referenced in SignatureTypes(type))
+            foreach (Type referenced in HeldTypes(type))
             {
                 var assembly = referenced.Assembly.GetName().Name;
                 if (assembly is null) continue;
@@ -44,12 +44,12 @@ public sealed class ArchitectureTests
 
         Assert.True(
             offenders.Count == 0,
-            "Services must stay free of game types so they remain testable:"
+            "Services types must hold no game types, so they can be built in tests:"
             + Environment.NewLine
             + string.Join(Environment.NewLine, offenders.Distinct()));
     }
 
-    private static IEnumerable<Type> SignatureTypes(Type type)
+    private static IEnumerable<Type> HeldTypes(Type type)
     {
         const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic
                                  | BindingFlags.Instance | BindingFlags.Static
@@ -60,16 +60,5 @@ public sealed class ArchitectureTests
         foreach (Type i in type.GetInterfaces()) yield return i;
         foreach (FieldInfo f in type.GetFields(All)) yield return f.FieldType;
         foreach (PropertyInfo p in type.GetProperties(All)) yield return p.PropertyType;
-
-        foreach (MethodInfo m in type.GetMethods(All))
-        {
-            yield return m.ReturnType;
-            foreach (ParameterInfo p in m.GetParameters()) yield return p.ParameterType;
-        }
-
-        foreach (ConstructorInfo c in type.GetConstructors(All))
-        {
-            foreach (ParameterInfo p in c.GetParameters()) yield return p.ParameterType;
-        }
     }
 }

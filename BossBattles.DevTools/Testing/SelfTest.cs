@@ -1,13 +1,12 @@
 using System.Collections;
 using System.Text.RegularExpressions;
 using BossBattles.Actors;
-using BossBattles.Arenas;
+using BossBattles.Arena;
 using BossBattles.Battle;
 using BossBattles.DevTools.Flatscreen;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Scoring;
 using BossBattles.UI;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using MelonLoader;
 using MelonLoader.Utils;
@@ -76,7 +75,7 @@ internal static partial class SelfTest
 
     public static void OnSceneLoaded(string scene)
     {
-        if (!Enabled || _started || !string.Equals(scene, Arena.GymScene, StringComparison.Ordinal)) return;
+        if (!Enabled || _started || !string.Equals(scene, Maps.GymScene, StringComparison.Ordinal)) return;
 
         _started = true;
         MelonCoroutines.Start(Run());
@@ -94,9 +93,9 @@ internal static partial class SelfTest
         // The Gym scene loads well before your player exists (a fixed wait was too short in the
         // first run); wait for the player, then let the scene settle.
         var playerDeadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
-        while (PlayerManager.instance?.localPlayer?.Controller == null && Time.realtimeSinceStartup < playerDeadline) yield return null;
+        while (BattlePlayer.Controller == null && Time.realtimeSinceStartup < playerDeadline) yield return null;
 
-        if (PlayerManager.instance?.localPlayer?.Controller == null)
+        if (BattlePlayer.Controller == null)
         {
             Finish(new[] { $"no local player after {PlayerTimeoutSeconds}s in the Gym - was the game launched through Steam?" });
             yield break;
@@ -105,7 +104,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(GymSettleSeconds);
 
         // What a chart made in game stores as its boss's look.
-        var look = PlayerManager.instance.localPlayer.Data.VisualData.ToPlayfabDataString();
+        var look = BattlePlayer.Player!.Data.VisualData.ToPlayfabDataString();
         Logger.Info($"[SelfTest] your look string: {look.Length} chars, \"{look[..Math.Min(look.Length, 120)]}\"");
 
         if (_measureTest)
@@ -171,12 +170,12 @@ internal static partial class SelfTest
         if (_arena == ArenaKind.Here)
         {
             // Somewhere flat and open: you stand at the lane's start, so you are moved there first.
-            PlayerController you = PlayerManager.instance.localPlayer.Controller;
+            PlayerController you = BattlePlayer.Controller;
             var yours = ActorRig.From(you);
             if (FlatLane(yours.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
                 you.PlayerMovement.Reposition(lane.Start + (Vector3.up * (yours.Head.position.y - yours.Vr.position.y)), Quaternion.LookRotation(lane.Direction));
-                Logger.Info($"[SelfTest] laying the lane at {StringHelpers.Vector(lane.Start)} towards {StringHelpers.Vector(lane.Direction)}");
+                Logger.Info($"[SelfTest] laying the lane at {lane.Start.Describe()} towards {lane.Direction.Describe()}");
                 yield return new WaitForSeconds(0.5f);
             }
             else
@@ -187,7 +186,7 @@ internal static partial class SelfTest
 
         Mod.Battle.Finished += OnFinished;
         // Something to clear: a battle starts on a clear floor.
-        Perform(PlayerManager.instance.localPlayer.Controller, "SpawnCube");
+        Perform(BattlePlayer.Controller, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
         Mod.Battle.Start(WithLook(chart), null, assets, pendingClip: SyntheticClips.Sway(SelfTestChart.Clip, 1.5f));
@@ -304,11 +303,11 @@ internal static partial class SelfTest
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
-        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || PlayerManager.instance?.localPlayer?.Controller is not { } you) yield break;
+        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Controller is not { } you) yield break;
 
         Vector3 feet = ActorRig.From(you).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
-        Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {StringHelpers.Vector(origin)}");
+        Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
 
         foreach (Actor actor in Mod.Battle.Actors.Where(a => a.Exists))
@@ -344,7 +343,7 @@ internal static partial class SelfTest
         {
             FlatscreenControls.ScriptedWalk = stick;
             yield return new WaitForSeconds(1f);
-            if (PlayerManager.instance?.localPlayer?.Controller is { } dasher)
+            if (BattlePlayer.Controller is { } dasher)
             {
                 Perform(dasher, "RockSlide");
                 yield return new WaitForSeconds(0.7f);
@@ -355,7 +354,7 @@ internal static partial class SelfTest
             FlatscreenControls.ScriptedWalk = Vector2.zero;
             yield return new WaitForSeconds(0.3f);
 
-            if (PlayerManager.instance?.localPlayer?.Controller is not { } you) break;
+            if (BattlePlayer.Controller is not { } you) break;
             Vector3 at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
             Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");

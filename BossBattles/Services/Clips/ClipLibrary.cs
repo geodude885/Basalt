@@ -1,7 +1,7 @@
 namespace BossBattles.Services.Clips;
 
 /// <summary>The clips in a folder, by the clip's name or its file name.</summary>
-public sealed class ClipLibrary
+public class ClipLibrary
 {
     private Dictionary<string, Clip> _clips = new(StringComparer.OrdinalIgnoreCase);
     private List<string> _errors = [];

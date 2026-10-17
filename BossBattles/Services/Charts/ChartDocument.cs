@@ -114,7 +114,7 @@ public static class ChartDocument
     private static string Reindent(string json, string indent) => string.Join("\n" + indent, json.Replace("\r\n", "\n").Split('\n'));
 
     /// <summary>Just enough of a JSON-with-comments reader to find where things start and end.</summary>
-    private sealed class Scanner
+    private class Scanner
     {
         private readonly string _text;
 

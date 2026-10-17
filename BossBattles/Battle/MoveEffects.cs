@@ -28,7 +28,7 @@ internal static class MoveEffects
     private static HashSet<string> _grounded = new(StringComparer.OrdinalIgnoreCase);
     private static Effects? _punch;
 
-    private sealed record Effects(string Move, List<AudioCall> Sounds, List<string> Visuals);
+    private record Effects(string Move, List<AudioCall> Sounds, List<string> Visuals);
 
     /// <summary>The spawn sound and effect for a structure, by pool name.</summary>
     public static void Spawn(string structure, Vector3 floor, Quaternion facing)
@@ -87,7 +87,7 @@ internal static class MoveEffects
     {
         if (_spawns != null) return true;
 
-        PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+        PlayerController? you = BattlePlayer.Controller;
         if (you == null) return false;
 
         try

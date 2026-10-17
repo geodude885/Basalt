@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 namespace BossBattles.Services.Charts;
 
 /// <summary>What packing a chart made, and what it could not include.</summary>
-public sealed record PackResult(string Path, IReadOnlyList<string> Included, IReadOnlyList<string> Missing);
+public record PackResult(string Path, IReadOnlyList<string> Included, IReadOnlyList<string> Missing);
 
 /// <summary>
 /// The sharing format: a <c>.bbchart</c> is a zip of a chart folder, unpacked into a cache keyed by

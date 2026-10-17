@@ -17,7 +17,7 @@ public enum ChartSource
 /// <param name="Result">The chart, or what is wrong with it.</param>
 /// <param name="Source">How it is stored.</param>
 /// <param name="Folder">Where its songs and clips are; for a package, where it was unpacked.</param>
-public sealed record ChartEntry(string File, ChartLoadResult Result, ChartSource Source = ChartSource.File, string? Folder = null)
+public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source = ChartSource.File, string? Folder = null)
 {
     /// <summary>The chart's name, or its file or folder name when it does not load.</summary>
     public string Name => Result.Chart?.Name ?? Stem;
@@ -37,7 +37,7 @@ public sealed record ChartEntry(string File, ChartLoadResult Result, ChartSource
 /// The charts in a folder: loose <c>*.json</c>, chart folders and <c>*.bbchart</c> packages. An
 /// empty folder gets the starter charts, and starters still exactly as written are kept up to date.
 /// </summary>
-public sealed class ChartLibrary
+public class ChartLibrary
 {
     public const string FolderChartFile = "chart.json";
     private List<ChartEntry> _entries = [];

@@ -4,10 +4,10 @@ namespace BossBattles.Services.Charts;
 /// A RumbleReShaded pack turned on at <see cref="Time"/> with the values in <see cref="Set"/>,
 /// fading over <see cref="Fade"/> seconds; or, with <see cref="Off"/>, faded back to the player's own.
 /// </summary>
-public sealed record VisualCue(double Time, string Pack, IReadOnlyDictionary<string, float> Set, bool Off, double Fade);
+public record VisualCue(double Time, string Pack, IReadOnlyDictionary<string, float> Set, bool Off, double Fade);
 
 /// <summary>Where one pack stands at a moment: on or not, and the charted parameters' values.</summary>
-public sealed record PackLook(bool On, IReadOnlyDictionary<string, float> Values);
+public record PackLook(bool On, IReadOnlyDictionary<string, float> Values);
 
 /// <summary>
 /// Every pack's look at a chart time, stateless so a run started part way looks as it would have.

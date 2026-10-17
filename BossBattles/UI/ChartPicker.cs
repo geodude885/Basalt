@@ -1,10 +1,10 @@
 using BossBattles.Actors;
-using BossBattles.Arenas;
+using BossBattles.Arena;
+using BossBattles.Battle;
 using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Placement;
 using Il2CppRUMBLE.Interactions.InteractionBase;
-using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
 using UnityEngine;
@@ -12,10 +12,10 @@ using UnityEngine;
 namespace BossBattles.UI;
 
 /// <summary>What the picker's card shows: rich text, and a cover image file or none.</summary>
-internal sealed record PickerCard(string Text, string? CoverPath = null);
+internal record PickerCard(string Text, string? CoverPath = null);
 
 /// <summary>A button on the picker; the id is for keys and tests.</summary>
-internal sealed record PickerButton(string Id, string Label, Color Colour, Action Press);
+internal record PickerButton(string Id, string Label, Color Colour, Action Press);
 
 /// <summary>Where the picker stands when it appears.</summary>
 internal enum PickerPlacement
@@ -33,7 +33,7 @@ internal enum PickerPlacement
 /// mod's boxes poked by hand position; they can also be clicked or pressed from the keys. Built
 /// without colliders, so nothing of it touches the game's physics.
 /// </summary>
-internal sealed class ChartPicker
+internal class ChartPicker
 {
     private const float PokeMargin = 0.03f;
     private const float PressCooldown = 0.5f;
@@ -121,7 +121,7 @@ internal sealed class ChartPicker
 
     public void Update()
     {
-        var want = _wanted() && PlayerManager.instance?.localPlayer?.Controller != null;
+        var want = _wanted() && BattlePlayer.Controller != null;
 
         if (want && !_shown)
         {
@@ -140,7 +140,7 @@ internal sealed class ChartPicker
 
         if (Time.time >= _nextRefresh) Refresh();
         // Following you: brought back when you walk away from it.
-        if (Follow && PlayerManager.instance?.localPlayer?.Controller is { } you)
+        if (Follow && BattlePlayer.Controller is { } you)
         {
             Vector3 away = _root!.transform.position - ActorRig.From(you).Head.position;
             away.y = 0f;
@@ -158,13 +158,13 @@ internal sealed class ChartPicker
         if (_root == null || !_shown) return;
 
         PlaceInFrontOfYou();
-        if (!FixedInGym || !Arena.InScene(ArenaKind.Gym)) return;
+        if (!FixedInGym || !ArenaKind.Gym.IsLoaded()) return;
 
         Vector3 position = _root.transform.position;
         try
         {
-            _spots.Set(Arena.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
-            Logger.Debug($"[Picker.Moved] {StringHelpers.Vector(position)}");
+            _spots.Set(Maps.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
+            Logger.Debug($"[Picker.Moved] {position.Describe()}");
         }
         catch (IOException e)
         {
@@ -277,7 +277,7 @@ internal sealed class ChartPicker
     /// <summary>In the Gym, its fixed spot; false anywhere else, when it has none, or when it is not wanted.</summary>
     private bool PlaceAtSavedSpot()
     {
-        if (_root == null || !FixedInGym || !Arena.InScene(ArenaKind.Gym) || _spots.Get(Arena.GymScene) is not { } spot) return false;
+        if (_root == null || !FixedInGym || !ArenaKind.Gym.IsLoaded() || _spots.Get(Maps.GymScene) is not { } spot) return false;
 
         _root.transform.SetPositionAndRotation(new Vector3(spot.X, spot.Y, spot.Z), Quaternion.Euler(0f, spot.Yaw, 0f));
         _leftWasIn = _rightWasIn = true;
@@ -286,7 +286,7 @@ internal sealed class ChartPicker
 
     private void CheckPokes()
     {
-        PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+        PlayerController? you = BattlePlayer.Controller;
         if (you == null) return;
 
         var rig = ActorRig.From(you);
@@ -313,7 +313,7 @@ internal sealed class ChartPicker
 
     private void PlaceInFrontOfYou()
     {
-        PlayerController? you = PlayerManager.instance?.localPlayer?.Controller;
+        PlayerController? you = BattlePlayer.Controller;
         if (you == null || _root == null) return;
 
         var rig = ActorRig.From(you);
@@ -325,7 +325,7 @@ internal sealed class ChartPicker
             : rig.Head.position + (facing * Distance) + (Vector3.up * Height) + (right * Side);
 
         Vector3 away = position - rig.Head.position;
-        _root.transform.SetPositionAndRotation(position, Quaternion.LookRotation(VectorHelpers.Flat(away)));
+        _root.transform.SetPositionAndRotation(position, Quaternion.LookRotation(away.Flat()));
         _leftWasIn = _rightWasIn = true; // no press from hands already where it appears
         _arrivedAt = Time.time;
     }
@@ -448,7 +448,7 @@ internal sealed class ChartPicker
                && Mathf.Abs(local.z) <= 0.5f + (margin / scale.z);
     }
 
-    private sealed class Button
+    private class Button
     {
         private readonly GameObject _face;
         private readonly Material? _normal;

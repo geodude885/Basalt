@@ -4,7 +4,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class AnchorTests
+public class AnchorTests
 {
     private const float Tolerance = 1e-4f;
 
@@ -42,7 +42,7 @@ public sealed class AnchorTests
         Assert.True(Vector3.Distance(expected, actual) < Tolerance, $"expected {expected}, got {actual}");
 }
 
-public sealed class BallisticsTests
+public class BallisticsTests
 {
     private const float Gravity = 9.81f;
 

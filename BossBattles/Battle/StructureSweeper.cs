@@ -4,7 +4,7 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>Structures on the map: cleared before a battle, and broken when left standing still.</summary>
-internal sealed class StructureSweeper
+internal class StructureSweeper
 {
     private static readonly string[] PlayerStructures = { "Disc", "Ball", "RockCube", "Pillar", "Wall" };
 

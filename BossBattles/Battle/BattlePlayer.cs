@@ -10,15 +10,19 @@ using UnityEngine;
 namespace BossBattles.Battle;
 
 /// <summary>You in a battle: placed in the lane, kept inside it, open to the game's hits, and on full health at either end.</summary>
-internal sealed class BattlePlayer
+internal class BattlePlayer
 {
     private PlayerHealth? _invincibleBefore;
     private float _nextLaneCheck;
     private int _placement;
 
-    public static PlayerController? Controller => PlayerManager.instance?.localPlayer?.Controller;
+    public static Player? Player => PlayerManager.instance?.localPlayer;
 
-    public static Vector3 Head => Controller is { } you ? ActorRig.From(you).Head.position : Vector3.zero;
+    public static PlayerController? Controller => Player?.Controller;
+
+    public static ActorRig? Rig => Controller is { } you ? ActorRig.From(you) : null;
+
+    public static Vector3 Head => Rig?.Head.position ?? Vector3.zero;
 
     /// <summary>
     /// Moves you with the game's <c>Reposition</c>, then corrects once from where your feet landed:
@@ -44,14 +48,14 @@ internal sealed class BattlePlayer
         _nextLaneCheck = Time.time + 0.1f;
 
         var rig = ActorRig.From(you);
-        Vector3 at = StringHelpers.ToUnity(frame.ToLocal(StringHelpers.ToNumerics(rig.Feet)));
+        Vector3 at = frame.ToLocal(rig.Feet.ToNumerics()).ToUnity();
         float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
         var far = zoned ? chart.Zone.Length + 0.3f : chart.Lane.Length + 0.75f;
         var above = rig.Vr.position.y - frame.Position.Y;
         var tooHigh = zoned && above > chart.Zone.Height + 0.8f;
         if (!tooHigh && Math.Abs(at.x) <= side + 0.3f && at.z >= back - 0.3f && at.z <= far + 0.3f) return;
 
-        Vector3 inside = StringHelpers.ToUnity(frame.ToWorld(new System.Numerics.Vector3(Math.Clamp(at.x, -side + 0.2f, side - 0.2f), 0f, Math.Clamp(at.z, back + 0.2f, far - 0.2f))));
+        Vector3 inside = frame.ToWorld(new System.Numerics.Vector3(Math.Clamp(at.x, -side + 0.2f, side - 0.2f), 0f, Math.Clamp(at.z, back + 0.2f, far - 0.2f))).ToUnity();
         Vector3 floor = rig.Feet;
         var shift = new Vector3(inside.x - floor.x, 0f, inside.z - floor.z);
         if (tooHigh) shift.y = -(above - chart.Zone.Height);
@@ -119,7 +123,7 @@ internal sealed class BattlePlayer
 
     public static void FullHealth()
     {
-        Player? you = PlayerManager.instance?.localPlayer;
+        Player? you = Player;
         if (you?.Controller == null) return;
 
         var hp = you.Data.HealthPoints;
@@ -145,6 +149,6 @@ internal sealed class BattlePlayer
         }
 
         var left = new Vector2(floor.x - feet.x, floor.z - feet.z).magnitude;
-        Logger.Write(left > 0.3f ? LogLevel.Warning : LogLevel.Debug, $"[{(left > 0.3f ? "Battle.YouPlacedOff" : "Battle.YouPlaced")}] {StringHelpers.Vector(feet)}, {left:0.00} m from {StringHelpers.Vector(floor)} (first try {off.magnitude:0.00} m off)");
+        Logger.Write(left > 0.3f ? LogLevel.Warning : LogLevel.Debug, $"[{(left > 0.3f ? "Battle.YouPlacedOff" : "Battle.YouPlaced")}] {feet.Describe()}, {left:0.00} m from {floor.Describe()} (first try {off.magnitude:0.00} m off)");
     }
 }

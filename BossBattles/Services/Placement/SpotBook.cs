@@ -3,10 +3,10 @@ using System.Text.Json;
 namespace BossBattles.Services.Placement;
 
 /// <summary>Where something stands: a world position and a yaw in degrees.</summary>
-public sealed record SavedSpot(float X, float Y, float Z, float Yaw);
+public record SavedSpot(float X, float Y, float Z, float Yaw);
 
 /// <summary>Remembered spots by name, in a JSON file; an unreadable file starts empty.</summary>
-public sealed class SpotBook
+public class SpotBook
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 

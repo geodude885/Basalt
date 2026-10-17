@@ -5,7 +5,7 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public sealed class ClipTests
+public class ClipTests
 {
     private static ClipPose At(float x, float yawDegrees = 0f) =>
         new(new Vector3(x, 1.6f, 0f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, yawDegrees * MathF.PI / 180f));

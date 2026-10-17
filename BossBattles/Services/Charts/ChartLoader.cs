@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace BossBattles.Services.Charts;
 
 /// <summary>The outcome of loading a chart: a chart, or every problem found, each with its path in the file.</summary>
-public sealed record ChartLoadResult(Chart? Chart, IReadOnlyList<string> Errors)
+public record ChartLoadResult(Chart? Chart, IReadOnlyList<string> Errors)
 {
     public bool Ok => Chart != null;
 }
@@ -275,7 +275,7 @@ public static class ChartLoader
         return errors.Count == before ? new MusicSpec(file, start, volume) : null;
     }
 
-    private sealed record Context(Lane Lane, TempoMap? Tempo, HashSet<string> ActorIds, string DefaultActorId, List<string> Errors);
+    private record Context(Lane Lane, TempoMap? Tempo, HashSet<string> ActorIds, string DefaultActorId, List<string> Errors);
 
     /// <summary><c>"bpm": 120</c>, or tempo changes: <c>"bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]</c>.</summary>
     private static TempoMap? ReadTempo(JsonElement? bpm, List<string> errors)
@@ -572,7 +572,7 @@ public static class ChartLoader
 
     private static string Format(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
-    private sealed class ChartDto
+    private class ChartDto
     {
         public int? Format { get; set; }
         public string? Name { get; set; }
@@ -596,7 +596,7 @@ public static class ChartLoader
         public double? End { get; set; }
     }
 
-    private sealed class ColoursDto
+    private class ColoursDto
     {
         public string? Edges { get; set; }
         public string? Ends { get; set; }
@@ -605,7 +605,7 @@ public static class ChartLoader
         public string? Walls { get; set; }
     }
 
-    private sealed class VisualDto
+    private class VisualDto
     {
         public double? T { get; set; }
         public double? Beat { get; set; }
@@ -616,25 +616,25 @@ public static class ChartLoader
         public double? Fade { get; set; }
     }
 
-    private sealed class ZoneDto
+    private class ZoneDto
     {
         public float? Length { get; set; }
         public float? Height { get; set; }
     }
 
-    private sealed class RulesDto
+    private class RulesDto
     {
         public string? Spawn { get; set; }
         public double? Cleanup { get; set; }
     }
 
-    private sealed class TrackDto
+    private class TrackDto
     {
         public string? Actor { get; set; }
         public List<TrackClipDto>? Clips { get; set; }
     }
 
-    private sealed class TrackClipDto
+    private class TrackClipDto
     {
         public double? T { get; set; }
         public double? Beat { get; set; }
@@ -644,27 +644,27 @@ public static class ChartLoader
         public bool? Mime { get; set; }
     }
 
-    private sealed class ArenaDto
+    private class ArenaDto
     {
         public string? Map { get; set; }
         public PointDto? At { get; set; }
         public float? Facing { get; set; }
     }
 
-    private sealed class MusicDto
+    private class MusicDto
     {
         public string? File { get; set; }
         public double? Start { get; set; }
         public float? Volume { get; set; }
     }
 
-    private sealed class LaneDto
+    private class LaneDto
     {
         public float? Length { get; set; }
         public float? Width { get; set; }
     }
 
-    private sealed class ActorDto
+    private class ActorDto
     {
         public string? Id { get; set; }
         public string? Name { get; set; }
@@ -674,13 +674,13 @@ public static class ChartLoader
         public MeasurementDto? Measurement { get; set; }
     }
 
-    private sealed class MeasurementDto
+    private class MeasurementDto
     {
         public float? Height { get; set; }
         public float? ArmSpan { get; set; }
     }
 
-    private sealed class PhaseDto
+    private class PhaseDto
     {
         public string? Name { get; set; }
         public double? Start { get; set; }
@@ -692,7 +692,7 @@ public static class ChartLoader
         public ColoursDto? Colors { get; set; }
     }
 
-    private sealed class EventDto
+    private class EventDto
     {
         public double? T { get; set; }
         public double? Beat { get; set; }
@@ -702,7 +702,7 @@ public static class ChartLoader
         public PointDto? At { get; set; }
     }
 
-    private sealed class ProjectileDto
+    private class ProjectileDto
     {
         public string? Structure { get; set; }
         public PointDto? From { get; set; }
@@ -713,7 +713,7 @@ public static class ChartLoader
         public bool? Grounded { get; set; }
     }
 
-    private sealed class PointDto
+    private class PointDto
     {
         public float? X { get; set; }
         public float? Y { get; set; }

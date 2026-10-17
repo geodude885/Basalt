@@ -10,7 +10,7 @@ namespace BossBattles.Tests;
 /// Every patch's target still exists in the interop assemblies, with the parameters it injects
 /// (Harmony binds by the game's names), so a game update fails here instead of in the headset.
 /// </summary>
-public sealed class PatchTargetTests
+public class PatchTargetTests
 {
     public static TheoryData<Type> Patches()
     {

@@ -28,7 +28,7 @@ internal enum MusicState
 /// audio clock, so frame hitches cannot drift the chart off the beat.
 /// </para>
 /// </summary>
-internal sealed class Music
+internal class Music
 {
     private const double ScheduleAheadSeconds = 0.15;
     private const float FadeSeconds = 1.5f;
@@ -133,7 +133,7 @@ internal sealed class Music
         State = MusicState.None;
     }
 
-    private sealed class Decoding
+    private class Decoding
     {
         public readonly ConcurrentQueue<float[]> Chunks = new();
         public volatile bool Done;

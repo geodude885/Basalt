@@ -6,7 +6,7 @@ using UIFramework.UiExtensions;
 namespace BossBattles.UI;
 
 /// <summary>The mod's MelonPreferences, in <c>UserData/BossBattles/settings.cfg</c>, shown by UIFramework.</summary>
-internal sealed class Settings
+internal class Settings
 {
     /// <summary>Where battles are played: the chart's own arena, or one for every chart.</summary>
     public enum ArenaChoice

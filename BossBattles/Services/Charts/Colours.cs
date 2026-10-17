@@ -29,7 +29,7 @@ public readonly record struct Rgba(float R, float G, float B, float A = 1f)
 }
 
 /// <summary>The lane's colours; null keeps the mod's own, and a wall colour shows the walls as see-through panes.</summary>
-public sealed record LaneColours(Rgba? Edges = null, Rgba? Ends = null, Rgba? Zone = null, Rgba? Backstop = null, Rgba? Walls = null)
+public record LaneColours(Rgba? Edges = null, Rgba? Ends = null, Rgba? Zone = null, Rgba? Backstop = null, Rgba? Walls = null)
 {
     public static LaneColours Default { get; } = new();
 

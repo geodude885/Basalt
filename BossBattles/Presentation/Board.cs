@@ -5,7 +5,7 @@ using UnityEngine;
 namespace BossBattles.Presentation;
 
 /// <summary>Floating text over the lane: the countdown, phase names and results.</summary>
-internal sealed class Board
+internal class Board
 {
     private const float FontSize = 1.6f;
 

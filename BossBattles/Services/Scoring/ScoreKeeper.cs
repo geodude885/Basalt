@@ -1,7 +1,7 @@
 namespace BossBattles.Services.Scoring;
 
 /// <summary>How a battle went. <see cref="Rank"/> is S, A, B, C, or D for not surviving.</summary>
-public sealed record BattleResult(
+public record BattleResult(
     string Chart,
     bool Survived,
     double Seconds,
@@ -23,7 +23,7 @@ public sealed record BattleResult(
 /// </list>
 /// Rank is about staying clean: S untouched, A up to 3 damage, B up to 8, C any survival, D not.
 /// </summary>
-public sealed class ScoreKeeper
+public class ScoreKeeper
 {
     public const int SurvivalPoints = 1000;
     public const int ActorDamagePoints = 10;

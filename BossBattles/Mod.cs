@@ -1,11 +1,11 @@
 using BossBattles.Actors;
 using BossBattles.Battle;
 using BossBattles.Editing;
-using BossBattles.Services.Scoring;
+using BossBattles.UI;
 
 namespace BossBattles;
 
-// Built once at load. Kept static only for what cannot be handed anything: the Harmony patches and the DevTools.
+// The mod's services as ModEntry built them, for the DevTools, which cannot be handed anything.
 internal static class Mod
 {
     public static ActorRegistry Actors { get; private set; } = null!;
@@ -14,10 +14,16 @@ internal static class Mod
 
     public static Studio Studio { get; private set; } = null!;
 
-    public static void Build(ScoreBook scores)
+    public static ChartSelection Charts { get; private set; } = null!;
+
+    public static ChartPicker Picker { get; private set; } = null!;
+
+    public static void Share(ActorRegistry actors, BattleController battle, Studio studio, ChartSelection charts, ChartPicker picker)
     {
-        Actors = new ActorRegistry();
-        Battle = new BattleController(Actors, scores);
-        Studio = new Studio(Battle);
+        Actors = actors;
+        Battle = battle;
+        Studio = studio;
+        Charts = charts;
+        Picker = picker;
     }
 }

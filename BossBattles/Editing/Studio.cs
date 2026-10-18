@@ -1,10 +1,11 @@
 using BossBattles.Battle;
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 
 namespace BossBattles.Editing;
 
-internal class Studio(BattleController battle)
+internal class Studio(BattleController battle, GameAssets assets)
 {
     public const double MaxRecordingLength = 600;
     public const double EaseInSeconds = 2;
@@ -18,7 +19,7 @@ internal class Studio(BattleController battle)
     public Clip? NewClip { get; private set; }
     public bool Mime { get; private set; }
     public RecordingSection SelectedSection { get; private set; }
-    public LaneSetup LaneSetup { get; } = new();
+    public LaneSetup LaneSetup { get; } = new(assets);
 
     private Anchor? _recordedLane;
     private double _recordingStartedAtChartTime;
@@ -210,11 +211,11 @@ internal class Studio(BattleController battle)
                 break;
 
             case StudioState.Reviewing:
-                if (battle.Mode != BattleMode.Review || battle.State is BattleState.Finished or BattleState.Idle) State = StudioState.Deciding;
+                if (battle.Mode != BattleMode.Review || battle.BetweenBattles) State = StudioState.Deciding;
                 break;
 
             case StudioState.PreviewingSection:
-                if (battle.Mode != BattleMode.Review || battle.State is BattleState.Finished or BattleState.Idle)
+                if (battle.Mode != BattleMode.Review || battle.BetweenBattles)
                 {
                     battle.Stop("section previewed");
                     State = StudioState.ChoosingSection;

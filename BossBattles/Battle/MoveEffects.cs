@@ -9,7 +9,7 @@ namespace BossBattles.Battle;
 /// The game's own sounds and effects for spawning and punching a structure, read off your moves'
 /// modifiers, so chart projectiles look and sound like a player's.
 /// </summary>
-internal static class MoveEffects
+internal class MoveEffects
 {
     private const string PunchMove = "Straight";
 
@@ -23,14 +23,14 @@ internal static class MoveEffects
         ["SpawnWall"] = "Wall",
     };
 
-    private static Dictionary<string, Effects>? _spawns;
-    private static HashSet<string> _grounded = new(StringComparer.OrdinalIgnoreCase);
-    private static Effects? _punch;
+    private Dictionary<string, Effects>? _spawns;
+    private HashSet<string> _grounded = new(StringComparer.OrdinalIgnoreCase);
+    private Effects? _punch;
 
     private record Effects(string Move, List<AudioCall> Sounds, List<string> Visuals);
 
     /// <summary>The spawn sound and effect for a structure, by pool name.</summary>
-    public static void Spawn(string structure, Vector3 floor, Quaternion facing)
+    public void Spawn(string structure, Vector3 floor, Quaternion facing)
     {
         if (!Ensure()) return;
         if (!_spawns!.TryGetValue(structure, out var effects))
@@ -46,16 +46,16 @@ internal static class MoveEffects
     /// Whether the game spawns this structure out of the ground rather than in mid-air. The disc
     /// does, though its spawn step is not the grounded kind.
     /// </summary>
-    public static bool IsGrounded(string structure) =>
+    public bool IsGrounded(string structure) =>
         string.Equals(structure, "Disc", StringComparison.OrdinalIgnoreCase) || (Ensure() && _grounded.Contains(structure));
 
-    public static void Punch(Vector3 at, Quaternion facing)
+    public void Punch(Vector3 at, Quaternion facing)
     {
         if (Ensure()) Play(_punch, at, facing);
     }
 
     /// <summary>For a new scene: what the moves pointed at may have gone.</summary>
-    public static void Forget()
+    public void Forget()
     {
         _spawns = null;
         _grounded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -82,7 +82,7 @@ internal static class MoveEffects
         }
     }
 
-    private static bool Ensure()
+    private bool Ensure()
     {
         if (_spawns != null) return true;
 

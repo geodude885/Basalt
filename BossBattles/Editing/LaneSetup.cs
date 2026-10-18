@@ -1,17 +1,18 @@
 using BossBattles.Arenas;
 using BossBattles.Battle;
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using UnityEngine;
 
 namespace BossBattles.Editing;
 
 // A preview lane you walk around, resized and moved from the panel, then written into the chart.
-internal class LaneSetup
+internal class LaneSetup(GameAssets assets)
 {
     public ArenaSpec ArenaSpec { get; private set; } = ArenaSpec.Here;
     public Lane Lane { get; private set; }
 
-    public Arena ArenaPreview { get; private set; } = new();
+    public Arena ArenaPreview { get; private set; } = new(assets);
     public List<ActorSpec> Actors = [];
 
     private (Vector3 Feet, Vector3 Facing)? _laneStartedFrom;

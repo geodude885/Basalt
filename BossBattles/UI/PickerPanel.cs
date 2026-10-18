@@ -2,48 +2,52 @@ using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.Editing;
 using BossBattles.Services.Charts;
-using BossBattles.UI;
+using BossBattles.Services.Scoring;
 using UnityEngine;
 
-namespace BossBattles;
+namespace BossBattles.UI;
 
-/// <summary>What the chart picker shows: the chosen chart between battles, and the studio's controls while recording.</summary>
-public partial class ModEntry
+// What the chart picker shows and where: the chosen chart between battles, and the studio's controls while recording.
+internal class PickerPanel(ChartSelection charts, ChartLibrary library, ScoreBook scores, Settings settings, BattleController battle, Studio studio)
 {
     private static readonly Color Orange = new(1f, 0.45f, 0.1f);
     private static readonly Color Green = new(0.2f, 0.75f, 0.3f);
     private static readonly Color Red = new(0.85f, 0.2f, 0.2f);
     private static readonly Color Blue = new(0.25f, 0.5f, 0.95f);
 
-    private bool PanelWanted() => Mod.Studio.State switch
+    // Out of the way while you perform or walk the lane.
+    public PickerPlacement Placement => studio.State is StudioState.Recording or StudioState.Setup ? PickerPlacement.Beside : PickerPlacement.InFront;
+
+    public bool FollowsYou => studio.State == StudioState.Setup;
+
+    public bool Wanted(bool pickerOpen) => studio.State switch
     {
-        StudioState.Recording => Mod.Battle.State == BattleState.Running,
+        StudioState.Recording => battle.State == BattleState.Running,
         StudioState.Setup or StudioState.ChoosingSection => true,
         StudioState.Reviewing or StudioState.PreviewingSection => false,
-        StudioState.Deciding => Mod.Battle.State is BattleState.Idle or BattleState.Finished,
-        _ => Picker.Open && !Maps.Online && Mod.Battle.State is BattleState.Idle or BattleState.Finished,
+        StudioState.Deciding => battle.BetweenBattles,
+        _ => pickerOpen && !Maps.Online && battle.BetweenBattles,
     };
 
-    private IReadOnlyList<PickerButton> PanelButtons()
+    public IReadOnlyList<PickerButton> Buttons()
     {
-        var studio = Mod.Studio;
         switch (studio.State)
         {
             case StudioState.Recording:
-                return new[] { new PickerButton("stop", "STOP", Red, studio.StopRecording) };
+                return [new PickerButton("stop", "STOP", Red, studio.StopRecording)];
 
             case StudioState.Deciding:
-                return new[]
-                {
-                    new PickerButton("keep", "KEEP", Green, () => Saved(studio.KeepClip)),
+                return
+                [
+                    new PickerButton("keep", "KEEP", Green, () => charts.Saved(studio.KeepClip)),
                     new PickerButton("again", "AGAIN", Orange, studio.RestartRecording),
                     new PickerButton("replay", "REPLAY", Blue, studio.ReviewRecording),
                     new PickerButton("discard", "DISCARD", Red, studio.DiscardClip),
-                };
+                ];
 
             case StudioState.Setup:
-                return new[]
-                {
+                return
+                [
                     new PickerButton("longer", "LONGER", Orange, () => studio.LaneSetup.ResizeLane(1f, 0f)),
                     new PickerButton("shorter", "SHORTER", Orange, () => studio.LaneSetup.ResizeLane(-1f, 0f)),
                     new PickerButton("wider", "WIDER", Orange, () => studio.LaneSetup.ResizeLane(0f, 0.5f)),
@@ -51,13 +55,13 @@ public partial class ModEntry
                     new PickerButton("map", "MAP", Blue, studio.LaneSetup.SwitchToNextMap),
                     new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneSetup.StartLaneWhereYouStand),
                     new PickerButton("actorhere", "ACTOR HERE", Blue, studio.LaneSetup.MoveFirstActorWhereYouStand),
-                    new PickerButton("save", "SAVE", Green, () => Saved(studio.SaveChartOptions)),
+                    new PickerButton("save", "SAVE", Green, () => charts.Saved(studio.SaveChartOptions)),
                     new PickerButton("cancel", "CANCEL", Red, studio.ExitChartOptions),
-                };
+                ];
 
             case StudioState.ChoosingSection:
-                return new[]
-                {
+                return
+                [
                     new PickerButton("fromearlier", "FROM -", Orange, () => studio.NudgeRecordingSection(start: true, -1)),
                     new PickerButton("fromlater", "FROM +", Orange, () => studio.NudgeRecordingSection(start: true, 1)),
                     new PickerButton("toearlier", "TO -", Orange, () => studio.NudgeRecordingSection(start: false, -1)),
@@ -66,34 +70,31 @@ public partial class ModEntry
                     new PickerButton("record", "RECORD", Red, () => studio.RecordSection()),
                     new PickerButton("mime", "MIME", Orange, () => studio.RecordSection(mime: true)),
                     new PickerButton("back", "BACK", Orange, studio.CloseSection),
-                };
+                ];
         }
 
         var buttons = new List<PickerButton>
         {
-            new("prev", "PREV", Orange, () => StepChart(-1)),
-            new("start", "START", Green, StartBattle),
-            new("next", "NEXT", Orange, () => StepChart(1)),
+            new("prev", "PREV", Orange, () => charts.StepChart(-1)),
+            new("start", "START", Green, charts.StartBattle),
+            new("next", "NEXT", Orange, () => charts.StepChart(1)),
         };
 
-        if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new PickerButton("gym", "GYM", Orange, Mod.Battle.ReturnToGym));
+        if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new PickerButton("gym", "GYM", Orange, battle.ReturnToGym));
 
-        var chosen = Chosen();
-        if (_settings.Editing.Value && chosen is { CanEdit: true })
-        {
-            buttons.Add(new PickerButton("setup", "SETUP", Blue, () => studio.OpenChartOptions(chosen)));
-            buttons.Add(new PickerButton("record", "RECORD", Red, () => RecordChosen()));
-            buttons.Add(new PickerButton("mime", "MIME", Orange, () => RecordChosen(mime: true)));
-            if (chosen.HasActorTrack) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseRecordingSection(chosen, _settings.ArenaOverride)));
-            if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => Saved(() => Studio.Undo(chosen))));
-        }
+        var chosen = charts.Chosen;
+        if (!settings.Editing.Value || chosen is not { CanEdit: true }) return buttons;
 
+        buttons.Add(new PickerButton("setup", "SETUP", Blue, () => studio.OpenChartOptions(chosen)));
+        buttons.Add(new PickerButton("record", "RECORD", Red, () => charts.RecordChosen()));
+        buttons.Add(new PickerButton("mime", "MIME", Orange, () => charts.RecordChosen(mime: true)));
+        if (chosen.HasActorTrack) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseRecordingSection(chosen, settings.ArenaOverride)));
+        if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => charts.Saved(() => Studio.Undo(chosen))));
         return buttons;
     }
 
-    private PickerCard DescribePanel()
+    public PickerCard Card()
     {
-        var studio = Mod.Studio;
         switch (studio.State)
         {
             case StudioState.Recording:
@@ -122,32 +123,25 @@ public partial class ModEntry
                     "<size=38%>walk the preview: LANE HERE starts the lane where you stand, facing the way you face; ACTOR HERE puts the actor where you stand</size>");
 
             case StudioState.ChoosingSection:
+                // The section on a bar of the chart's length: |-----#####--------|
+                var section = studio.SelectedSection;
+                var chartLength = Math.Max(studio.Chart?.End ?? section.To, section.To);
+                var timeline = string.Concat(Enumerable.Range(0, 28).Select(i => (i + 0.5) * chartLength / 28).Select(t => t >= section.From && t < section.To ? '#' : '-'));
                 return new PickerCard(
-                    $"<size=45%>RE-RECORD</size>\n<b>{studio.ActorName}</b>\n<size=55%>{studio.SelectedSection.From:0.0}s to {studio.SelectedSection.To:0.0}s</size>\n" +
-                    $"<size=45%><mspace=0.55em>{Timeline(studio.SelectedSection.From, studio.SelectedSection.To, studio.Chart?.End ?? studio.SelectedSection.To)}</mspace></size>\n" +
+                    $"<size=45%>RE-RECORD</size>\n<b>{studio.ActorName}</b>\n<size=55%>{section.From:0.0}s to {section.To:0.0}s</size>\n" +
+                    $"<size=45%><mspace=0.55em>|{timeline}|</mspace></size>\n" +
                     $"<size=38%>PREVIEW plays it; RECORD starts {Studio.EaseInSeconds:0} s before, where the actor stood</size>");
         }
 
-        return DescribeChosen();
+        return DescribeChosenChart();
     }
 
-    /// <summary>A section on a bar of the chart's length: <c>|-----#####--------|</c>.</summary>
-    private static string Timeline(double from, double to, double end)
+    // Where it is played and your best - or why it does not load.
+    private PickerCard DescribeChosenChart()
     {
-        const int width = 28;
-        var length = Math.Max(end, to);
-        var bar = Enumerable.Range(0, width)
-            .Select(i => (i + 0.5) * length / width)
-            .Select(t => t >= from && t < to ? '#' : '-');
-        return $"|{string.Concat(bar)}|";
-    }
-
-    /// <summary>The chosen chart, where it is played and your best - or why it does not load.</summary>
-    private PickerCard DescribeChosen()
-    {
-        var all = _library.Entries.ToList();
-        var entry = Chosen();
-        if (entry == null) return new PickerCard($"<b>No charts</b>\n<size=50%>New chart in the settings makes one in {_library.Folder}</size>");
+        var all = library.Entries.ToList();
+        var entry = charts.Chosen;
+        if (entry == null) return new PickerCard($"<b>No charts</b>\n<size=50%>New chart in the settings makes one in {library.Folder}</size>");
 
         var position = $"<size=45%>CHART {all.IndexOf(entry) + 1} OF {all.Count}</size>\n";
         if (entry.Result.Chart is not { } chart)
@@ -158,7 +152,7 @@ public partial class ModEntry
                 $"<size=38%>{errors}</size>\n<size=40%><i>fix and save {Path.GetFileName(entry.File)} - it reloads by itself</i></size>");
         }
 
-        var arena = _settings.ArenaOverride is { } forced ? $"{forced} (override)" : chart.Arena.Map.ToString();
+        var arena = settings.ArenaOverride is { } forced ? $"{forced} (override)" : chart.Arena.Map.ToString();
         var by = string.Join("  |  ", new[] { chart.Info.Author == null ? null : $"by {chart.Info.Author}", chart.Info.Difficulty }.Where(p => p != null));
         var facts = string.Join("  |  ", new[]
         {
@@ -168,7 +162,7 @@ public partial class ModEntry
             chart.Music == null ? null : $"music: {Path.GetFileNameWithoutExtension(chart.Music.File)}",
             entry.Source == ChartSource.Package ? "package" : null,
         }.Where(p => p != null));
-        var best = _scores.Best(entry.ScoreKey);
+        var best = scores.Best(entry.ScoreKey);
 
         return new PickerCard(
             position +

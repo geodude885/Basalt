@@ -38,7 +38,7 @@ internal partial class Projectiles
         var before = body.constraints;
         body.constraints = SlideConstraints;
         body.linearVelocity = velocity;
-        MoveEffects.Punch(from, Quaternion.LookRotation(direction));
+        _effects.Punch(from, Quaternion.LookRotation(direction));
 
         var seconds = (flat.magnitude / Math.Max(0.1f, projectile.Speed)) + SlideOvershootSeconds;
         _sliding.Add(new Slide(id, body, velocity, Time.time + seconds, before)

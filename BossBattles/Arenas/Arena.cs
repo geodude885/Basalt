@@ -1,14 +1,15 @@
+using BossBattles.Presentation;
 using BossBattles.Services.Charts;
 using UnityEngine;
 using Part = BossBattles.Arenas.Visuals.Part;
 
 namespace BossBattles.Arenas;
 
-internal class Arena
+internal class Arena(GameAssets assets)
 {
     public Boundary Boundary { get; } = new();
 
-    public Visuals Visuals { get; } = new();
+    public Visuals Visuals { get; } = new(assets);
 
     public void Build(Anchor origin, Lane lane, bool showBackstop, bool walls = true, Zone? zone = null, LaneColours? colours = null, bool panes = false)
     {

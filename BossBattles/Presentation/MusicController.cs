@@ -19,7 +19,7 @@ internal class MusicController
     private const int ChunksDecodedAhead = 30;
     private const int ChunksCopiedPerFrame = 4;
 
-    private static (string Path, DateTime Written, AudioClip Clip)? _lastDecoded;
+    private (string Path, DateTime Written, AudioClip Clip)? _lastDecoded;
 
     private AudioSource? _source;
     private AudioClip? _clip;

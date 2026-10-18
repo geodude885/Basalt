@@ -88,7 +88,7 @@ internal static partial class SelfTest
         FlatscreenControls.ScriptedTurn = null;
         yield return new WaitForSeconds(0.6f);
 
-        if (!_picker!.InvokeGameButton("stop") && !_picker.Press("stop")) problems.Add("the panel had no STOP button while recording");
+        if (!Mod.Picker.InvokeGameButton("stop") && !Mod.Picker.Press("stop")) problems.Add("the panel had no STOP button while recording");
 
         var clip = Mod.Studio.NewClip;
         if (clip == null)
@@ -139,7 +139,7 @@ internal static partial class SelfTest
 
         // The panel has just appeared: its buttons wait a second before they press.
         yield return new WaitForSeconds(1.2f);
-        if (!_picker.InvokeGameButton("keep") && !_picker.Press("keep")) problems.Add("the panel had no KEEP button after the review");
+        if (!Mod.Picker.InvokeGameButton("keep") && !Mod.Picker.Press("keep")) problems.Add("the panel had no KEEP button after the review");
         yield return new WaitForSeconds(0.5f);
 
         CheckKept(file, clip, problems);
@@ -160,14 +160,14 @@ internal static partial class SelfTest
 
         Mod.Studio.ChooseRecordingSection(entry, null);
         yield return new WaitForSeconds(0.5f);
-        if (!_picker!.ButtonIds.Contains("fromlater")) problems.Add($"choosing a section shows {string.Join(", ", _picker.ButtonIds)}");
-        _picker.Press("fromlater");
+        if (!Mod.Picker.ButtonIds.Contains("fromlater")) problems.Add($"choosing a section shows {string.Join(", ", Mod.Picker.ButtonIds)}");
+        Mod.Picker.Press("fromlater");
         yield return new WaitForSeconds(0.4f);
         (var from, var to) = Mod.Studio.SelectedSection;
         Logger.Info($"[SelfTest] section {from:0.0}-{to:0.0}s");
-        if (_shots && _picker.Root is { } card) ShootPanel(card, "7-section");
+        if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "7-section");
 
-        if (!_picker.InvokeGameButton("record") && !_picker.Press("record")) problems.Add("no RECORD button for the section");
+        if (!Mod.Picker.InvokeGameButton("record") && !Mod.Picker.Press("record")) problems.Add("no RECORD button for the section");
 
         var deadline = Time.realtimeSinceStartup + 60f;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < from + 0.2) && Time.realtimeSinceStartup < deadline) yield return null;
@@ -196,7 +196,7 @@ internal static partial class SelfTest
         if (section.Moves.Count < 2) problems.Add($"the section recorded {section.Moves.Count} of 2 moves");
         if (section.Start != 0 || section.Duration > to - from + 0.2) problems.Add($"the section clip runs {section.Start:0.0}-{section.Duration:0.0}s, longer than its {to - from:0.0}s section");
 
-        _picker.Press("keep");
+        Mod.Picker.Press("keep");
         yield return new WaitForSeconds(0.5f);
 
         var spliced = ChartLoader.Load(File.ReadAllText(file)).Chart;
@@ -220,9 +220,9 @@ internal static partial class SelfTest
 
         Mod.Studio.OpenChartOptions(entry);
         yield return new WaitForSeconds(1f);
-        _picker!.Press("longer");
-        _picker.Press("longer");
-        _picker.Press("wider");
+        Mod.Picker.Press("longer");
+        Mod.Picker.Press("longer");
+        Mod.Picker.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
         if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Controller is { } you)
@@ -234,7 +234,7 @@ internal static partial class SelfTest
             Shoot(ShotFolder(), "8-setup");
         }
 
-        if (!_picker.Press("save")) problems.Add("no SAVE button in lane setup");
+        if (!Mod.Picker.Press("save")) problems.Add("no SAVE button in lane setup");
         yield return new WaitForSeconds(0.3f);
 
         var text = File.ReadAllText(file);

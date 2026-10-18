@@ -28,11 +28,11 @@ internal enum PickerPlacement
 
 /// <summary>
 /// The mod's panel in the world: a card and the buttons its host supplies for the moment. Buttons
-/// are the game's own push buttons (<see cref="GameButtons"/>) once one has been seen, else the
+/// are the game's own push buttons (<see cref="GameAssets.CreateGameButton"/>) once one has been seen, else the
 /// mod's boxes poked by hand position; they can also be clicked or pressed from the keys. Built
 /// without colliders, so nothing of it touches the game's physics.
 /// </summary>
-internal class ChartPicker
+internal class ChartPicker(PickerPanel panel, SpotBook spots, GameAssets assets)
 {
     private const float PokeMargin = 0.03f;
     private const float PressCooldown = 0.5f;
@@ -54,11 +54,8 @@ internal class ChartPicker
     private static readonly Color PressedColour = new(1f, 0.9f, 0.4f);
     private static readonly Color TextOnRock = new(0.12f, 0.1f, 0.09f);
 
-    private readonly Func<PickerCard> _describe;
-    private readonly Func<IReadOnlyList<PickerButton>> _buttonsFor;
-    private readonly Func<bool> _wanted;
     private readonly List<Button> _buttons = [];
-    private readonly SpotBook _spots;
+    private readonly Covers _covers = new(assets);
 
     private GameObject? _root;
     private TextMeshPro? _card;
@@ -72,18 +69,6 @@ internal class ChartPicker
     private float _arrivedAt = float.NegativeInfinity;
     private bool _leftWasIn;
     private bool _rightWasIn;
-
-    /// <param name="describe">The card for now.</param>
-    /// <param name="buttons">The buttons for now.</param>
-    /// <param name="wanted">Whether it should stand in the world now.</param>
-    /// <param name="spots">Its fixed spots, by scene.</param>
-    public ChartPicker(Func<PickerCard> describe, Func<IReadOnlyList<PickerButton>> buttons, Func<bool> wanted, SpotBook spots)
-    {
-        _describe = describe;
-        _buttonsFor = buttons;
-        _wanted = wanted;
-        _spots = spots;
-    }
 
     /// <summary>Whether the picker is wanted between battles.</summary>
     public bool Open { get; set; } = true;
@@ -99,11 +84,6 @@ internal class ChartPicker
 
     /// <summary>Keeps a fixed spot in the Gym once one is set, rather than coming to you.</summary>
     public bool FixedInGym { get; set; } = true;
-
-    /// <summary>Comes back to you when you walk away from it.</summary>
-    public bool Follow { get; set; }
-
-    public PickerPlacement Placement { get; set; } = PickerPlacement.InFront;
 
     /// <summary>A card shown instead of the host's.</summary>
     public PickerCard? Override { get; set; }
@@ -124,12 +104,12 @@ internal class ChartPicker
 
     public void Update()
     {
-        var want = _wanted() && BattlePlayer.Controller != null;
+        var want = panel.Wanted(Open) && BattlePlayer.Controller != null;
 
         if (want && !_shown)
         {
             if (!Ensure()) return;
-            if (Placement == PickerPlacement.Beside || !PlaceAtSavedSpot()) PlaceInFrontOfYou();
+            if (panel.Placement == PickerPlacement.Beside || !PlaceAtSavedSpot()) PlaceInFrontOfYou();
             _root!.SetActive(true);
             _nextRefresh = 0f;
         }
@@ -143,7 +123,7 @@ internal class ChartPicker
 
         if (Time.time >= _nextRefresh) Refresh();
         // Following you: brought back when you walk away from it.
-        if (Follow && BattlePlayer.Controller is { } you)
+        if (panel.FollowsYou && BattlePlayer.Controller is { } you)
         {
             var away = _root!.transform.position - ActorRig.From(you).Head.position;
             away.y = 0f;
@@ -166,7 +146,7 @@ internal class ChartPicker
         var position = _root.transform.position;
         try
         {
-            _spots.Set(Maps.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
+            spots.Set(Maps.GymScene, new SavedSpot(position.x, position.y, position.z, _root.transform.eulerAngles.y));
             Logger.Debug($"[Picker.Moved] {position.Describe()}");
         }
         catch (IOException e)
@@ -218,11 +198,11 @@ internal class ChartPicker
     {
         _nextRefresh = Time.time + RefreshSeconds;
 
-        var card = Override ?? _describe();
+        var card = Override ?? panel.Card();
         _card!.text = card.Text;
         ShowCover(card.CoverPath);
 
-        var wanted = _buttonsFor();
+        var wanted = panel.Buttons();
         var key = string.Join("|", wanted.Select(b => $"{b.Id}:{b.Label}"));
         if (key != _buttonKey)
         {
@@ -257,12 +237,12 @@ internal class ChartPicker
     {
         if (_cover == null || _card == null) return;
 
-        var texture = path == null ? null : Covers.Get(path);
+        var texture = path == null ? null : _covers.Get(path);
         if (path == _coverPath && texture == _coverTexture) return;
         _coverPath = path;
         _coverTexture = texture;
 
-        var material = texture == null ? null : Covers.Material(texture);
+        var material = texture == null ? null : _covers.Material(texture);
         var show = texture != null && material != null;
         _cover.SetActive(show);
 
@@ -280,7 +260,7 @@ internal class ChartPicker
     /// <summary>In the Gym, its fixed spot; false anywhere else, when it has none, or when it is not wanted.</summary>
     private bool PlaceAtSavedSpot()
     {
-        if (_root == null || !FixedInGym || !ArenaKind.Gym.IsLoaded() || _spots.Get(Maps.GymScene) is not { } spot) return false;
+        if (_root == null || !FixedInGym || !ArenaKind.Gym.IsLoaded() || spots.Get(Maps.GymScene) is not { } spot) return false;
 
         _root.transform.SetPositionAndRotation(new Vector3(spot.X, spot.Y, spot.Z), Quaternion.Euler(0f, spot.Yaw, 0f));
         _leftWasIn = _rightWasIn = true;
@@ -323,7 +303,7 @@ internal class ChartPicker
         var facing = rig.Facing;
         var right = Vector3.Cross(Vector3.up, facing);
 
-        var position = Placement == PickerPlacement.Beside
+        var position = panel.Placement == PickerPlacement.Beside
             ? rig.Head.position + (facing * 0.35f) - (right * 0.8f) + (Vector3.down * 0.45f)
             : rig.Head.position + (facing * Distance) + (Vector3.up * Height) + (right * Side);
 
@@ -341,7 +321,7 @@ internal class ChartPicker
         {
             _root = new GameObject("BossBattles_ChartPicker");
 
-            var onRock = GamePanels.CreateRockPanel("Card", _root.transform, new Vector3(0f, 0.17f, 0.01f + (RockDepth / 2f)), new Vector3(0.8f, 0.42f, RockDepth)) != null;
+            var onRock = assets.CreateRockPanel("Card", _root.transform, new Vector3(0f, 0.17f, 0.01f + (RockDepth / 2f)), new Vector3(0.8f, 0.42f, RockDepth)) != null;
             if (!onRock) Box(_root.transform, "Card", new Vector3(0f, 0.17f, 0.02f), new Vector3(0.8f, 0.42f, 0.02f), CardColour);
             _card = Text(_root.transform, new Vector3(0f, 0.17f, 0f), new Vector2(0.74f, 0.38f), 1.2f, onRock ? TextOnRock : Color.white);
             _card.enableAutoSizing = true;
@@ -377,7 +357,7 @@ internal class ChartPicker
         holder.transform.localPosition = new Vector3(x, -0.12f + rowOffset, -0.04f);
 
         Button? made = null;
-        var native = GameButtons.Create(holder.transform, () =>
+        var native = assets.CreateGameButton(holder.transform, () =>
         {
             if (made != null && made.Root != null && made.Root.activeInHierarchy && _buttons.Contains(made)) TryPress(made);
         });
@@ -393,7 +373,7 @@ internal class ChartPicker
         var labelCentre = native != null ? new Vector3(0f, 0.058f, -0.005f) : new Vector3(0f, 0f, -0.03f);
 
         // On a rock tile the button's colour is a bar along its top edge; without one, the whole face is coloured.
-        var rockFace = GamePanels.CreateRockPanel("Face", holder.transform, faceCentre, faceSize);
+        var rockFace = assets.CreateRockPanel("Face", holder.transform, faceCentre, faceSize);
         var face = rockFace ?? Box(holder.transform, "Face", faceCentre, faceSize, spec.Colour);
         var colourBar = rockFace == null
             ? face
@@ -407,11 +387,11 @@ internal class ChartPicker
         text.fontSizeMax = 0.6f;
         text.text = $"{spec.Label}";
 
-        made = new Button(spec, holder, face, colourBar, spec.Colour) { Native = native != null };
+        made = new Button(spec, holder, face, colourBar, spec.Colour, assets) { Native = native != null };
         _buttons.Add(made);
     }
 
-    private static GameObject Box(Transform parent, string name, Vector3 position, Vector3 size, Color colour)
+    private GameObject Box(Transform parent, string name, Vector3 position, Vector3 size, Color colour)
     {
         var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
         box.name = name;
@@ -423,12 +403,12 @@ internal class ChartPicker
         box.transform.localScale = size;
 
         var renderer = box.GetComponent<Renderer>();
-        var material = Paint.Colour(colour);
+        var material = assets.Colour(colour);
         if (renderer != null && material != null) renderer.material = material;
         return box;
     }
 
-    private static TextMeshPro Text(Transform parent, Vector3 position, Vector2 size, float fontSize, Color colour)
+    private TextMeshPro Text(Transform parent, Vector3 position, Vector2 size, float fontSize, Color colour)
     {
         var holder = new GameObject("Text");
         holder.transform.SetParent(parent, false);
@@ -441,7 +421,7 @@ internal class ChartPicker
         text.enableWordWrapping = false;
         text.color = colour;
 
-        Paint.GiveFont(text);
+        assets.GiveFont(text);
         return text;
     }
 
@@ -464,15 +444,15 @@ internal class ChartPicker
         private readonly Vector3 _rest;
         private float _releaseAt;
 
-        public Button(PickerButton spec, GameObject root, GameObject face, GameObject colourBar, Color colour)
+        public Button(PickerButton spec, GameObject root, GameObject face, GameObject colourBar, Color colour, GameAssets assets)
         {
             Spec = spec;
             Root = root;
             _face = face;
             _colourBar = colourBar;
             _rest = face.transform.localPosition;
-            _normal = Paint.Colour(colour);
-            _pressed = Paint.Colour(PressedColour);
+            _normal = assets.Colour(colour);
+            _pressed = assets.Colour(PressedColour);
         }
 
         public PickerButton Spec { get; set; }

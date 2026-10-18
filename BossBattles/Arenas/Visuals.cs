@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace BossBattles.Arenas;
 
-internal class Visuals
+internal class Visuals(GameAssets assets)
 {
     public const float LineThickness = 0.04f;
     public const float LineHeight = 0.02f;
@@ -39,13 +39,13 @@ internal class Visuals
     public void Colour(LaneColours colours) => _now = Targets(colours);
 
     public void Line(Vector3 centre, Quaternion rotation, Vector3 size, Part part) =>
-        Remember(Make("BossBattles_Lane", centre, rotation, size, Paint.Colour(_now[part])), part);
+        Remember(Make("BossBattles_Lane", centre, rotation, size, assets.Colour(_now[part])), part);
 
     public void ActorMarker(Vector3 feet) =>
-        Remember(Make("BossBattles_ActorMarker", feet + (Vector3.up * ActorMarkerSize.y), Quaternion.identity, ActorMarkerSize, Paint.Colour(_now[Part.ActorMarker]), PrimitiveType.Cylinder), Part.ActorMarker);
+        Remember(Make("BossBattles_ActorMarker", feet + (Vector3.up * ActorMarkerSize.y), Quaternion.identity, ActorMarkerSize, assets.Colour(_now[Part.ActorMarker]), PrimitiveType.Cylinder), Part.ActorMarker);
 
     public void Pane(Vector3 centre, Quaternion rotation, Vector3 size) =>
-        Remember(Make("BossBattles_Pane", centre, rotation, size, Paint.Glass(_now[Part.Pane])), Part.Pane);
+        Remember(Make("BossBattles_Pane", centre, rotation, size, assets.Glass(_now[Part.Pane])), Part.Pane);
 
     public void Recolour(LaneColours colours, float seconds)
     {

@@ -1,11 +1,10 @@
 using BossBattles.Services.Scoring;
-using BossBattles.UI;
 using Il2CppTMPro;
 using UnityEngine;
 
 namespace BossBattles.Presentation;
 
-internal class BattleInfoBoard
+internal class BattleInfoBoard(GameAssets assets)
 {
     private const float SlabDepth = 0.06f;
     private const float SlabPadding = 0.12f;
@@ -70,7 +69,7 @@ internal class BattleInfoBoard
 
     private void FitSlabToText()
     {
-        _slab ??= GamePanels.CreateRockPanel("Slab", GameObject!.transform, Vector3.zero, Vector3.one);
+        _slab ??= assets.CreateRockPanel("Slab", GameObject!.transform, Vector3.zero, Vector3.one);
         _text!.color = _slab == null ? Color.white : TextOnRock;
         if (_slab == null) return;
 
@@ -95,7 +94,7 @@ internal class BattleInfoBoard
             _text.fontSize = FontSize;
             _text.enableWordWrapping = false;
             _text.color = Color.white;
-            Paint.GiveFont(_text);
+            assets.GiveFont(_text);
             return true;
         }
         catch (Exception e)

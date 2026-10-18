@@ -32,7 +32,7 @@ public enum BattleMode
 /// executes each <see cref="ChartCommand"/> the <see cref="ChartRunner"/> hands back. You win by
 /// lasting to the end; your health reaching 0 loses.
 /// </summary>
-internal class BattleController(ActorRegistry actors, ScoreBook scores)
+internal class BattleController(ActorRegistry actors, ScoreBook scores, GameAssets assets)
 {
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;
@@ -45,9 +45,9 @@ internal class BattleController(ActorRegistry actors, ScoreBook scores)
     /// <summary>A long MP3 can take a while to decode; the countdown waits this long for it.</summary>
     private const float MusicWaitSeconds = 90f;
 
-    private readonly Arena _arena = new();
+    private readonly Arena _arena = new(assets);
     private readonly Projectiles _projectiles = new(actors);
-    private readonly BattleInfoBoard _board = new();
+    private readonly BattleInfoBoard _board = new(assets);
     private readonly MusicController _music = new();
     private readonly MoveLock _moves = new();
     private readonly StructureSweeper _sweeper = new();
@@ -90,6 +90,8 @@ internal class BattleController(ActorRegistry actors, ScoreBook scores)
     public bool ShowPhaseBanners { get; set; } = true;
 
     public bool Miming { get; private set; }
+
+    public bool BetweenBattles => State is BattleState.Idle or BattleState.Finished;
 
     public bool StayInMap => State != BattleState.Idle && CurrentArena.IsMatchMap();
 
@@ -227,7 +229,6 @@ internal class BattleController(ActorRegistry actors, ScoreBook scores)
         // Everything built in the old scene went with it, your player too.
         Signals.End();
         _moves.Forget();
-        MoveEffects.Forget();
         _projectiles.Forget();
         _arena.Forget();
         _board.Forget();

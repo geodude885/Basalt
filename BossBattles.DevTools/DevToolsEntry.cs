@@ -24,8 +24,7 @@ public class DevToolsEntry : MelonMod
 
     public override void OnInitializeMelon()
     {
-        var boss = ModEntry.Instance;
-        if (boss == null)
+        if (Mod.Picker is null)
         {
             LoggerInstance.Error("BossBattles is not loaded - the dev tools are off");
             return;
@@ -33,7 +32,7 @@ public class DevToolsEntry : MelonMod
 
         FlatscreenControls.Log = message => Logger.Info($"[Flatscreen] {message}");
         Logger.Debug($"[Init] flatscreen controls: {FlatscreenControls.Apply(HarmonyInstance)} methods");
-        SelfTest.Configure(_camera.ShowFixed, _camera.CapturePng, boss.Picker, boss.NewChart);
+        SelfTest.Configure(_camera.ShowFixed, _camera.CapturePng);
         Logger.Info($"BossBattles.DevTools loaded. {Keys}");
     }
 
@@ -65,18 +64,18 @@ public class DevToolsEntry : MelonMod
     /// <summary>A mouse click presses the picker button under the cursor, through the desktop camera when it shows.</summary>
     private void HandleClick()
     {
-        if (!Input.GetMouseButtonDown(0) || ModEntry.Instance is not { } boss || (_camera.Camera ?? Camera.main) is not { } camera) return;
+        if (!Input.GetMouseButtonDown(0) || Mod.Picker is not { } picker || (_camera.Camera ?? Camera.main) is not { } camera) return;
 
         var ray = camera.ScreenPointToRay(Input.mousePosition);
         var unitBox = new Bounds(Vector3.zero, Vector3.one);
-        var hit = boss.Picker.ShownButtons
+        var hit = picker.ShownButtons
             .Select(b => (b.Id, Hit: unitBox.IntersectRay(new Ray(b.Face.InverseTransformPoint(ray.origin), b.Face.InverseTransformVector(ray.direction)), out var distance), Distance: distance))
             .Where(b => b.Hit)
             .OrderBy(b => b.Distance)
             .Select(b => b.Id)
             .FirstOrDefault();
 
-        if (hit != null) boss.Picker.Press(hit);
+        if (hit != null) picker.Press(hit);
     }
 
     private void HandleKeys()

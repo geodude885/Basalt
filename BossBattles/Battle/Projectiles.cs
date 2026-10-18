@@ -24,6 +24,7 @@ internal partial class Projectiles(ActorRegistry actors)
     /// <summary>How far above the floor a grounded structure rests, so physics finds no overlap to push out of.</summary>
     private const float FloorClearance = 0.03f;
 
+    private readonly MoveEffects _effects = new();
     private readonly Dictionary<int, Projectile> _live = [];
     private readonly List<FlightCheck> _checks = [];
 
@@ -57,7 +58,7 @@ internal partial class Projectiles(ActorRegistry actors)
         var height = shape != null ? Math.Max(0.2f, shape.bounds.size.y) : 0.5f;
 
         // What the game spawns on the ground rests on the floor, whatever height the chart gave.
-        if (MoveEffects.IsGrounded(projectile.Structure) || projectile.IsGrounded)
+        if (_effects.IsGrounded(projectile.Structure) || projectile.IsGrounded)
         {
             origin.y += floor + FloorClearance - LowestPoint(pooled.transform, origin, facing);
 
@@ -68,7 +69,7 @@ internal partial class Projectiles(ActorRegistry actors)
 
         Vector3 below = new(origin.x, Math.Min(origin.y, floor) - height, origin.z);
         var rise = Math.Min(RiseSeconds, projectile.Telegraph * 0.8f);
-        MoveEffects.Spawn(projectile.Structure, new Vector3(origin.x, floor, origin.z), facing);
+        _effects.Spawn(projectile.Structure, new Vector3(origin.x, floor, origin.z), facing);
 
         // The game removes structures outside the scene's structure boundary the moment they move.
         var bounds = SceneBoundary.CurrentActiveStructuresSceneBoundary;
@@ -96,10 +97,10 @@ internal partial class Projectiles(ActorRegistry actors)
         live.Body.transform.position = from;
         live.Body.isKinematic = false;
         live.Body.linearVelocity = velocity;
-        MoveEffects.Punch(from, Quaternion.LookRotation(velocity.sqrMagnitude > 0f ? velocity : Vector3.forward));
+        _effects.Punch(from, Quaternion.LookRotation(velocity.sqrMagnitude > 0f ? velocity : Vector3.forward));
 
         // Turned along its path, unless it rests on the floor: its edge would tip into it.
-        if (velocity.sqrMagnitude > 0f && !MoveEffects.IsGrounded(projectile.Structure)) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
+        if (velocity.sqrMagnitude > 0f && !_effects.IsGrounded(projectile.Structure)) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
 
         _checks.Add(new FlightCheck(id, projectile.Structure, live.Body.transform, from, Time.time, projectile.Speed));
         Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} -> {target.Describe()} at {velocity.magnitude:F1} m/s, state {live.Structure?.currentPhysicsState}");
@@ -148,6 +149,7 @@ internal partial class Projectiles(ActorRegistry actors)
     /// <summary>For a scene change: the structures went with the scene.</summary>
     public void Forget()
     {
+        _effects.Forget();
         _live.Clear();
         _checks.Clear();
         _sliding.Clear();

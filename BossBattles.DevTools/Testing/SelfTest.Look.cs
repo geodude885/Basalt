@@ -15,7 +15,6 @@ namespace BossBattles.DevTools.Testing;
 internal static partial class SelfTest
 {
     private static bool _lookTest;
-    private static Func<string?>? _newChart;
 
     private static IEnumerator RunLookTest(List<string> problems)
     {
@@ -26,7 +25,7 @@ internal static partial class SelfTest
         Logger.Info($"[SelfTest] look: yours \"{yours}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
 
         // 1. A chart made in game.
-        var folder = _newChart?.Invoke();
+        var folder = Mod.Charts.NewChart();
         if (folder == null)
         {
             problems.Add("NEW CHART made no chart");

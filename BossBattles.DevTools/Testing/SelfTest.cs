@@ -40,17 +40,14 @@ internal static partial class SelfTest
     private static bool _shots;
     private static Action<Vector3, Vector3>? _showCamera;
     private static Func<int, int, byte[]?>? _capture;
-    private static ChartPicker? _picker;
     private static string? _pickerProblem;
     private static string? _laneProblem;
     private static string _song = "";
 
     public static bool Enabled { get; private set; }
 
-    public static void Configure(Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture, ChartPicker picker, Func<string?> newChart)
+    public static void Configure(Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture)
     {
-        _newChart = newChart;
-        _picker = picker;
         _showCamera = showCamera;
         _capture = capture;
         _shots = Environment.GetCommandLineArgs().Any(a => string.Equals(a, ShotsFlag, StringComparison.OrdinalIgnoreCase));
@@ -206,20 +203,14 @@ internal static partial class SelfTest
     /// <summary>The picker appears in the Gym and a press changes its card; the press is undone after.</summary>
     private static IEnumerator CheckPicker()
     {
-        if (_picker == null)
-        {
-            _pickerProblem = "no chart picker";
-            yield break;
-        }
-
-        _picker.Open = true;
+        Mod.Picker.Open = true;
         var deadline = Time.realtimeSinceStartup + 5f;
-        while (!_picker.Visible && Time.realtimeSinceStartup < deadline) yield return null;
+        while (!Mod.Picker.Visible && Time.realtimeSinceStartup < deadline) yield return null;
 
         // Its buttons wait a second after it appears - it can land where a hand is.
         yield return new WaitForSeconds(1.2f);
 
-        if (!_picker.Visible)
+        if (!Mod.Picker.Visible)
         {
             _pickerProblem = "the chart picker never appeared";
             yield break;
@@ -227,15 +218,15 @@ internal static partial class SelfTest
 
         yield return CheckCover();
 
-        var before = _picker.CardText;
-        var gameButton = _picker.InvokeGameButton("next");
-        if (!gameButton) _picker.Press("next");
+        var before = Mod.Picker.CardText;
+        var gameButton = Mod.Picker.InvokeGameButton("next");
+        if (!gameButton) Mod.Picker.Press("next");
         yield return new WaitForSeconds(0.5f);
-        var after = _picker.CardText;
+        var after = Mod.Picker.CardText;
 
-        if (_shots && _picker.Root is { } card) ShootPanel(card, "0-picker");
+        if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "0-picker");
 
-        _picker.Press("prev");
+        Mod.Picker.Press("prev");
         if (string.IsNullOrWhiteSpace(before) || before == after) _pickerProblem = $"pressing next did not change the picker's card (\"{before}\")";
         Logger.Info($"[SelfTest] picker ({(gameButton ? "the game's NEXT button" : "the mod's own buttons")}): {Regex.Replace(before, "<[^>]+>", "").Replace('\n', ' ')} -> {Regex.Replace(after, "<[^>]+>", "").Replace('\n', ' ')}");
     }
@@ -257,13 +248,13 @@ internal static partial class SelfTest
         File.WriteAllBytes(path, ImageConversion.EncodeToPNG(image));
         UnityEngine.Object.Destroy(image);
 
-        _picker!.Override = new PickerCard("<b>Cover test</b>\n<size=50%>a chart with a cover</size>", path);
+        Mod.Picker.Override = new PickerCard("<b>Cover test</b>\n<size=50%>a chart with a cover</size>", path);
         yield return new WaitForSeconds(0.5f);
-        if (!_picker.ShowingCover) _pickerProblem = "a chart's cover image did not show on the picker";
+        if (!Mod.Picker.ShowingCover) _pickerProblem = "a chart's cover image did not show on the picker";
 
-        if (_shots && _picker.Root is { } card) ShootPanel(card, "0-cover");
+        if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "0-cover");
 
-        _picker.Override = null;
+        Mod.Picker.Override = null;
         yield return new WaitForSeconds(0.4f);
     }
 

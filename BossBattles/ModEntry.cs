@@ -1,3 +1,4 @@
+using BossBattles.Arenas;
 using BossBattles.Editing;
 using BossBattles.Patches;
 using BossBattles.Services.Charts;
@@ -111,6 +112,7 @@ public partial class ModEntry : MelonMod
         Mod.Battle.OnSceneLoaded(sceneName);
         Mod.Studio.OnSceneLoaded();
         Picker.Forget();
+        if (sceneName == Maps.GymScene) GamePanels.CaptureRockTemplate();
     }
 
     private void ApplySettings()

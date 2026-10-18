@@ -47,9 +47,9 @@ internal class BattleController
 
     private readonly Arena _arena = new();
     private readonly Projectiles _projectiles = new();
-    private readonly Board _board = new();
+    private readonly BattleInfoBoard _board = new();
     private readonly List<Actor> _actors = [];
-    private readonly Music _music = new();
+    private readonly MusicController _music = new();
     private readonly MoveLock _moves = new();
     private readonly StructureSweeper _sweeper = new();
     private readonly BattlePlayer _player = new();
@@ -94,7 +94,7 @@ internal class BattleController
 
     public bool StayInMap => State != BattleState.Idle && CurrentArena.IsMatchMap();
 
-    public ChartSignals Signals { get; } = new();
+    public BattleVisualEvents Signals { get; } = new();
 
     public float MusicVolume
     {
@@ -267,7 +267,7 @@ internal class BattleController
                 KeepLane();
                 var left = _countdownEnds - Time.time;
                 if (left > 0f) _board.Show($"<b>{Chart!.Name}</b>\n{Mathf.CeilToInt(left)}");
-                else if (_music.State == MusicState.Loading && Time.time < _musicDeadline) _board.Show($"<b>{Chart!.Name}</b>\nloading music {_music.Progress * 100:0}%");
+                else if (_music.Loading && Time.time < _musicDeadline) _board.Show($"<b>{Chart!.Name}</b>\nloading music {_music.Progress * 100:0}%");
                 else BeginRunning();
                 break;
 
@@ -348,12 +348,12 @@ internal class BattleController
                 colours: Chart.ColoursIn(Chart.Phases.LastOrDefault(p => p.Start <= StartAt)), panes: Chart.EverShowsWalls);
             if (Mode == BattleMode.Record)
             {
-                _board.Place(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
+                _board.SetPosition(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
                 _board.Show($"<b>Recording {performer.Name}</b>\nget ready");
             }
             else
             {
-                _board.Place(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), _frame.Position.ToUnity());
+                _board.SetPosition(World(0f, 2.6f, Math.Min(3f, Chart.Lane.Length / 2f)), _frame.Position.ToUnity());
                 _board.Show($"<b>{Chart.Name}</b>\n{(Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
@@ -420,7 +420,7 @@ internal class BattleController
         _score = new ScoreKeeper(Chart!.Name);
         _phase = Chart.Phases[0];
         _startedAt = Time.time;
-        if (_music.State == MusicState.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
+        if (_music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
         if (Chart.Music != null) _music.Play(Chart.Music.Start + StartAt, Chart.Music.Volume);
         _board.Show("<b>GO</b>", 1f);
         foreach (var actor in _actors) actor.FullHeal();

@@ -208,7 +208,7 @@ the chart's `visuals`:
 | `bossbattles.hit` | event | You take damage, at your head; strength = damage / 5 (up to 1). |
 | `bossbattles.phase` | event | A new phase starts, at your end of the lane. |
 | `bossbattles.survived` / `bossbattles.defeated` | event | The battle ends. |
-| `_RRS_bossbattles_running` | global float | 1 during a battle, else 0. |
+| `_RRS_bossbattles_running` | global float | 1 during a battle, else 0. When a battle ends, time and beat go back to 0 and health to 1. |
 | `_RRS_bossbattles_time` | global float | Chart time in seconds. |
 | `_RRS_bossbattles_beat` | global float | 0 to 1 through the current beat (charts with a `bpm`). |
 | `_RRS_bossbattles_health` | global float | Your health, 0 to 1. |

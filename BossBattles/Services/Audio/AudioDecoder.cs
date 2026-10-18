@@ -22,7 +22,8 @@ public interface IPcmSource : IDisposable
 /// <summary>Opens an MP3, OGG or WAV by its extension; the game ships without Unity's own decoders.</summary>
 public static class AudioDecoder
 {
-    public static IPcmSource Open(string path)
+    // A song with more than `monoAboveSamples` samples in all is downmixed to mono, to save memory.
+    public static IPcmSource Open(string path, long monoAboveSamples = long.MaxValue)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
         if (extension is not (".mp3" or ".ogg" or ".wav")) throw new NotSupportedException($"{Path.GetFileName(path)}: songs are .mp3, .ogg or .wav");
@@ -30,12 +31,13 @@ public static class AudioDecoder
         var stream = File.OpenRead(path);
         try
         {
-            return extension switch
+            IPcmSource song = extension switch
             {
                 ".mp3" => new Mp3Source(stream),
                 ".ogg" => new OggSource(stream),
                 _ => WavSource.Open(stream),
             };
+            return song.Channels > 1 && song.Frames * song.Channels > monoAboveSamples ? new MonoDownmix(song) : song;
         }
         catch
         {
@@ -84,6 +86,42 @@ public static class AudioDecoder
         public int Read(float[] buffer, int offset, int count) => _reader.ReadSamples(buffer, offset, count);
 
         public void Dispose() => _reader.Dispose();
+    }
+
+    private class MonoDownmix : IPcmSource
+    {
+        private readonly IPcmSource _song;
+        private float[] _interleaved = Array.Empty<float>();
+
+        public MonoDownmix(IPcmSource song)
+        {
+            _song = song;
+        }
+
+        public int Channels => 1;
+
+        public int SampleRate => _song.SampleRate;
+
+        public long Frames => _song.Frames;
+
+        public int Read(float[] buffer, int offset, int count)
+        {
+            var wanted = count * _song.Channels;
+            if (_interleaved.Length < wanted) _interleaved = new float[wanted];
+
+            var frames = _song.Read(_interleaved, 0, wanted) / _song.Channels;
+            // Plain loops: this runs for every sample of a long song, where LINQ would allocate per frame.
+            for (var frame = 0; frame < frames; frame++)
+            {
+                var sum = 0f;
+                for (var channel = 0; channel < _song.Channels; channel++) sum += _interleaved[(frame * _song.Channels) + channel];
+                buffer[offset + frame] = sum / _song.Channels;
+            }
+
+            return frames;
+        }
+
+        public void Dispose() => _song.Dispose();
     }
 }
 

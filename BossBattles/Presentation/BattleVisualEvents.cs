@@ -6,7 +6,7 @@ using UnityEngine;
 namespace BossBattles.Presentation;
 
 // A chart's RumbleReShaded looks, and the battle's state and events for packs to read. Does nothing without RumbleReShaded.
-internal class ChartSignals
+internal class BattleVisualEvents
 {
     private readonly ReShade? _reshade = ReShade.IsLoaded ? new ReShade() : null;
     private long _lastBeat = -1;
@@ -17,13 +17,15 @@ internal class ChartSignals
         set => _reshade?.Strength = Math.Clamp(value, 0f, 1f);
     }
 
+    // TODO: Currently still has causes minor playback starting issues
     // During the countdown, so the first look does not hitch the battle.
     public void PreloadChartPacks(Chart chart) => _reshade?.PreloadPacks(chart.Visuals.Select(v => v.Pack));
 
     public void Begin(Chart chart)
     {
         _lastBeat = -1;
-        if (_reshade != null && chart.Visuals.Count > 0) Logger.Debug($"[Visuals.Chart] {chart.Visuals.Count} look(s); installed: {ReShade.DescribeInstalledPacks()}");
+        if (_reshade != null && chart.Visuals.Count > 0)
+            Logger.Debug($"[Visuals.Chart] {chart.Visuals.Count} look(s); installed: {ReShade.DescribeInstalledPacks()}");
     }
 
     public void Update(Chart chart, double chartTime)
@@ -31,18 +33,20 @@ internal class ChartSignals
         if (_reshade == null) return;
 
         _reshade.ApplyLooksAt(chart.Visuals, chartTime);
+
         ReShade.SetShaderGlobal("running", 1f);
         ReShade.SetShaderGlobal("time", (float)chartTime);
+
         if (BattlePlayer.Player?.Data is { } you) ReShade.SetShaderGlobal("health", you.HealthPoints / (float)PlayerHealth.MAX_PLAYER_HEALTH);
 
         if (chart.Tempo is not { } tempo) return;
 
         var beat = tempo.Beat(Math.Max(0, chartTime));
         ReShade.SetShaderGlobal("beat", (float)(beat - Math.Floor(beat)));
+
         var wholeBeat = (long)Math.Floor(beat);
         if (wholeBeat == _lastBeat) return;
 
-        // Stronger on the first beat of a bar.
         _lastBeat = wholeBeat;
         _reshade.FireEvent("beat", BattlePlayer.Head, wholeBeat % 4 == 0 ? 1f : 0.6f, (float)(60.0 / tempo.BpmAt(chartTime)));
     }
@@ -55,6 +59,8 @@ internal class ChartSignals
 
         _reshade.ReleaseAllPacks();
         ReShade.SetShaderGlobal("running", 0f);
+        ReShade.SetShaderGlobal("time", 0f);
         ReShade.SetShaderGlobal("beat", 0f);
+        ReShade.SetShaderGlobal("health", 1f);
     }
 }

@@ -28,6 +28,10 @@
 		<InternalsVisibleTo Include="BossBattles.DevTools" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="UI\CoverMask.png" LogicalName="BossBattles.CoverMask.png" />
+	</ItemGroup>
+
 	<!-- The song decoders: MelonLoader loads libraries from RUMBLE\UserLibs. -->
 	<Target Name="CopyDecodersToUserLibs" AfterTargets="Build">
 		<ItemGroup>

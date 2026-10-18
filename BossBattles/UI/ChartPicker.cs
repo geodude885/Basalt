@@ -47,8 +47,12 @@ internal class ChartPicker
     private const int ButtonsPerRow = 5;
     private const float RowSpacing = 0.21f;
 
+    private const float RockDepth = 0.04f;
+    private const float ColourBarHeight = 0.014f;
+
     private static readonly Color CardColour = new(0.08f, 0.08f, 0.1f);
     private static readonly Color PressedColour = new(1f, 0.9f, 0.4f);
+    private static readonly Color TextOnRock = new(0.12f, 0.1f, 0.09f);
 
     private readonly Func<PickerCard> _describe;
     private readonly Func<IReadOnlyList<PickerButton>> _buttonsFor;
@@ -337,8 +341,9 @@ internal class ChartPicker
         {
             _root = new GameObject("BossBattles_ChartPicker");
 
-            Box(_root.transform, "Card", new Vector3(0f, 0.17f, 0.02f), new Vector3(0.8f, 0.42f, 0.02f), CardColour);
-            _card = Text(_root.transform, new Vector3(0f, 0.17f, 0f), new Vector2(0.74f, 0.38f), 1.2f);
+            var onRock = GamePanels.CreateRockPanel("Card", _root.transform, new Vector3(0f, 0.17f, 0.01f + (RockDepth / 2f)), new Vector3(0.8f, 0.42f, RockDepth)) != null;
+            if (!onRock) Box(_root.transform, "Card", new Vector3(0f, 0.17f, 0.02f), new Vector3(0.8f, 0.42f, 0.02f), CardColour);
+            _card = Text(_root.transform, new Vector3(0f, 0.17f, 0f), new Vector2(0.74f, 0.38f), 1.2f, onRock ? TextOnRock : Color.white);
             _card.enableAutoSizing = true;
             _card.fontSizeMin = 0.3f;
             _card.fontSizeMax = 1.2f;
@@ -377,29 +382,32 @@ internal class ChartPicker
             if (made != null && made.Root != null && made.Root.activeInHierarchy && _buttons.Contains(made)) TryPress(made);
         });
 
-        GameObject face;
-        TextMeshPro text;
-
         if (native != null)
         {
-            // The game's button pushes along its local up: turned towards you, on a plate clicks hit.
             native.transform.localPosition = new Vector3(0f, -0.02f, -0.02f);
             native.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            face = Box(holder.transform, "Face", new Vector3(0f, 0.01f, 0.01f), new Vector3(ButtonWidth, 0.16f, 0.02f), spec.Colour);
-            text = Text(holder.transform, new Vector3(0f, 0.065f, -0.005f), new Vector2(ButtonWidth, 0.05f), 0.5f);
         }
-        else
-        {
-            face = Box(holder.transform, "Face", Vector3.zero, new Vector3(ButtonWidth, 0.09f, 0.05f), spec.Colour);
-            text = Text(holder.transform, new Vector3(0f, 0f, -0.03f), new Vector2(ButtonWidth, 0.09f), 0.6f);
-        }
+
+        var faceCentre = native != null ? new Vector3(0f, 0.01f, 0.01f) : Vector3.zero;
+        var faceSize = native != null ? new Vector3(ButtonWidth, 0.16f, 0.02f) : new Vector3(ButtonWidth, 0.09f, 0.05f);
+        var labelCentre = native != null ? new Vector3(0f, 0.058f, -0.005f) : new Vector3(0f, 0f, -0.03f);
+
+        // On a rock tile the button's colour is a bar along its top edge; without one, the whole face is coloured.
+        var rockFace = GamePanels.CreateRockPanel("Face", holder.transform, faceCentre, faceSize);
+        var face = rockFace ?? Box(holder.transform, "Face", faceCentre, faceSize, spec.Colour);
+        var colourBar = rockFace == null
+            ? face
+            : Box(rockFace.transform, "ColourBar", new Vector3(0f, 0.5f - (ColourBarHeight / faceSize.y / 2f), -0.5f), new Vector3(1f, ColourBarHeight / faceSize.y, 0.2f), spec.Colour);
+        var onRock = rockFace != null;
+
+        var text = Text(holder.transform, labelCentre, new Vector2(ButtonWidth, native != null ? 0.05f : 0.09f), native != null ? 0.5f : 0.6f, onRock ? TextOnRock : Color.white);
 
         text.enableAutoSizing = true;
         text.fontSizeMin = 0.2f;
         text.fontSizeMax = 0.6f;
-        text.text = $"<b>{spec.Label}</b>";
+        text.text = $"{spec.Label}";
 
-        made = new Button(spec, holder, face, spec.Colour) { Native = native != null };
+        made = new Button(spec, holder, face, colourBar, spec.Colour) { Native = native != null };
         _buttons.Add(made);
     }
 
@@ -420,7 +428,7 @@ internal class ChartPicker
         return box;
     }
 
-    private static TextMeshPro Text(Transform parent, Vector3 position, Vector2 size, float fontSize)
+    private static TextMeshPro Text(Transform parent, Vector3 position, Vector2 size, float fontSize, Color colour)
     {
         var holder = new GameObject("Text");
         holder.transform.SetParent(parent, false);
@@ -431,7 +439,7 @@ internal class ChartPicker
         text.alignment = TextAlignmentOptions.Center;
         text.fontSize = fontSize;
         text.enableWordWrapping = false;
-        text.color = Color.white;
+        text.color = colour;
 
         Paint.GiveFont(text);
         return text;
@@ -450,16 +458,18 @@ internal class ChartPicker
     private class Button
     {
         private readonly GameObject _face;
+        private readonly GameObject _colourBar;
         private readonly Material? _normal;
         private readonly Material? _pressed;
         private readonly Vector3 _rest;
         private float _releaseAt;
 
-        public Button(PickerButton spec, GameObject root, GameObject face, Color colour)
+        public Button(PickerButton spec, GameObject root, GameObject face, GameObject colourBar, Color colour)
         {
             Spec = spec;
             Root = root;
             _face = face;
+            _colourBar = colourBar;
             _rest = face.transform.localPosition;
             _normal = Paint.Colour(colour);
             _pressed = Paint.Colour(PressedColour);
@@ -493,7 +503,7 @@ internal class ChartPicker
 
         private void Recolour(Material? material)
         {
-            var renderer = _face.GetComponent<Renderer>();
+            var renderer = _colourBar.GetComponent<Renderer>();
             if (renderer != null && material != null) renderer.sharedMaterial = material;
         }
     }

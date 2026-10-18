@@ -38,6 +38,31 @@ public class AudioDecoderTests
         Assert.Equal(source.Frames * source.Channels, total);
     }
 
+    [Theory]
+    [InlineData("tone.mp3")]
+    [InlineData("tone.ogg")]
+    [InlineData("tone.wav")]
+    public void LongSongsAreDownmixedToMono(string file)
+    {
+        using var stereo = AudioDecoder.Open(Fixture(file));
+        var stereoAudio = TestAudio.DecodeAll(stereo);
+        using var mono = AudioDecoder.Open(Fixture(file), monoAboveSamples: 1000);
+        var monoAudio = TestAudio.DecodeAll(mono);
+
+        Assert.Equal(1, monoAudio.Channels);
+        Assert.Equal(stereo.Frames, mono.Frames);
+        Assert.Equal(stereoAudio.Samples.Length / 2, monoAudio.Samples.Length);
+        Assert.Equal((stereoAudio.Samples[200] + stereoAudio.Samples[201]) / 2f, monoAudio.Samples[100], 5);
+    }
+
+    [Fact]
+    public void ShortSongsStayStereo()
+    {
+        using var source = AudioDecoder.Open(Fixture("tone.wav"), monoAboveSamples: 1_000_000);
+
+        Assert.Equal(2, source.Channels);
+    }
+
     [Fact]
     public void OtherFormatsAreRefused() => Assert.Throws<NotSupportedException>(() => AudioDecoder.Open("song.flac"));
 

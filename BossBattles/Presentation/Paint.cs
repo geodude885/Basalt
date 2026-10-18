@@ -18,6 +18,13 @@ internal static class Paint
         "Sprites/Default",
     };
 
+    private static readonly string[] PreferredFonts =
+    {
+        "GOODDP__ SDF Global Text Material + DropShadow",
+        "GoodDogPlain",
+    };
+
+    private static TMP_FontAsset? _font;
     private static Shader? _shader;
     private static bool _searched;
 
@@ -51,14 +58,25 @@ internal static class Paint
         return material;
     }
 
-    /// <summary>Whatever TextMeshPro font the game has loaded, since a built game may carry no default.</summary>
+    // The game's own handwriting (Good Dog Plain) with its drop shadow, then the plain cut, then whatever is loaded.
     public static void GiveFont(TextMeshPro text)
     {
-        if (text.font != null) return;
+        if (_font == null)
+        {
+            var loadedFonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().Where(f => f != null).ToList();
+            _font = PreferredFonts
+                .Select(name => loadedFonts.FirstOrDefault(f => f.name == name))
+                .FirstOrDefault(f => f != null) ?? loadedFonts.FirstOrDefault();
+            if (_font == null)
+            {
+                Logger.Warning("[Paint.NoFont] no TextMeshPro font loaded - text will be blank");
+                return;
+            }
 
-        var font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
-        if (font != null) text.font = font;
-        else Logger.Warning("[Paint.NoFont] no TextMeshPro font loaded - text will be blank");
+            Logger.Debug($"[Paint.Font] using {_font.name}");
+        }
+
+        text.font = _font;
     }
 
     private static Shader? FindShader()

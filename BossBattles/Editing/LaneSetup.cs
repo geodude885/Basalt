@@ -33,7 +33,7 @@ internal class LaneSetup(GameAssets assets)
 
     public void ResizeLane(float lengthChange, float widthChange)
     {
-        (Lane, var actors) = ChartSetup.Resize(Lane, Actors, Lane.Length + lengthChange, Lane.Width + widthChange);
+        (Lane, var actors) = LaneSetupWriter.Resize(Lane, Actors, Lane.Length + lengthChange, Lane.Width + widthChange);
         Actors = actors.ToList();
         _previewOutOfDate = true;
     }
@@ -64,7 +64,7 @@ internal class LaneSetup(GameAssets assets)
 
         var inLane = anchor.ToLocal(rig.Feet.ToNumerics());
         var along = Math.Max(0.5f, inLane.Z);
-        if (along > Lane.Length) Lane = new Lane(Math.Min(ChartSetup.MaxLength, MathF.Ceiling(along)), Lane.Width);
+        if (along > Lane.Length) Lane = new Lane(Math.Min(LaneSetupWriter.MaxLength, MathF.Ceiling(along)), Lane.Width);
 
         var across = Math.Clamp(inLane.X, -Lane.Width / 2f, Lane.Width / 2f);
         Actors[0] = Actors[0] with { At = new Spot(MathF.Round(across, 2), MathF.Round(Math.Min(along, Lane.Length), 2)) };
@@ -84,7 +84,7 @@ internal class LaneSetup(GameAssets assets)
     public string WriteIntoChartText(string chartText, Chart chartBefore)
     {
         var lengthScale = chartBefore.Lane.Length > 0 ? Lane.Length / chartBefore.Lane.Length : 1f;
-        return ChartSetup.ScaleDepth(ChartSetup.Write(chartText, ArenaSpec, Lane, Actors), lengthScale, Lane.Length);
+        return LaneSetupWriter.ScaleDepth(LaneSetupWriter.Write(chartText, ArenaSpec, Lane, Actors), lengthScale, Lane.Length);
     }
 
     public void RebuildPreviewIfOutOfDate()

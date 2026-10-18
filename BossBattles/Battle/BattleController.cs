@@ -2,6 +2,7 @@ using System.Collections;
 using BossBattles.Actors;
 using BossBattles.Arenas;
 using BossBattles.Presentation;
+using BossBattles.Services;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using BossBattles.Services.Scoring;
@@ -32,7 +33,7 @@ public enum BattleMode
 /// executes each <see cref="ChartCommand"/> the <see cref="ChartRunner"/> hands back. You win by
 /// lasting to the end; your health reaching 0 loses.
 /// </summary>
-internal class BattleController(ActorRegistry actors, ScoreBook scores, GameAssets assets)
+internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores, GameAssets assets)
 {
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;
@@ -186,7 +187,7 @@ internal class BattleController(ActorRegistry actors, ScoreBook scores, GameAsse
         _music.Clear();
         if (chart.Music != null)
         {
-            var song = assetFolder == null ? null : ChartPaths.Inside(assetFolder, chart.Music.File);
+            var song = assetFolder == null ? null : ChartFiles.Inside(assetFolder, chart.Music.File);
             if (song == null) Logger.Warning($"[Music.Missing] {chart.Name}: no folder to find {chart.Music.File} in - playing without music");
             else _music.Load(song);
         }
@@ -510,10 +511,11 @@ internal class BattleController(ActorRegistry actors, ScoreBook scores, GameAsse
         Signals.Fire(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
         Signals.End();
 
-        var previous = _scoreKey == null ? null : scores.Best(_scoreKey);
+        var previous = _scoreKey == null ? null : scores.Get(_scoreKey);
+        LastWasBest = _scoreKey != null && (previous == null || previous.IsBeatenBy(result));
         try
         {
-            LastWasBest = _scoreKey != null && scores.Record(_scoreKey, result, DateTime.Now);
+            if (LastWasBest) scores.Set(_scoreKey!, BestScore.From(result, DateTime.Now));
         }
         catch (IOException e)
         {

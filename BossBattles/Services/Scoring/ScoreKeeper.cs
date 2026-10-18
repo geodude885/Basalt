@@ -12,6 +12,14 @@ public record BattleResult(
     int Score,
     string Rank);
 
+// Your best run of one chart, kept in a JsonBook by ChartEntry.ScoreKey.
+public record BestScore(int Score, string Rank, bool Survived, DateTime When)
+{
+    public static BestScore From(BattleResult result, DateTime when) => new(result.Score, result.Rank, result.Survived, when);
+
+    public bool IsBeatenBy(BattleResult result) => result.Score > Score;
+}
+
 /// <summary>
 /// Scores a battle. The goal is to survive; hurting actors is the bonus:
 /// <list type="bullet">

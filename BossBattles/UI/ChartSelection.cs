@@ -92,7 +92,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         if (Time.unscaledTime < _nextChartsCheck || !battle.BetweenBattles) return;
         _nextChartsCheck = Time.unscaledTime + 1f;
 
-        var fingerprint = FolderFingerprint.Of(library.Folder);
+        var fingerprint = ChartFiles.Fingerprint(library.Folder);
         if (fingerprint == _chartsFingerprint) return;
 
         var first = _chartsFingerprint == 0;
@@ -110,7 +110,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         {
             var what = save();
             ReloadCharts();
-            _chartsFingerprint = FolderFingerprint.Of(library.Folder);
+            _chartsFingerprint = ChartFiles.Fingerprint(library.Folder);
             Logger.Info($"[Studio] {what}");
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException)
@@ -124,8 +124,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     {
         try
         {
-            var name = Enumerable.Range(1, int.MaxValue).Select(n => n == 1 ? "My Chart" : $"My Chart {n}")
-                .First(candidate => !library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
+            var name = ChartFiles.FirstFreeName("My Chart", " ", candidate => library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
             var you = BattlePlayer.Player;
             var look = you?.Data?.VisualData?.ToPlayfabDataString();
@@ -136,7 +135,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             ReloadCharts();
             if (library.Find(name) is { } made) Choose(made);
             else settings.Chart.Value = name;
-            _chartsFingerprint = FolderFingerprint.Of(library.Folder);
+            _chartsFingerprint = ChartFiles.Fingerprint(library.Folder);
             Logger.Info($"[Charts] new chart \"{name}\": edit {Path.Combine(folder, ChartLibrary.FolderChartFile)} - it reloads when you save");
             return folder;
         }
@@ -174,7 +173,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 
         try
         {
-            var packed = ChartPackage.Pack(entry, Path.Combine(exportsFolder, ChartPackage.FileStem(entry.Name) + ChartPackage.Extension));
+            var packed = ChartPackage.Pack(entry, Path.Combine(exportsFolder, ChartFiles.FileStem(entry.Name) + ChartPackage.Extension));
             Logger.Info($"[Export] {entry.Name} -> {packed.Path} ({string.Join(", ", packed.Included)})" +
                         (packed.Missing.Count > 0 ? $" - missing: {string.Join(", ", packed.Missing)}" : ""));
         }

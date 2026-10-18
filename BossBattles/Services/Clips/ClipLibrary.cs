@@ -1,31 +1,25 @@
+using System.Globalization;
+using BossBattles.Services.Charts;
+
 namespace BossBattles.Services.Clips;
 
-/// <summary>The clips in a folder, by the clip's name or its file name.</summary>
-public class ClipLibrary
+// The clips in a folder, by the clip's name or its file name.
+public class ClipLibrary(string folder)
 {
     private Dictionary<string, Clip> _clips = new(StringComparer.OrdinalIgnoreCase);
     private List<string> _errors = [];
 
-    public ClipLibrary(string folder)
-    {
-        Folder = folder;
-    }
-
-    public string Folder { get; }
-
-    public IReadOnlyCollection<Clip> All => _clips.Values;
-
-    /// <summary>Files that are not clips, with why.</summary>
+    // Files that are not clips, with why.
     public IReadOnlyList<string> Errors => _errors;
 
     public void Reload()
     {
-        Directory.CreateDirectory(Folder);
+        Directory.CreateDirectory(folder);
 
         var clips = new Dictionary<string, Clip>(StringComparer.OrdinalIgnoreCase);
         var errors = new List<string>();
 
-        foreach (var file in Directory.EnumerateFiles(Folder, "*.json").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+        foreach (var file in Directory.EnumerateFiles(folder, "*.json").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {
             var stem = Path.GetFileNameWithoutExtension(file);
             (var clip, var error) = ClipFile.Read(File.ReadAllText(file), stem);
@@ -45,14 +39,24 @@ public class ClipLibrary
 
     public Clip? Find(string name) => _clips.TryGetValue(name, out var clip) ? clip : null;
 
-    /// <summary>Saves a clip under a file name made from its name, never overwriting; returns the path.</summary>
+    // The actor's next clip name, counting up from its highest so far: boss-clip-1, boss-clip-2...
+    public string NextName(string actorId)
+    {
+        var prefix = $"{ChartFiles.FileStem(actorId)}-clip-";
+        var highest = !Directory.Exists(folder) ? 0 : Directory.EnumerateFiles(folder, prefix + "*.json")
+            .Select(file => int.TryParse(Path.GetFileNameWithoutExtension(file)[prefix.Length..], NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        return $"{prefix}{highest + 1}";
+    }
+
+    // Under a file name made from the clip's name, never overwriting; returns the path.
     public string Save(Clip clip)
     {
-        Directory.CreateDirectory(Folder);
+        Directory.CreateDirectory(folder);
 
-        var stem = string.Concat(clip.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
-        var path = Enumerable.Range(1, int.MaxValue).Select(n => Path.Combine(Folder, n == 1 ? $"{stem}.json" : $"{stem}-{n}.json")).First(p => !File.Exists(p));
-
+        var stem = ChartFiles.FirstFreeName(ChartFiles.FileStem(clip.Name), "-", candidate => File.Exists(Path.Combine(folder, $"{candidate}.json")));
+        var path = Path.Combine(folder, $"{stem}.json");
         File.WriteAllText(path, ClipFile.Write(clip));
         _clips[clip.Name] = clip;
         return path;

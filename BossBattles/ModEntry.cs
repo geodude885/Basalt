@@ -5,8 +5,8 @@ using BossBattles.Battle;
 using BossBattles.Editing;
 using BossBattles.Patches;
 using BossBattles.Presentation;
+using BossBattles.Services;
 using BossBattles.Services.Charts;
-using BossBattles.Services.Placement;
 using BossBattles.Services.Scoring;
 using BossBattles.UI;
 using MelonLoader;
@@ -40,10 +40,10 @@ public class ModEntry : MelonMod
         var folder = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles");
 
         var library = new ChartLibrary(Path.Combine(folder, "Charts"));
-        var scores = new ScoreBook(Path.Combine(folder, "scores.json"));
+        var scores = new JsonBook<BestScore>(Path.Combine(folder, "scores.json"));
         scores.Load();
         if (scores.LoadError != null) Logger.Info($"scores.json could not be read ({scores.LoadError}) - starting a fresh book");
-        var pickerSpots = new SpotBook(Path.Combine(folder, "places.json"));
+        var pickerSpots = new JsonBook<SavedSpot>(Path.Combine(folder, "places.json"));
         pickerSpots.Load();
 
         _assets = new GameAssets();

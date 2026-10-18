@@ -45,7 +45,7 @@ public static class ChartPackage
                 var name = entry.FullName.Replace('\\', '/');
                 if (name.EndsWith('/')) continue;
 
-                var path = ChartPaths.Inside(partial, name[prefix.Length..]);
+                var path = ChartFiles.Inside(partial, name[prefix.Length..]);
                 if (path == null) return (null, $"has an entry \"{entry.FullName}\" outside the package");
 
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -89,8 +89,8 @@ public static class ChartPackage
 
             foreach (var name in chart.Tracks.SelectMany(t => t.Clips).Select(t => t.Clip).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var entryName = $"{ClipsFolder}/{FileStem(name)}.json";
-                var own = ChartPaths.Inside(entry.AssetFolder, entryName);
+                var entryName = $"{ClipsFolder}/{ChartFiles.FileStem(name)}.json";
+                var own = ChartFiles.Inside(entry.AssetFolder, entryName);
 
                 if (own != null && File.Exists(own))
                 {
@@ -111,7 +111,7 @@ public static class ChartPackage
     /// <summary>A file the chart names, beside it - already compressed media, so stored as is.</summary>
     private static void AddFile(ZipArchive zip, ChartEntry entry, string file, string what, List<string> included, List<string> missing)
     {
-        var path = ChartPaths.Inside(entry.AssetFolder, file);
+        var path = ChartFiles.Inside(entry.AssetFolder, file);
         if (path == null || !File.Exists(path))
         {
             missing.Add($"{what} {file}");
@@ -120,14 +120,6 @@ public static class ChartPackage
 
         zip.CreateEntryFromFile(path, file.Replace('\\', '/'), CompressionLevel.NoCompression);
         included.Add(file);
-    }
-
-    /// <summary>A file-name-safe version of a chart or clip name.</summary>
-    public static string FileStem(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var stem = string.Concat(name.Trim().Select(c => invalid.Contains(c) || c == ' ' ? '-' : c));
-        return stem.Length == 0 ? "chart" : stem;
     }
 
     /// <summary>chart.json at the top, or inside one top-level folder (a zipped folder) - which then becomes the prefix to strip.</summary>

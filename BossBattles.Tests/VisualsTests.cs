@@ -234,7 +234,7 @@ public class ActorLookTests
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss", "shiftstones": [ "Vigor" ] } ] }""").Chart!;
 
-        var saved = ChartSetup.Write(/*lang=json,strict*/ """{ "actors": [] }""", chart.Arena, chart.Lane, chart.Actors);
+        var saved = LaneSetupWriter.Write(/*lang=json,strict*/ """{ "actors": [] }""", chart.Arena, chart.Lane, chart.Actors);
 
         Assert.Equal(new[] { "Vigor" }, ChartLoader.Load(saved).Chart!.Actors[0].Shiftstones);
     }
@@ -265,7 +265,7 @@ public class ProjectileReachTests
     {
         var chart = /*lang=json,strict*/ """{ "events": [ { "t": 1, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 10 }, "speed": 9 } } ], "phases": [ { "start": 0, "at": { "x": 0, "z": 8 } } ] }""";
 
-        var scaled = ChartSetup.ScaleDepth(chart, 0.5f, 4f);
+        var scaled = LaneSetupWriter.ScaleDepth(chart, 0.5f, 4f);
 
         Assert.Contains("\"z\": 5", scaled, StringComparison.Ordinal);
         Assert.Contains("\"z\": 4", scaled, StringComparison.Ordinal);
@@ -301,10 +301,10 @@ public class MimeClipTests
 
         var clip = new Services.Clips.Clip("boss-clip-1", new[] { Frame(0), Frame(4) });
 
-        var whole = TrackEdits.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
+        var whole = TrackWriter.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
         Assert.True(ChartLoader.Load(whole).Chart!.Tracks[0].Clips[0].Mime);
 
-        var punched = TrackEdits.PunchIn(new[] { new TrackClip(0, "old", 0) }, "new", 2, 3, mime: true);
+        var punched = TrackWriter.PunchIn(new[] { new TrackClip(0, "old", 0) }, "new", 2, 3, mime: true);
         Assert.False(punched[0].Mime);
         Assert.True(punched[1].Mime);
         Assert.False(punched[2].Mime);

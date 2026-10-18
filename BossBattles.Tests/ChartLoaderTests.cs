@@ -166,7 +166,7 @@ public class ChartLoaderTests
         var chart = ChartLoader.Load(Text).Chart!;
         Assert.Equal(new BodySize(1.72f, 1.68f), chart.Actors[0].Measurement);
 
-        var saved = ChartLoader.Load(ChartSetup.WriteActors(Text, chart.Actors)).Chart!;
+        var saved = ChartLoader.Load(LaneSetupWriter.WriteActors(Text, chart.Actors)).Chart!;
         Assert.Equal(chart.Actors[0].Measurement, saved.Actors[0].Measurement);
 
         Assert.Null(ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""").Chart!.Actors[0].Measurement);

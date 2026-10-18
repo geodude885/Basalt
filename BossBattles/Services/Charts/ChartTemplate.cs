@@ -11,8 +11,8 @@ public static class ChartTemplate
     /// <param name="stones">The maker's equipped stones, for the boss; null for whoever plays.</param>
     public static string Create(string chartsFolder, string name, string? author, string? look = null, IReadOnlyList<string>? stones = null)
     {
-        var stem = ChartPackage.FileStem(name).ToLowerInvariant();
-        var folder = Enumerable.Range(1, int.MaxValue).Select(n => Path.Combine(chartsFolder, n == 1 ? stem : $"{stem}-{n}")).First(f => !Directory.Exists(f));
+        var stem = ChartFiles.FileStem(name).ToLowerInvariant();
+        var folder = Path.Combine(chartsFolder, ChartFiles.FirstFreeName(stem, "-", candidate => Directory.Exists(Path.Combine(chartsFolder, candidate))));
 
         Directory.CreateDirectory(Path.Combine(folder, ChartPackage.ClipsFolder));
         File.WriteAllText(Path.Combine(folder, ChartLibrary.FolderChartFile), Json(name, author, look, stones));

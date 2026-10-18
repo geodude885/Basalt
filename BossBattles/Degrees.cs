@@ -1,4 +1,4 @@
-namespace BossBattles.Services;
+namespace BossBattles;
 
 /// <summary>Compass degrees as Unity has them: 0 = +Z, clockwise from above, kept to 0..360.</summary>
 public static class Degrees

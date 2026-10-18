@@ -1,6 +1,7 @@
 using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.Editing;
+using BossBattles.Services;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Scoring;
 using UnityEngine;
@@ -8,7 +9,7 @@ using UnityEngine;
 namespace BossBattles.UI;
 
 // What the chart picker shows and where: the chosen chart between battles, and the studio's controls while recording.
-internal class PickerPanel(ChartSelection charts, ChartLibrary library, ScoreBook scores, Settings settings, BattleController battle, Studio studio)
+internal class PickerPanel(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio)
 {
     private static readonly Color Orange = new(1f, 0.45f, 0.1f);
     private static readonly Color Green = new(0.2f, 0.75f, 0.3f);
@@ -162,7 +163,7 @@ internal class PickerPanel(ChartSelection charts, ChartLibrary library, ScoreBoo
             chart.Music == null ? null : $"music: {Path.GetFileNameWithoutExtension(chart.Music.File)}",
             entry.Source == ChartSource.Package ? "package" : null,
         }.Where(p => p != null));
-        var best = scores.Best(entry.ScoreKey);
+        var best = scores.Get(entry.ScoreKey);
 
         return new PickerCard(
             position +
@@ -171,6 +172,6 @@ internal class PickerPanel(ChartSelection charts, ChartLibrary library, ScoreBoo
             $"<size=50%>{facts}</size>\n" +
             (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "") +
             $"<size=55%>{(best == null ? "no best yet" : $"best: {best.Rank} {best.Score}")}</size>",
-            chart.Cover == null ? null : ChartPaths.Inside(entry.AssetFolder, chart.Cover));
+            chart.Cover == null ? null : ChartFiles.Inside(entry.AssetFolder, chart.Cover));
     }
 }

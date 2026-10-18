@@ -1,13 +1,12 @@
 using System.Numerics;
 using BossBattles.DevTools.Testing;
-using BossBattles.Services;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
 using Xunit;
 
 namespace BossBattles.Tests;
 
-public class ChartDocumentTests
+public class ChartTextTests
 {
     private const string Chart = /*lang=json*/ """
         {
@@ -21,7 +20,7 @@ public class ChartDocumentTests
     [Fact]
     public void ReplacingAValueKeepsEverythingElse()
     {
-        var text = ChartDocument.SetRaw(Chart, "lane", /*lang=json,strict*/ """{ "length": 9, "width": 2 }""");
+        var text = ChartText.Set(Chart, "lane", /*lang=json,strict*/ """{ "length": 9, "width": 2 }""");
 
         Assert.Contains(/*lang=json,strict*/ """{ "length": 9, "width": 2 }""", text, StringComparison.Ordinal);
         Assert.Contains("// keep me", text, StringComparison.Ordinal);
@@ -33,7 +32,7 @@ public class ChartDocumentTests
     [Fact]
     public void ANewPropertyIsAddedAtTheEnd()
     {
-        var text = ChartDocument.SetRaw(Chart, "end", "20");
+        var text = ChartText.Set(Chart, "end", "20");
 
         Assert.Equal(20, ChartLoader.Load(text).Chart!.End);
         Assert.Contains("// keep me", text, StringComparison.Ordinal);
@@ -42,15 +41,15 @@ public class ChartDocumentTests
     [Fact]
     public void AddingAfterATrailingCommaOrToAnEmptyObjectStaysValid()
     {
-        Assert.Equal(5, ChartLoader.Load(ChartDocument.SetRaw(/*lang=json*/ """{ "name": "A", }""", "end", "5")).Chart!.End);
-        Assert.Equal(5, ChartLoader.Load(ChartDocument.SetRaw("{}", "end", "5")).Chart!.End);
-        Assert.Equal(5, ChartLoader.Load(ChartDocument.SetRaw(/*lang=json*/ "{ \"name\": \"A\" // last\n}", "end", "5")).Chart!.End);
+        Assert.Equal(5, ChartLoader.Load(ChartText.Set(/*lang=json*/ """{ "name": "A", }""", "end", "5")).Chart!.End);
+        Assert.Equal(5, ChartLoader.Load(ChartText.Set("{}", "end", "5")).Chart!.End);
+        Assert.Equal(5, ChartLoader.Load(ChartText.Set(/*lang=json*/ "{ \"name\": \"A\" // last\n}", "end", "5")).Chart!.End);
     }
 
     [Fact]
     public void KeysAreMatchedAsTheLoaderMatchesThem()
     {
-        var text = ChartDocument.SetRaw(/*lang=json,strict*/ """{ "Name": "Old" }""", "name", "\"New\"");
+        var text = ChartText.Set(/*lang=json,strict*/ """{ "Name": "Old" }""", "name", "\"New\"");
 
         Assert.Equal("New", ChartLoader.Load(text).Chart!.Name);
         Assert.DoesNotContain("Old", text, StringComparison.Ordinal);
@@ -67,14 +66,14 @@ public class ChartDocumentTests
             }
             """;
 
-        var chart = ChartLoader.Load(ChartDocument.SetRaw(tricky, "end", "7")).Chart!;
+        var chart = ChartLoader.Load(ChartText.Set(tricky, "end", "7")).Chart!;
         Assert.Equal(7, chart.End);
         Assert.Equal("a } { ] [ \" quote", chart.Name);
         Assert.Equal("/* not a comment */", chart.Info.Description);
     }
 
     [Fact]
-    public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => ChartDocument.SetRaw("[1]", "end", "1"));
+    public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => ChartText.Set("[1]", "end", "1"));
 }
 
 public class TrackTests
@@ -133,14 +132,14 @@ public class TrackTests
         var chart = Load(text);
         var clip = Recorded("boss-clip-1", 0f, 9.5f);
 
-        var kept = TrackEdits.KeepWhole(text, chart, "boss", clip, 0);
+        var kept = TrackWriter.KeepWhole(text, chart, "boss", clip, 0);
         var after = Load(kept);
 
         Assert.Contains("// my chart", kept, StringComparison.Ordinal);
         Assert.Equal(new TrackClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
         Assert.Equal(10.5, after.End);
 
-        var again = TrackEdits.KeepWhole(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
+        var again = TrackWriter.KeepWhole(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
         Assert.Equal("boss-clip-2", Assert.Single(Assert.Single(Load(again).Tracks).Clips).Clip);
         Assert.Equal(10.5, Load(again).End);
     }
@@ -149,7 +148,7 @@ public class TrackTests
     public void AClipRecordedLateStartsAtZeroAndTheTrackPlacesIt()
     {
         const string text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ], "end": 5 }""";
-        var after = Load(TrackEdits.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
+        var after = Load(TrackWriter.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
 
         Assert.Equal(new TrackClip(40, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
         Assert.Equal(45, after.End);
@@ -161,12 +160,12 @@ public class TrackTests
         var folder = Path.Combine(Path.GetTempPath(), $"BossBattles-{Guid.NewGuid():N}");
         try
         {
-            Assert.Equal("boss-clip-1", TrackEdits.NextName(folder, "boss"));
+            Assert.Equal("boss-clip-1", new ClipLibrary(folder).NextName("boss"));
             Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "boss-clip-1.json"), "{}");
             File.WriteAllText(Path.Combine(folder, "boss-clip-7.json"), "{}");
             File.WriteAllText(Path.Combine(folder, "other-clip-9.json"), "{}");
-            Assert.Equal("boss-clip-8", TrackEdits.NextName(folder, "boss"));
+            Assert.Equal("boss-clip-8", new ClipLibrary(folder).NextName("boss"));
         }
         finally
         {
@@ -257,7 +256,7 @@ public class SectionTests
     [Fact]
     public void PunchingIntoOneClipCutsItAndResumesIt()
     {
-        var result = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
+        var result = TrackWriter.PunchIn(Whole, "clip-2", 4, 8);
 
         Assert.Equal(new[]
         {
@@ -270,8 +269,8 @@ public class SectionTests
     [Fact]
     public void PunchingAgainOverAnEarlierPunchReplacesWhatItCovers()
     {
-        var once = TrackEdits.PunchIn(Whole, "clip-2", 4, 8);
-        var twice = TrackEdits.PunchIn(once, "clip-3", 6, 10);
+        var once = TrackWriter.PunchIn(Whole, "clip-2", 4, 8);
+        var twice = TrackWriter.PunchIn(once, "clip-3", 6, 10);
 
         Assert.Equal(new[]
         {
@@ -285,8 +284,8 @@ public class SectionTests
     [Fact]
     public void PunchingFromTheStartOrOverEverythingLeavesNothingStale()
     {
-        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 3), new TrackClip(3, "clip-1", 3) }, TrackEdits.PunchIn(Whole, "clip-2", 0, 3));
-        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 30) }, TrackEdits.PunchIn(new[] { new TrackClip(0, "clip-1", 0, 20) }, "clip-2", 0, 30));
+        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 3), new TrackClip(3, "clip-1", 3) }, TrackWriter.PunchIn(Whole, "clip-2", 0, 3));
+        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 30) }, TrackWriter.PunchIn(new[] { new TrackClip(0, "clip-1", 0, 20) }, "clip-2", 0, 30));
     }
 
     [Fact]
@@ -296,7 +295,7 @@ public class SectionTests
         var chart = ChartLoader.Load(text).Chart!;
         Clip clip = new("clip-2", new[] { Frame(0f), Frame(4f) });
 
-        var after = ChartLoader.Load(TrackEdits.KeepSection(text, chart, "boss", clip, 4, 8)).Chart!;
+        var after = ChartLoader.Load(TrackWriter.KeepSection(text, chart, "boss", clip, 4, 8)).Chart!;
         var plays = new ChartRunner(after).Schedule.OfType<PlayClip>().ToList();
 
         Assert.Equal(new[] { "clip-1", "clip-2", "clip-1" }, plays.Select(p => p.Clip));
@@ -344,9 +343,9 @@ public class SectionTests
             }
             """;
         var chart = ChartLoader.Load(text).Chart!;
-        (var lane, var actors) = ChartSetup.Resize(chart.Lane, chart.Actors, 14f, 3.5f);
+        (var lane, var actors) = LaneSetupWriter.Resize(chart.Lane, chart.Actors, 14f, 3.5f);
 
-        var saved = ChartSetup.Write(text, new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), lane, actors);
+        var saved = LaneSetupWriter.Write(text, new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), lane, actors);
         var after = ChartLoader.Load(saved).Chart!;
 
         Assert.Contains("// keep", saved, StringComparison.Ordinal);
@@ -361,10 +360,10 @@ public class SectionTests
     {
         var actors = new[] { new ActorSpec("a", "A", new Spot(0, 12), "you"), new ActorSpec("b", "B", new Spot(1, 6), "you") };
 
-        (var lane, var moved) = ChartSetup.Resize(new Lane(12, 3), actors, 100f, 0.1f);
+        (var lane, var moved) = LaneSetupWriter.Resize(new Lane(12, 3), actors, 100f, 0.1f);
 
-        Assert.Equal(new Lane(ChartSetup.MaxLength, ChartSetup.MinWidth), lane);
-        Assert.Equal(ChartSetup.MaxLength, moved[0].At.Z);
+        Assert.Equal(new Lane(LaneSetupWriter.MaxLength, LaneSetupWriter.MinWidth), lane);
+        Assert.Equal(LaneSetupWriter.MaxLength, moved[0].At.Z);
         Assert.Equal(6f, moved[1].At.Z);
     }
 
@@ -423,9 +422,9 @@ public class LaneScaleTests
     {
         var text = ChartTemplate.Json("Scaled", "me");
         var before = ChartLoader.Load(text).Chart!;
-        (var lane, var actors) = ChartSetup.Resize(before.Lane, before.Actors, 9f, before.Lane.Width);
+        (var lane, var actors) = LaneSetupWriter.Resize(before.Lane, before.Actors, 9f, before.Lane.Width);
 
-        var saved = ChartSetup.ScaleDepth(ChartSetup.Write(text, new ArenaSpec(ArenaKind.Pit, 1.7f, -7.2f, 354f), lane, actors), 9f / 12f, 9f);
+        var saved = LaneSetupWriter.ScaleDepth(LaneSetupWriter.Write(text, new ArenaSpec(ArenaKind.Pit, 1.7f, -7.2f, 354f), lane, actors), 9f / 12f, 9f);
         var after = ChartLoader.Load(saved);
 
         Assert.True(after.Ok, string.Join("; ", after.Errors));
@@ -505,7 +504,7 @@ public class ZoneAndRulesTests
     public void TheZoneGoesWithTheLane()
     {
         const string text = /*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 }, "zone": { "length": 8, "height": 3 } }""";
-        var scaled = ChartSetup.ScaleDepth(text, 0.75f, 9f);
+        var scaled = LaneSetupWriter.ScaleDepth(text, 0.75f, 9f);
 
         Assert.Equal(6f, ChartLoader.Load(scaled).Chart!.Zone.Length);
     }

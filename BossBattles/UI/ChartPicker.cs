@@ -2,8 +2,8 @@ using BossBattles.Actors;
 using BossBattles.Arenas;
 using BossBattles.Battle;
 using BossBattles.Presentation;
+using BossBattles.Services;
 using BossBattles.Services.Charts;
-using BossBattles.Services.Placement;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppTMPro;
 using UnityEngine;
@@ -32,7 +32,7 @@ internal enum PickerPlacement
 /// mod's boxes poked by hand position; they can also be clicked or pressed from the keys. Built
 /// without colliders, so nothing of it touches the game's physics.
 /// </summary>
-internal class ChartPicker(PickerPanel panel, SpotBook spots, GameAssets assets)
+internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAssets assets)
 {
     private const float PokeMargin = 0.03f;
     private const float PressCooldown = 0.5f;

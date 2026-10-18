@@ -1,9 +1,9 @@
 using System.IO.Compression;
 using BossBattles.DevTools.Testing;
+using BossBattles.Services;
 using BossBattles.Services.Audio;
 using BossBattles.Services.Charts;
 using BossBattles.Services.Clips;
-using BossBattles.Services.Placement;
 using BossBattles.Services.Scoring;
 using Xunit;
 
@@ -117,15 +117,15 @@ public class ChartPathTests
     [InlineData("", false)]
     [InlineData("music//song.ogg", false)]
     public void OnlyPathsInsideTheFolderAreSafe(string path, bool safe) =>
-        Assert.Equal(safe, ChartPaths.IsSafeRelative(path));
+        Assert.Equal(safe, ChartFiles.IsSafeRelative(path));
 
     [Fact]
     public void InsideResolvesWithinTheFolder()
     {
         var folder = Path.Combine(Path.GetTempPath(), "charts");
 
-        Assert.Equal(Path.GetFullPath(Path.Combine(folder, "a", "b.ogg")), ChartPaths.Inside(folder, "a/b.ogg"));
-        Assert.Null(ChartPaths.Inside(folder, "../b.ogg"));
+        Assert.Equal(Path.GetFullPath(Path.Combine(folder, "a", "b.ogg")), ChartFiles.Inside(folder, "a/b.ogg"));
+        Assert.Null(ChartFiles.Inside(folder, "../b.ogg"));
     }
 }
 
@@ -304,24 +304,25 @@ public sealed class ChartPackageTests : IDisposable
     }
 }
 
-public sealed class ScoreBookTests : IDisposable
+public sealed class BestScoreTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"BossBattles-{Guid.NewGuid():N}", "scores.json");
 
     [Fact]
     public void KeepsOnlyTheBestAndSurvivesARestart()
     {
-        var book = new ScoreBook(_file);
+        var book = new JsonBook<BestScore>(_file);
         book.Load();
+        var best = BestScore.From(Result(900, "A"), new DateTime(2026, 1, 1));
+        book.Set("Song|me", best);
 
-        Assert.True(book.Record("Song|me", Result(900, "A"), new DateTime(2026, 1, 1)));
-        Assert.False(book.Record("Song|me", Result(500, "C"), new DateTime(2026, 1, 2)));
-        Assert.True(book.Record("Song|me", Result(1000, "S"), new DateTime(2026, 1, 3)));
+        Assert.False(best.IsBeatenBy(Result(500, "C")));
+        Assert.True(best.IsBeatenBy(Result(1000, "S")));
 
-        var again = new ScoreBook(_file);
+        var again = new JsonBook<BestScore>(_file);
         again.Load();
-        Assert.Equal(new BestScore(1000, "S", true, new DateTime(2026, 1, 3)), again.Best("Song|me"));
-        Assert.Null(again.Best("Other|me"));
+        Assert.Equal(best, again.Get("Song|me"));
+        Assert.Null(again.Get("Other|me"));
     }
 
     [Fact]
@@ -330,11 +331,11 @@ public sealed class ScoreBookTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
         File.WriteAllText(_file, "{ not json");
 
-        var book = new ScoreBook(_file);
+        var book = new JsonBook<BestScore>(_file);
         book.Load();
 
         Assert.NotNull(book.LoadError);
-        Assert.Null(book.Best("Song|me"));
+        Assert.Null(book.Get("Song|me"));
     }
 
     public void Dispose()
@@ -381,19 +382,19 @@ public class WavFileTests
     }
 }
 
-public sealed class SpotBookTests : IDisposable
+public sealed class JsonBookTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"BossBattles-{Guid.NewGuid():N}", "places.json");
 
     [Fact]
     public void ASpotSurvivesARestartAndABrokenFileStartsEmpty()
     {
-        var book = new SpotBook(_file);
+        var book = new JsonBook<SavedSpot>(_file);
         book.Load();
         Assert.Null(book.Get("Gym"));
 
         book.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
-        var again = new SpotBook(_file);
+        var again = new JsonBook<SavedSpot>(_file);
         again.Load();
         Assert.Equal(new SavedSpot(1f, 2f, 3f, 90f), again.Get("Gym"));
 
@@ -433,12 +434,12 @@ public sealed class ChartAuthoringTests : IDisposable
         Directory.CreateDirectory(_folder);
         var file = Path.Combine(_folder, "a.json");
         File.WriteAllText(file, "{}");
-        var before = FolderFingerprint.Of(_folder);
+        var before = ChartFiles.Fingerprint(_folder);
 
-        Assert.Equal(before, FolderFingerprint.Of(_folder));
+        Assert.Equal(before, ChartFiles.Fingerprint(_folder));
         File.WriteAllText(file, /*lang=json,strict*/ "{ \"name\": \"changed\" }");
-        Assert.NotEqual(before, FolderFingerprint.Of(_folder));
-        Assert.NotEqual(0, FolderFingerprint.Of(Path.Combine(_folder, "missing")));
+        Assert.NotEqual(before, ChartFiles.Fingerprint(_folder));
+        Assert.NotEqual(0, ChartFiles.Fingerprint(Path.Combine(_folder, "missing")));
     }
 
     public void Dispose()

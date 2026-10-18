@@ -1,3 +1,4 @@
+using BossBattles.Battle;
 using HarmonyLib;
 using Il2CppRUMBLE.Networking.MatchFlow;
 
@@ -9,7 +10,13 @@ namespace BossBattles.Patches;
 /// </summary>
 public static class ArenaPatches
 {
-    public static int Apply(HarmonyLib.Harmony harmony) => PatchGroup.Apply(harmony, typeof(ArenaPatches));
+    private static BattleController _battle = null!;
+
+    internal static int Apply(HarmonyLib.Harmony harmony, BattleController battle)
+    {
+        _battle = battle;
+        return PatchGroup.Apply(harmony, typeof(ArenaPatches));
+    }
 
     [HarmonyPatch(typeof(MatchHandler), nameof(MatchHandler.ForceQuit))]
     public static class NoForceQuitDuringBattle
@@ -20,7 +27,7 @@ public static class ArenaPatches
 
             PatchGuard.Run(nameof(NoForceQuitDuringBattle), () =>
             {
-                if (!Mod.Battle.StayInMap) return;
+                if (!_battle.StayInMap) return;
 
                 runOriginal = false;
                 Logger.Debug("[Arena.ForceQuitBlocked] the match handler tried to send you back to the Gym mid-battle");

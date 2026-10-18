@@ -1,3 +1,4 @@
+using BossBattles.Actors;
 using BossBattles.Services.Charts;
 using Il2CppRUMBLE.Environment;
 using Il2CppRUMBLE.Managers;
@@ -12,7 +13,7 @@ namespace BossBattles.Battle;
 /// that arrives in distance / speed seconds. Outside the move system, so a chart can throw faster
 /// than a player could spawn.
 /// </summary>
-internal partial class Projectiles
+internal partial class Projectiles(ActorRegistry actors)
 {
     /// <summary>How long after launch actors stay out of a projectile's way.</summary>
     private const float ActorGraceAfterLaunch = 2f;
@@ -49,7 +50,7 @@ internal partial class Projectiles
             body.isKinematic = true;
         }
 
-        Mod.Actors.IgnoreStructure(pooled.gameObject, projectile.Telegraph + ActorGraceAfterLaunch);
+        actors.IgnoreStructure(pooled.gameObject, projectile.Telegraph + ActorGraceAfterLaunch);
 
         var facing = Quaternion.LookRotation(towardYou);
         var shape = pooled.GetComponentInChildren<Collider>();

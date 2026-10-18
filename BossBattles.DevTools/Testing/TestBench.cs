@@ -45,7 +45,7 @@ internal static class TestBench
     {
         if (Actor != null)
         {
-            _actor!.Despawn();
+            Mod.Actors.Despawn(_actor!);
             Forget();
             return;
         }
@@ -57,7 +57,7 @@ internal static class TestBench
         var at = yours.Feet + (yours.Facing * SpawnDistance);
 
         _actor = new Actor("test", "Test Actor", "you");
-        _actor.Spawn(at, Quaternion.LookRotation(-yours.Facing));
+        Mod.Actors.Spawn(_actor, at, Quaternion.LookRotation(-yours.Facing));
         _mirroring = true;
     }
 

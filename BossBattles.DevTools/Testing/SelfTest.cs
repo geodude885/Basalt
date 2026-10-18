@@ -309,7 +309,7 @@ internal static partial class SelfTest
         Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
 
-        foreach (var actor in Mod.Battle.Actors.Where(a => a.Exists))
+        foreach (var actor in Mod.Actors.All.Where(a => a.Exists))
         {
             var spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
             if (spec == null) continue;
@@ -425,7 +425,7 @@ internal static partial class SelfTest
         var problems = new List<string>();
 
         if (result == null) problems.Add($"the battle did not finish within {TimeoutSeconds}s (state {Mod.Battle.State})");
-        var ready = Mod.Battle.Actors.Count(a => a.Ready);
+        var ready = Mod.Actors.All.Count(a => a.Ready);
         if (ready < chart.Actors.Count) problems.Add($"{ready} of {chart.Actors.Count} actor(s) came up ready");
         if (!_sawSimulatedActor) problems.Add("no actor was ever seen as a ready, simulated player");
 

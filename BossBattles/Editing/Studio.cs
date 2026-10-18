@@ -4,7 +4,7 @@ using BossBattles.Services.Clips;
 
 namespace BossBattles.Editing;
 
-internal class Studio
+internal class Studio(BattleController battle)
 {
     public const double MaxRecordingLength = 600;
     public const double EaseInSeconds = 2;
@@ -40,7 +40,7 @@ internal class Studio
 
         Mime = mime;
         StartStudioBattle(Chart!, BattleMode.Record, mime: mime);
-        State = Mod.Battle.State == BattleState.Idle ? StudioState.Off : StudioState.Recording;
+        State = battle.State == BattleState.Idle ? StudioState.Off : StudioState.Recording;
         Logger.Info($"[Studio] {(mime ? "miming" : "recording")} {ActorName} for {Chart!.Name} - STOP when done");
     }
 
@@ -49,8 +49,8 @@ internal class Studio
         if (State != StudioState.Recording) return;
 
         NewClip = Recorder.Stop(TrackEdits.NextName(ClipsFolder(), _actorId));
-        _recordedLane = Mod.Battle.Lane ?? _recordedLane;
-        Mod.Battle.Stop("recording stopped");
+        _recordedLane = battle.Lane ?? _recordedLane;
+        battle.Stop("recording stopped");
 
         if (NewClip == null)
         {
@@ -110,7 +110,7 @@ internal class Studio
         }
 
         ChartBackup.SaveKeepingBackup(Entry.File, chartText, keptText);
-        Mod.Battle.Stop("clip kept");
+        battle.Stop("clip kept");
 
         var what = _sectionBeingRecorded is { } kept
             ? $"kept {clip.Name} over {kept.From:0.0}-{kept.To:0.0}s ({clip.Moves.Count} moves) in {Entry.Name}"
@@ -122,7 +122,7 @@ internal class Studio
 
     public void DiscardClip()
     {
-        Mod.Battle.Stop("clip discarded");
+        battle.Stop("clip discarded");
         NewClip = null;
         if (IsSectionOrWholeClip) State = StudioState.ChoosingSection;
         else StopEditing();
@@ -139,7 +139,7 @@ internal class Studio
     {
         if (!entry.HasActorTrack || !BeginEditing(entry, arenaOverride)) return;
 
-        Mod.Battle.Stop("choosing a section");
+        battle.Stop("choosing a section");
         SelectedSection = RecordingSection.MiddleThirdOf(Chart!);
         State = StudioState.ChoosingSection;
     }
@@ -166,13 +166,13 @@ internal class Studio
         NewClip = null;
         Mime = mime;
         StartStudioBattle(Chart, BattleMode.Record, startAt: Math.Max(0, SelectedSection.From - EaseInSeconds), recordSpot: GetActorSpot(SelectedSection.From), mime: mime);
-        State = Mod.Battle.State == BattleState.Idle ? StudioState.ChoosingSection : StudioState.Recording;
+        State = battle.State == BattleState.Idle ? StudioState.ChoosingSection : StudioState.Recording;
         Logger.Info($"[Studio] recording {ActorName} from {SelectedSection.From:0.0}s to {SelectedSection.To:0.0}s - it stops by itself");
     }
 
     public void CloseSection()
     {
-        Mod.Battle.Stop("section closed");
+        battle.Stop("section closed");
         StopEditing();
     }
 
@@ -180,7 +180,7 @@ internal class Studio
     {
         if (!BeginEditing(entry, null)) return;
 
-        Mod.Battle.Stop("lane setup");
+        battle.Stop("lane setup");
         LaneSetup.BeginWith(Chart!);
         State = StudioState.Setup;
     }
@@ -210,13 +210,13 @@ internal class Studio
                 break;
 
             case StudioState.Reviewing:
-                if (Mod.Battle.Mode != BattleMode.Review || Mod.Battle.State is BattleState.Finished or BattleState.Idle) State = StudioState.Deciding;
+                if (battle.Mode != BattleMode.Review || battle.State is BattleState.Finished or BattleState.Idle) State = StudioState.Deciding;
                 break;
 
             case StudioState.PreviewingSection:
-                if (Mod.Battle.Mode != BattleMode.Review || Mod.Battle.State is BattleState.Finished or BattleState.Idle)
+                if (battle.Mode != BattleMode.Review || battle.State is BattleState.Finished or BattleState.Idle)
                 {
-                    Mod.Battle.Stop("section previewed");
+                    battle.Stop("section previewed");
                     State = StudioState.ChoosingSection;
                 }
 
@@ -232,35 +232,35 @@ internal class Studio
 
     private void UpdateRecording()
     {
-        if (Mod.Battle.Mode != BattleMode.Record || Mod.Battle.State == BattleState.Idle)
+        if (battle.Mode != BattleMode.Record || battle.State == BattleState.Idle)
         {
             Recorder.Cancel();
             StopEditing();
             return;
         }
 
-        if (Mod.Battle.State != BattleState.Running) return;
-        var chartTime = Mod.Battle.ChartTime;
+        if (battle.State != BattleState.Running) return;
+        var chartTime = battle.ChartTime;
 
         var startsAt = _sectionBeingRecorded?.From ?? 0;
         if (!Recorder.Recording && chartTime < startsAt)
         {
-            Mod.Battle.Banner($"<b>{Math.Ceiling(startsAt - chartTime):0}</b>", 0.2f);
+            battle.Banner($"<b>{Math.Ceiling(startsAt - chartTime):0}</b>", 0.2f);
             return;
         }
 
         if (!Recorder.Recording)
         {
-            if (BattlePlayer.Controller is not { } you || Mod.Battle.Lane is not { } lane) return;
+            if (BattlePlayer.Controller is not { } you || battle.Lane is not { } lane) return;
             _recordedLane = lane;
             Recorder.Start(you, lane);
             _recordingStartedAtChartTime = chartTime;
-            if (IsSectionOrWholeClip) Mod.Battle.Banner("<b>GO</b>", 0.8f);
+            if (IsSectionOrWholeClip) battle.Banner("<b>GO</b>", 0.8f);
         }
 
         Recorder.Update(chartTime);
         var sectionOver = _sectionBeingRecorded is { } section && chartTime >= section.To;
-        if (sectionOver || Mod.Battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
+        if (sectionOver || battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
     }
 
     private bool BeginEditing(ChartEntry entry, ArenaKind? arenaOverride)
@@ -291,7 +291,7 @@ internal class Studio
         Anchor? lane = null,
         Clip? pendingClip = null,
         System.Numerics.Vector2? recordSpot = null,
-        bool mime = false) => Mod.Battle.Start(chart, ArenaOverride, Entry!.AssetFolder, scoreKey: null, mode, _actorId, lane, pendingClip, startAt, recordSpot, mime);
+        bool mime = false) => battle.Start(chart, ArenaOverride, Entry!.AssetFolder, scoreKey: null, mode, _actorId, lane, pendingClip, startAt, recordSpot, mime);
 
     private System.Numerics.Vector2? GetActorSpot(double chartTime)
     {

@@ -32,7 +32,7 @@ public enum BattleMode
 /// executes each <see cref="ChartCommand"/> the <see cref="ChartRunner"/> hands back. You win by
 /// lasting to the end; your health reaching 0 loses.
 /// </summary>
-internal class BattleController
+internal class BattleController(ActorRegistry actors, ScoreBook scores)
 {
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;
@@ -46,9 +46,8 @@ internal class BattleController
     private const float MusicWaitSeconds = 90f;
 
     private readonly Arena _arena = new();
-    private readonly Projectiles _projectiles = new();
+    private readonly Projectiles _projectiles = new(actors);
     private readonly BattleInfoBoard _board = new();
-    private readonly List<Actor> _actors = [];
     private readonly MusicController _music = new();
     private readonly MoveLock _moves = new();
     private readonly StructureSweeper _sweeper = new();
@@ -104,8 +103,6 @@ internal class BattleController
 
     public bool SongOver => Chart?.Music != null && _music.Ended;
 
-    public ScoreBook? Scores { get; set; }
-
     /// <summary>Seconds into the chart: the song's clock when there is one, else game time; -1 before GO.</summary>
     public double ChartTime => State is BattleState.Running or BattleState.Finished ? StartAt + (_music.Clock ?? (Time.time - _startedAt)) : -1;
 
@@ -113,8 +110,6 @@ internal class BattleController
     public double StartAt { get; private set; }
 
     public Anchor? Lane => LaidOut ? _frame : null;
-
-    public IReadOnlyList<Actor> Actors => _actors;
 
     private bool LaidOut => State is not (BattleState.Idle or BattleState.LoadingArena) && Chart != null;
 
@@ -126,7 +121,7 @@ internal class BattleController
     /// <param name="chart">The chart.</param>
     /// <param name="arenaOverride">An arena to play in instead of the chart's own.</param>
     /// <param name="assetFolder">Where its song and <c>clips/</c> are.</param>
-    /// <param name="scoreKey">Files the result in <see cref="Scores"/>; null keeps no score.</param>
+    /// <param name="scoreKey">Files the result in the score book; null keeps no score.</param>
     /// <param name="mode">Play, record a clip as <paramref name="recordActor"/>, or review one.</param>
     /// <param name="recordActor">The actor recorded; default the first.</param>
     /// <param name="lane">A lane already laid out (a clip's) instead of laying one now.</param>
@@ -210,8 +205,7 @@ internal class BattleController
         _player.RestoreInvincibility();
         if (State == BattleState.Running && Mode != BattleMode.Record) BattlePlayer.FullHealth();
         Signals.End();
-        foreach (var actor in _actors) actor.Despawn();
-        _actors.Clear();
+        actors.DespawnAll();
         _projectiles.Clear();
         _arena.Destroy();
         _board.Hide();
@@ -234,7 +228,6 @@ internal class BattleController
         Signals.End();
         _moves.Forget();
         MoveEffects.Forget();
-        _actors.Clear();
         _projectiles.Forget();
         _arena.Forget();
         _board.Forget();
@@ -260,7 +253,7 @@ internal class BattleController
         switch (State)
         {
             case BattleState.SpawningActors:
-                if (_actors.All(a => a.Ready) || Time.time >= _spawnDeadline) BeginCountdown();
+                if (actors.All.All(a => a.Ready) || Time.time >= _spawnDeadline) BeginCountdown();
                 break;
 
             case BattleState.Countdown:
@@ -303,9 +296,9 @@ internal class BattleController
         if (healthNow <= 0) Finish(survived: false, ChartTime);
     }
 
-    public void OnActorDamaged(Actor actor, int amount)
+    public void OnActorDamaged(int amount)
     {
-        if (State != BattleState.Running || !_actors.Contains(actor)) return;
+        if (State != BattleState.Running) return;
         _score!.ActorDamaged(amount, _phase?.ScoreMultiplier ?? 1);
     }
 
@@ -360,14 +353,13 @@ internal class BattleController
             foreach (var spec in Mode == BattleMode.Record ? Enumerable.Empty<ActorSpec>() : Chart.Actors)
             {
                 var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { SelfKnockbackMultiplier = 0f, Measurement = spec.Measurement };
-                _actors.Add(actor);
                 var spot = World(spec.At.X, 0f, spec.At.Z);
                 var yaw = _frame.ActorYaw(spec.At.Facing);
 
                 // Spawning puts the head on the floor, so the body falls until placed properly.
                 var session = _session;
                 actor.OnReady += ready => MelonCoroutines.Start(PlaceWhenSettled(ready, spot, yaw, session));
-                actor.Spawn(spot, Quaternion.Euler(0f, yaw, 0f));
+                actors.Spawn(actor, spot, Quaternion.Euler(0f, yaw, 0f));
             }
 
             _spawnDeadline = Time.time + ActorSpawnTimeoutSeconds;
@@ -395,12 +387,12 @@ internal class BattleController
 
     private void BeginCountdown()
     {
-        var ready = _actors.Count(a => a.Ready);
-        if (ready < _actors.Count) Logger.Warning($"[Battle.ActorsLate] {_actors.Count - ready} of {_actors.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
+        var ready = actors.All.Count(a => a.Ready);
+        if (ready < actors.All.Count) Logger.Warning($"[Battle.ActorsLate] {actors.All.Count - ready} of {actors.All.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
 
         _countdownEnds = Time.time + CountdownSeconds;
         _musicDeadline = _countdownEnds + MusicWaitSeconds;
-        _arena.Boundary.LetActorsThrough(_actors.SelectMany(a => a.Colliders));
+        _arena.Boundary.LetActorsThrough(actors.All.SelectMany(a => a.Colliders));
         _moves.Hold();
         Signals.PreloadChartPacks(Chart!);
         State = BattleState.Countdown;
@@ -423,7 +415,7 @@ internal class BattleController
         if (_music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
         if (Chart.Music != null) _music.Play(Chart.Music.Start + StartAt, Chart.Music.Volume);
         _board.Show("<b>GO</b>", 1f);
-        foreach (var actor in _actors) actor.FullHeal();
+        foreach (var actor in actors.All) actor.FullHeal();
         _sweeper.Reset();
         Signals.Begin(Chart);
 
@@ -517,10 +509,10 @@ internal class BattleController
         Signals.Fire(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
         Signals.End();
 
-        var previous = _scoreKey == null ? null : Scores?.Best(_scoreKey);
+        var previous = _scoreKey == null ? null : scores.Best(_scoreKey);
         try
         {
-            LastWasBest = _scoreKey != null && Scores != null && Scores.Record(_scoreKey, result, DateTime.Now);
+            LastWasBest = _scoreKey != null && scores.Record(_scoreKey, result, DateTime.Now);
         }
         catch (IOException e)
         {
@@ -533,7 +525,7 @@ internal class BattleController
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 
-        foreach (var actor in _actors) actor.AllowFreePlacement();
+        foreach (var actor in actors.All) actor.AllowFreePlacement();
         Finished?.Invoke(result);
     }
 
@@ -545,7 +537,7 @@ internal class BattleController
 
     private Actor? ActorById(string id)
     {
-        var actor = _actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
+        var actor = actors.All.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
         if (actor == null || !actor.Exists) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
         return actor is { Exists: true } ? actor : null;
     }

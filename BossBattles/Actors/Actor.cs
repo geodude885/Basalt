@@ -17,12 +17,12 @@ namespace BossBattles.Actors;
 /// <summary>
 /// A simulated player. Created as a Local player, drawn as a Remote one, so it has a body and its sounds play in the world.
 /// </summary>
-internal partial class Actor
+internal partial class Actor(string id, string name, string customisationString, IReadOnlyList<string>? stones = null)
 {
-    public string Id { get; }
-    public string Name { get; }
-    public string PlayerCustomisation { get; }
-    public IReadOnlyList<string>? Stones { get; }
+    public string Id { get; } = id;
+    public string Name { get; } = name;
+    public string PlayerCustomisation { get; } = customisationString;
+    public IReadOnlyList<string>? Stones { get; } = stones;
     public BodySize? Measurement { get; init; }
 
     public bool Exists => _player != null && _player.Controller != null;
@@ -46,14 +46,6 @@ internal partial class Actor
     private ActorPose? _pose;
     private bool _spawning;
     private Transform[] _playerUi = [];
-
-    public Actor(string id, string name, string customisationString, IReadOnlyList<string>? stones = null)
-    {
-        Id = id;
-        Name = name;
-        PlayerCustomisation = customisationString;
-        Stones = stones;
-    }
 
 
     /// <summary>Creates the body asynchronously, see <see cref="OnReady"/>.</summary>
@@ -206,7 +198,6 @@ internal partial class Actor
         foreach (var source in body.GetComponentsInChildren<AudioSource>(true)) source.spatialBlend = 1f;
 
         _player = player;
-        Mod.Actors.Add(this);
 
         // Only add to player list until visible to avoid stucture physics issues
         SetInPlayerList(true);
@@ -354,7 +345,6 @@ internal partial class Actor
 
     private void Forget()
     {
-        Mod.Actors.Remove(this);
         _player = null;
         _rig = null;
         _pose = null;

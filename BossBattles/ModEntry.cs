@@ -40,7 +40,7 @@ public partial class ModEntry : MelonMod
         _scores = new ScoreBook(Path.Combine(_folder, "scores.json"));
         _scores.Load();
         if (_scores.LoadError != null) Logger.Info($"scores.json could not be read ({_scores.LoadError}) - starting a fresh book");
-        Mod.Battle.Scores = _scores;
+        Mod.Build(_scores);
         var places = new SpotBook(Path.Combine(_folder, "places.json"));
         places.Load();
         Picker = new ChartPicker(DescribePanel, PanelButtons, PanelWanted, places);
@@ -50,8 +50,8 @@ public partial class ModEntry : MelonMod
         ApplySettings();
         _settings.Changed += ApplySettings;
 
-        Logger.Debug($"[Init] actor patches: {ActorPatches.Apply(HarmonyInstance)} methods");
-        Logger.Debug($"[Init] arena patches: {ArenaPatches.Apply(HarmonyInstance)} methods");
+        Logger.Debug($"[Init] actor patches: {ActorPatches.Apply(HarmonyInstance, Mod.Actors, Mod.Battle)} methods");
+        Logger.Debug($"[Init] arena patches: {ArenaPatches.Apply(HarmonyInstance, Mod.Battle)} methods");
 
         foreach ((var text, var name, var description, var handler) in new (string, string, string, Action)[]
         {

@@ -9,9 +9,23 @@ internal class ActorRegistry
 
     public IReadOnlyList<Actor> All => _actors;
 
-    public void Add(Actor actor) => _actors.Add(actor);
+    public void Spawn(Actor actor, Vector3 floorPosition, Quaternion facing)
+    {
+        _actors.Add(actor);
+        actor.Spawn(floorPosition, facing);
+    }
 
-    public void Remove(Actor actor) => _actors.Remove(actor);
+    public void Despawn(Actor actor)
+    {
+        actor.Despawn();
+        _actors.Remove(actor);
+    }
+
+    public void DespawnAll()
+    {
+        foreach (var actor in _actors) actor.Despawn();
+        _actors.Clear();
+    }
 
     public Actor? Find(Player? player) => player == null ? null : _actors.FirstOrDefault(a => a.Owns(player));
 

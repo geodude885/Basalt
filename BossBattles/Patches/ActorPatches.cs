@@ -20,7 +20,16 @@ namespace BossBattles.Patches;
 /// </summary>
 public static class ActorPatches
 {
-    public static int Apply(HarmonyLib.Harmony harmony) => PatchGroup.Apply(harmony, typeof(ActorPatches));
+    // Harmony only calls static methods, so what the patches use is handed over here, once.
+    private static ActorRegistry _actors = null!;
+    private static BattleController _battle = null!;
+
+    internal static int Apply(HarmonyLib.Harmony harmony, ActorRegistry actors, BattleController battle)
+    {
+        _actors = actors;
+        _battle = battle;
+        return PatchGroup.Apply(harmony, typeof(ActorPatches));
+    }
 
     /// <summary>
     /// An actor never reaches 0 HP, where the game's death handling would run - for an extra player
@@ -37,7 +46,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(NoLethalHits), () =>
             {
-                var actor = Mod.Actors.Find(__instance.ParentController);
+                var actor = _actors.Find(__instance.ParentController);
                 if (actor == null || amount < actor.Player!.Data.HealthPoints) return;
 
                 actor.FullHeal();
@@ -45,7 +54,7 @@ public static class ActorPatches
 
                 // Lethal even on full health: scored, not dealt.
                 runOriginal = false;
-                Mod.Battle.OnActorDamaged(actor, amount);
+                _battle.OnActorDamaged(amount);
             });
 
             return runOriginal;
@@ -62,7 +71,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(NoLethalSetHealth), () =>
             {
-                if (newHealth <= 0 && Mod.Actors.Find(__instance.ParentController) != null) runOriginal = false;
+                if (newHealth <= 0 && _actors.Find(__instance.ParentController) != null) runOriginal = false;
             });
 
             return runOriginal;
@@ -84,7 +93,7 @@ public static class ActorPatches
             PatchGuard.Run(nameof(ActorHealthAsRemote), () =>
             {
                 var controller = __instance.ParentController;
-                if (controller == null || Mod.Actors.Find(controller)?.Exists != true) return;
+                if (controller == null || _actors.Find(controller)?.Exists != true) return;
                 if (controller.controllerType != ControllerType.Local) return;
 
                 controller.controllerType = ControllerType.Remote;
@@ -117,16 +126,16 @@ public static class ActorPatches
             var controller = __instance.ParentController;
             if (controller == null) return;
 
-            var actor = Mod.Actors.Find(controller);
+            var actor = _actors.Find(controller);
             if (actor != null)
             {
-                Mod.Battle.OnActorDamaged(actor, previousHealth - newHealth);
+                _battle.OnActorDamaged(previousHealth - newHealth);
                 return;
             }
 
             var you = BattlePlayer.Player;
             if (you != null && controller.assignedPlayer != null && controller.assignedPlayer.Pointer == you.Pointer)
-                Mod.Battle.OnPlayerDamaged(previousHealth - newHealth, newHealth);
+                _battle.OnPlayerDamaged(previousHealth - newHealth, newHealth);
         });
     }
 
@@ -142,7 +151,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(Knockback), () =>
             {
-                var actor = Mod.Actors.Find(controller);
+                var actor = _actors.Find(controller);
                 if (actor == null) return;
 
                 if (actor.SelfKnockbackMultiplier <= 0f)
@@ -173,7 +182,7 @@ public static class ActorPatches
 
             PatchGuard.Run(nameof(ActorSticks), () =>
             {
-                if (Mod.Actors.Find(__instance.ParentController) == null) return;
+                if (_actors.Find(__instance.ParentController) == null) return;
 
                 runOriginal = false;
                 __instance.currentRawWalkInput = Vector2.zero;
@@ -198,7 +207,7 @@ public static class ActorPatches
         public static bool Prefix(PlayerHandPresence __instance, InputManager.Hand hand, ref PlayerHandPresence.HandPresenceInput __result)
         {
             ClipFingers? fingers = null;
-            PatchGuard.Run(nameof(ActorFingers), () => fingers = Mod.Actors.Find(__instance.ParentController)?.Fingers(hand));
+            PatchGuard.Run(nameof(ActorFingers), () => fingers = _actors.Find(__instance.ParentController)?.Fingers(hand));
             if (fingers is not { } held) return true;
 
             __result = new PlayerHandPresence.HandPresenceInput { indexInput = held.Index, gripInput = held.Grip, thumbInput = held.Thumb, swayInput = held.Sway };
@@ -222,7 +231,7 @@ public static class ActorPatches
     [HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseCompleted))]
     public static class PoseSoundScope
     {
-        public static void Prefix(PlayerPoseSystem __instance, out bool __state) => __state = ActorSoundScope.Enter(__instance.ParentController);
+        public static void Prefix(PlayerPoseSystem __instance, out bool __state) => __state = ActorSoundScope.Enter(_actors, __instance.ParentController);
 
         public static void Postfix(bool __state) => ActorSoundScope.Exit(__state);
     }
@@ -230,7 +239,7 @@ public static class ActorPatches
     [HarmonyPatch(typeof(PlayerPoseSystem), nameof(PlayerPoseSystem.OnPoseSetCompleted))]
     public static class PoseSetSoundScope
     {
-        public static void Prefix(PlayerPoseSystem __instance, out bool __state) => __state = ActorSoundScope.Enter(__instance.ParentController);
+        public static void Prefix(PlayerPoseSystem __instance, out bool __state) => __state = ActorSoundScope.Enter(_actors, __instance.ParentController);
 
         public static void Postfix(bool __state) => ActorSoundScope.Exit(__state);
     }
@@ -238,7 +247,7 @@ public static class ActorPatches
     [HarmonyPatch(typeof(PlayerMovement), nameof(PlayerMovement.OnBecameGrounded))]
     public static class LandingSoundScope
     {
-        public static void Prefix(PlayerMovement __instance, out bool __state) => __state = ActorSoundScope.Enter(__instance.ParentController);
+        public static void Prefix(PlayerMovement __instance, out bool __state) => __state = ActorSoundScope.Enter(_actors, __instance.ParentController);
 
         public static void Postfix(bool __state) => ActorSoundScope.Exit(__state);
     }
@@ -246,7 +255,7 @@ public static class ActorPatches
     [HarmonyPatch(typeof(PlayerShiftstoneSystem), nameof(PlayerShiftstoneSystem.ActivateUseShiftstoneEffects))]
     public static class ShiftstoneSoundScope
     {
-        public static void Prefix(PlayerShiftstoneSystem __instance, out bool __state) => __state = ActorSoundScope.Enter(__instance.ParentController);
+        public static void Prefix(PlayerShiftstoneSystem __instance, out bool __state) => __state = ActorSoundScope.Enter(_actors, __instance.ParentController);
 
         public static void Postfix(bool __state) => ActorSoundScope.Exit(__state);
     }

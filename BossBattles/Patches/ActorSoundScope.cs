@@ -1,3 +1,4 @@
+using BossBattles.Actors;
 using Il2CppRUMBLE.Players;
 
 namespace BossBattles.Patches;
@@ -13,13 +14,13 @@ internal static class ActorSoundScope
     public static bool Active => _depth > 0;
 
     /// <returns>Whether the scope was entered, for the matching <see cref="Exit"/>.</returns>
-    public static bool Enter(PlayerController? controller)
+    public static bool Enter(ActorRegistry actors, PlayerController? controller)
     {
         var entered = false;
 
         PatchGuard.Run(nameof(ActorSoundScope), () =>
         {
-            if (Mod.Actors.Find(controller)?.Exists != true) return;
+            if (actors.Find(controller)?.Exists != true) return;
 
             _depth++;
             entered = true;

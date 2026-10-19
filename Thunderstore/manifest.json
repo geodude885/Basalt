@@ -1,7 +1,7 @@
 {
   "name": "Basalt",
   "version_number": "1.0.0",
-  "website_url": "https://github.com/geodude885/BossBattles",
+  "website_url": "https://github.com/geodude885/Basalt",
   "description": "Survive scripted boss battles down a single lane against game-simulated actors.",
   "dependencies": [
     "LavaGang-MelonLoader-0.7.3",

@@ -9,19 +9,18 @@ Survive scripted boss battles down a single lane against game-simulated actors: 
 
 ```
 Basalt/                 the mod
-  ModEntry*.cs          entry point, chart actions, the picker's panel
-  Mod.cs, Logger.cs     shared state (actors, battle, studio) and the logger, with its log level
-  Actors/               Actor (simulated player): lifecycle, playback, body; rig
-  Battle/               BattleController and what it runs: projectiles, your moves, you, structures
-  Arenas/               the maps, and the lane laid out in them
-  Presentation/         music, the board, RumbleReShaded looks and signals
-  Authoring/            the studio (recording, lane setup) and the clip recorder
+  ModEntry.cs           builds the services, hands each what it needs, and passes MelonLoader's calls on
+  Mod.cs, Logger.cs     the services for DevTools, and the logger with its log level
+  Actors/               Actor (simulated player): lifecycle, playback, body; rig; the actor registry
+  Battle/               BattleController, its request and run, and what it drives: projectiles, moves, the player
+  Arenas/               the maps, and the lane's layout, walls and visuals
+  Presentation/         music, the board, the game's assets, RumbleReShaded looks and signals
+  Editing/              the studio (recording, lane setup) and the clip recorder
   Patches/              ActorPatches (health, knockback, input, sounds), ArenaPatches
-  UI/                   settings, the chart picker, covers, the game's buttons
-  Services/             game-free and unit tested: charts, clips, audio, scoring, logging
+  UI/                   settings, the chart picker and its panel, chart selection, covers
+  Services/             game-free and unit tested: charts, clips, audio, scoring, JSON books
 Basalt.DevTools/        a second mod for development: self-tests, test actor, flatscreen play
 Basalt.Tests/           xUnit: services, patch targets against the interop
-shaders/                the BossBattlesNight RumbleReShaded pack (a Unity project)
 tools/                  song analysis, cpp2il-isil.py
 ```
 

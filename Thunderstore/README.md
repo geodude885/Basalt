@@ -40,7 +40,7 @@ song, cover and `clips/`, or a `.bbchart` package. An empty folder gets two star
 reload by themselves when saved, and a chart that does not load says why on the picker.
 
 The format, field by field, is in
-[docs/chart-format.md](https://github.com/geodude885/BossBattles/blob/main/docs/chart-format.md).
+[docs/chart-format.md](https://github.com/geodude885/Basalt/blob/main/docs/chart-format.md).
 
 ## Making charts
 

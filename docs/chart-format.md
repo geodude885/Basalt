@@ -9,7 +9,7 @@ JSON, so comments and hand layout are not kept.
 Point an editor at [chart.schema.json](chart.schema.json) for completion and checking:
 
 ```jsonc
-{ "$schema": "https://raw.githubusercontent.com/<you>/RumbleBossBattles/main/docs/chart.schema.json", ... }
+{ "$schema": "https://raw.githubusercontent.com/geodude885/Basalt/main/docs/chart.schema.json", ... }
 ```
 
 ## Making one

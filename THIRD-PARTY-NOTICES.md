@@ -1,6 +1,6 @@
 # Third-party notices
 
-BossBattles ships these libraries in `UserLibs`, to decode chart songs:
+Basalt ships these libraries in `UserLibs`, to decode chart songs:
 
 - **NLayer** (MP3) - MIT License, Copyright (c) Mark Heath, Andrew Ward and contributors.
   https://github.com/naudio/NLayer

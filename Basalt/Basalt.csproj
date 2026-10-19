@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="..\Version.props" />
+	<Import Project="..\Rumble.props" />
+
+	<PropertyGroup>
+		<!-- MelonLoader hosts .NET 6 inside the game. -->
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>x64</PlatformTarget>
+		<SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+		<NoWarn>NU1603,NU1701,MSB3270</NoWarn>
+		<Version>$(ModVersion)</Version>
+		<AssemblyVersion>$(ModVersion)</AssemblyVersion>
+		<FileVersion>$(ModVersion)</FileVersion>
+		<CopyToMods>true</CopyToMods>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.3" />
+		<PackageReference Include="Lib.Harmony" Version="2.4.2" />
+		<PackageReference Include="NLayer" Version="1.16.0" GeneratePathProperty="true" />
+		<PackageReference Include="NVorbis" Version="0.10.5" GeneratePathProperty="true" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Basalt.DevTools" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="UI\CoverMask.png" LogicalName="Basalt.CoverMask.png" />
+	</ItemGroup>
+
+	<!-- The song decoders: MelonLoader loads libraries from RUMBLE\UserLibs. -->
+	<Target Name="CopyDecodersToUserLibs" AfterTargets="Build">
+		<ItemGroup>
+			<Decoder Include="$(PkgNLayer)\lib\netstandard2.0\NLayer.dll;$(PkgNVorbis)\lib\netstandard2.0\NVorbis.dll" />
+		</ItemGroup>
+		<Copy SourceFiles="@(Decoder)" DestinationFolder="$(RumblePath)\UserLibs" SkipUnchangedFiles="true" ContinueOnError="true" />
+	</Target>
+
+</Project>

@@ -1,4 +1,4 @@
-# BossBattles
+# Basalt
 
 Survive scripted boss battles down a single lane in **RUMBLE**.
 
@@ -35,7 +35,7 @@ in the Gym* to have it always come to you.
 
 ## Charts
 
-Charts live in `UserData/BossBattles/Charts`: a `.json` file, a folder holding `chart.json` with its
+Charts live in `UserData/Basalt/Charts`: a `.json` file, a folder holding `chart.json` with its
 song, cover and `clips/`, or a `.bbchart` package. An empty folder gets two starter charts. Charts
 reload by themselves when saved, and a chart that does not load says why on the picker.
 
@@ -54,9 +54,9 @@ Turn on **Chart editing** in the settings. The picker then gains:
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your
-look and stones), *Open chart folder* and *Export chart* (a `.bbchart` in `UserData/BossBattles/Exports`).
+look and stones), *Open chart folder* and *Export chart* (a `.bbchart` in `UserData/Basalt/Exports`).
 
-**The chart editor** is a separate desktop app for Windows, macOS and Linux, the Boss Battles Chart
+**The chart editor** is a separate desktop app for Windows, macOS and Linux, Basalt
 Editor: the song's waveform under a beat grid, projectiles on a top-down lane, phases, colours, and a
 problems list that matches the mod's own checks. Open a chart's folder in it, save, and the game
 reloads the chart.

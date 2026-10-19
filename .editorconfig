@@ -119,7 +119,7 @@ dotnet_diagnostic.IDE0305.severity = silent
 #### Test project ####
 # Scoped to the tests, so these relaxations cannot quietly weaken the mod itself.
 
-[BossBattles.Tests/**.cs]
+[Basalt.Tests/**.cs]
 # Test names are deliberately long sentences describing the behaviour under test.
 dotnet_diagnostic.CA1707.severity = none
 # Inline arrays of expected values read better than hoisting each one to a field.
@@ -127,12 +127,12 @@ dotnet_diagnostic.CA1861.severity = none
 
 # Guard clauses read better than the conditional expressions IDE0046/IDE0045 want, and a switch with
 # a deliberate default arm is not an omission.
-[{BossBattles,BossBattles.DevTools}/**.cs]
+[{Basalt,Basalt.DevTools}/**.cs]
 dotnet_diagnostic.IDE0046.severity = silent
 dotnet_diagnostic.IDE0045.severity = silent
 dotnet_diagnostic.IDE0010.severity = silent
 dotnet_diagnostic.IDE0072.severity = silent
 
 # Harmony binds patch parameters by exact name (__instance, __result, __state).
-[{BossBattles/Patches,BossBattles.DevTools/Flatscreen}/**.cs]
+[{Basalt/Patches,Basalt.DevTools/Flatscreen}/**.cs]
 dotnet_diagnostic.CA1707.severity = none

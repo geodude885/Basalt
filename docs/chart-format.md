@@ -1,4 +1,4 @@
-# BossBattles chart format (format 2)
+# Basalt chart format (format 2)
 
 A chart is one JSON object. Comments (`//`, `/* */`) and trailing commas are allowed; field names
 are case-insensitive; fields the mod does not know are ignored, so a chart written for a newer
@@ -195,29 +195,29 @@ again when the battle ends or stops.
 | `off` | bool | - | `true`: fade the pack's charted sliders back to the player's, then put it back on or off as they had it. |
 | `fade` | seconds | 0 | How long the change takes. |
 
-Players choose how much of it they get with **Chart visuals** in the BossBattles settings (0 off, 1
+Players choose how much of it they get with **Chart visuals** in the Basalt settings (0 off, 1
 full): it scales how far each slider moves from their own value. RRS's own master switch is
 respected - with it off, charts change nothing. RRS draws only in VR.
 
-**Signals for pack authors.** A BossBattles battle also tells RRS packs what is happening, whatever
+**Signals for pack authors.** A Basalt battle also tells RRS packs what is happening, whatever
 the chart's `visuals`:
 
 | Signal | Kind | When |
 |---|---|---|
-| `bossbattles.beat` | event | Every beat of the chart's `bpm`, at your head; strength 1 on the first of each four, 0.6 otherwise; lasts one beat. |
-| `bossbattles.spawn` | event | A projectile comes up, at its spot; lasts its telegraph. |
-| `bossbattles.launch` | event | A projectile is thrown, from its spot. |
-| `bossbattles.hit` | event | You take damage, at your head; strength = damage / 5 (up to 1). |
-| `bossbattles.phase` | event | A new phase starts, at your end of the lane. |
-| `bossbattles.survived` / `bossbattles.defeated` | event | The battle ends. |
-| `_RRS_bossbattles_running` | global float | 1 during a battle, else 0. When a battle ends, time and beat go back to 0 and health to 1. |
-| `_RRS_bossbattles_time` | global float | Chart time in seconds. |
-| `_RRS_bossbattles_beat` | global float | 0 to 1 through the current beat (charts with a `bpm`). |
-| `_RRS_bossbattles_health` | global float | Your health, 0 to 1. |
+| `basalt.beat` | event | Every beat of the chart's `bpm`, at your head; strength 1 on the first of each four, 0.6 otherwise; lasts one beat. |
+| `basalt.spawn` | event | A projectile comes up, at its spot; lasts its telegraph. |
+| `basalt.launch` | event | A projectile is thrown, from its spot. |
+| `basalt.hit` | event | You take damage, at your head; strength = damage / 5 (up to 1). |
+| `basalt.phase` | event | A new phase starts, at your end of the lane. |
+| `basalt.survived` / `basalt.defeated` | event | The battle ends. |
+| `_RRS_basalt_running` | global float | 1 during a battle, else 0. When a battle ends, time and beat go back to 0 and health to 1. |
+| `_RRS_basalt_time` | global float | Chart time in seconds. |
+| `_RRS_basalt_beat` | global float | 0 to 1 through the current beat (charts with a `bpm`). |
+| `_RRS_basalt_health` | global float | Your health, 0 to 1. |
 
 A pack reacts to an event by listing its channel in its manifest's `listen`. The floats are shader
-globals: declare `float _RRS_bossbattles_beat;` and read it. (RRS's own `SetGlobal` needs a dotted
-key and would publish `_RRS_bossbattles.beat`, which no shader can declare - so BossBattles sets
+globals: declare `float _RRS_basalt_beat;` and read it. (RRS's own `SetGlobal` needs a dotted
+key and would publish `_RRS_basalt.beat`, which no shader can declare - so Basalt sets
 these itself, with an underscore.) Event and global strengths scale with the player's Chart visuals
 setting; at 0 no events are sent.
 

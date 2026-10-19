@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BossBattles chart",
-  "description": "A BossBattles chart, format 2. See docs/chart-format.md.",
+  "title": "Basalt chart",
+  "description": "A Basalt chart, format 2. See docs/chart-format.md.",
   "type": "object",
   "properties": {
     "$schema": {

@@ -1,4 +1,4 @@
-# BossBattles
+# Basalt
 
 Survive scripted boss battles down a single lane against game-simulated actors: a
 [MelonLoader](https://melonloader.co/) mod for **RUMBLE**. What players see is in
@@ -8,7 +8,7 @@ Survive scripted boss battles down a single lane against game-simulated actors: 
 ## Projects
 
 ```
-BossBattles/            the mod
+Basalt/                 the mod
   ModEntry*.cs          entry point, chart actions, the picker's panel
   Mod.cs, Logger.cs     shared state (actors, battle, studio) and the logger, with its log level
   Actors/               Actor (simulated player): lifecycle, playback, body; rig
@@ -19,8 +19,8 @@ BossBattles/            the mod
   Patches/              ActorPatches (health, knockback, input, sounds), ArenaPatches
   UI/                   settings, the chart picker, covers, the game's buttons
   Services/             game-free and unit tested: charts, clips, audio, scoring, logging
-BossBattles.DevTools/   a second mod for development: self-tests, test actor, flatscreen play
-BossBattles.Tests/      xUnit: services, patch targets against the interop
+Basalt.DevTools/        a second mod for development: self-tests, test actor, flatscreen play
+Basalt.Tests/           xUnit: services, patch targets against the interop
 shaders/                the BossBattlesNight RumbleReShaded pack (a Unity project)
 tools/                  song analysis, cpp2il-isil.py
 ```
@@ -42,7 +42,7 @@ changes as you.
 
 ## Dev tools
 
-`BossBattles.DevTools.dll` is built beside the mod and copied into `RUMBLE\Mods`; it is never
+`Basalt.DevTools.dll` is built beside the mod and copied into `RUMBLE\Mods`; it is never
 packaged. It adds:
 
 | Keys | Does |
@@ -57,20 +57,20 @@ packaged. It adds:
 | Numpad 8/2/4/6, 7/9 | No headset: walk and turn your own player |
 
 **Self-tests** run with Steam open (launching `RUMBLE.exe` directly gets no sign-in), write
-`SELFTEST PASS` or the problems to `UserData/BossBattles/selftest.txt`, and quit:
+`SELFTEST PASS` or the problems to `UserData/Basalt/selftest.txt`, and quit:
 
 ```sh
-steam.exe -applaunch 890550 --bossbattles-selftest=ring --bossbattles-shots
+steam.exe -applaunch 890550 --basalt-selftest=ring --basalt-shots
 ```
 
 | Argument | Runs |
 |---|---|
-| `--bossbattles-selftest` (`=ring`, `=pit`) | The self-test chart, in place, in the Ring from a chart spot, or the Pit laid out automatically |
+| `--basalt-selftest` (`=ring`, `=pit`) | The self-test chart, in place, in the Ring from a chart spot, or the Pit laid out automatically |
 | `=record` | Records, reviews and keeps a clip |
 | `=look` | A new chart's boss wears your look and stones, and an edited look |
 | `=measure` | Writes structure sizes to `SelfTest/structures.json` for the editor |
 | `=chart:<name>` | Plays one of your charts and measures its clips |
-| `--bossbattles-shots` | Adds screenshots to `UserData/BossBattles/SelfTestShots` |
+| `--basalt-shots` | Adds screenshots to `UserData/Basalt/SelfTestShots` |
 
 The game sometimes closes at the loading screen before the Gym is up; run it again.
 
@@ -87,7 +87,7 @@ Both mods are copied into `RUMBLE\Mods`, and the song decoders into `RUMBLE\User
 elsewhere: `dotnet build -c Release /p:RumblePath="D:\Games\RUMBLE"`. The target framework must stay
 `net6.0` (MelonLoader hosts .NET 6). The build enforces `.editorconfig` with warnings as errors.
 
-The chart editor is a separate desktop app, in its own repository (`RumbleBossBattlesEditor`). It takes
+The chart editor is a separate desktop app, in its own repository (`BasaltEditor`). It takes
 `docs/chart.schema.json` and the `=measure` structure sizes from here with `npm run sync` - change the
 format here first.
 
@@ -98,5 +98,5 @@ build-thunderstore.bat
 ```
 
 Edit `Version.props`, `Thunderstore\manifest.json` and `Thunderstore\CHANGELogger.md` first, and add a
-256x256 `Thunderstore\icon.png`. The package carries `BossBattles.dll`, the song decoders and
+256x256 `Thunderstore\icon.png`. The package carries `Basalt.dll`, the song decoders and
 `Thunderstore\README.md`.

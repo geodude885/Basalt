@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Version.props" />
+    <File Path="Rumble.props" />
+  </Folder>
+  <Project Path="Basalt.Tests/Basalt.Tests.csproj" />
+  <Project Path="Basalt/Basalt.csproj" />
+  <Project Path="Basalt.DevTools/Basalt.DevTools.csproj" />
+</Solution>

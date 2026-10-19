@@ -6,74 +6,52 @@ using Xunit;
 
 namespace BossBattles.Tests;
 
-public class ChartTextTests
+public class ChartWritingTests
 {
-    private const string Chart = /*lang=json*/ """
+    private const string HandWritten = /*lang=json*/ """
         {
-          // keep me
-          "name": "Song", /* and me */
-          "lane": { "length": 12, "width": 3 }, // trailing
-          "events": [ { "t": 1, "move": "Straight" } ]
+          // a comment
+          "name": "Song", /* another */
+          "description": "Don't panic - it's été",
+          "lane": { "length": 12, "width": 3, },
+          "actors": [ { "id": "boss" } ],
         }
         """;
 
     [Fact]
-    public void ReplacingAValueKeepsEverythingElse()
+    public void CommentsAndTrailingCommasAreReadAndPlainJsonIsWritten()
     {
-        var text = ChartText.Set(Chart, "lane", /*lang=json,strict*/ """{ "length": 9, "width": 2 }""");
+        var saved = LaneSetupWriter.WriteActors(HandWritten, [new ActorSpec("boss", "Boss", new Spot(0f, 10f), "you")]);
+        var chart = ChartLoader.Load(saved).Chart!;
 
-        Assert.Contains(/*lang=json,strict*/ """{ "length": 9, "width": 2 }""", text, StringComparison.Ordinal);
-        Assert.Contains("// keep me", text, StringComparison.Ordinal);
-        Assert.Contains("/* and me */", text, StringComparison.Ordinal);
-        Assert.Contains("// trailing", text, StringComparison.Ordinal);
-        Assert.Equal(9f, ChartLoader.Load(text).Chart!.Lane.Length);
+        Assert.Equal("Song", chart.Name);
+        Assert.Equal(12f, chart.Lane.Length);
+        Assert.Equal(10f, chart.Actors[0].At.Z);
+        Assert.DoesNotContain("//", saved, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ANewPropertyIsAddedAtTheEnd()
+    public void ApostrophesAndAccentsAreWrittenAsTheyAre()
     {
-        var text = ChartText.Set(Chart, "end", "20");
+        var saved = LaneSetupWriter.WriteActors(HandWritten, []);
 
-        Assert.Equal(20, ChartLoader.Load(text).Chart!.End);
-        Assert.Contains("// keep me", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void AddingAfterATrailingCommaOrToAnEmptyObjectStaysValid()
-    {
-        Assert.Equal(5, ChartLoader.Load(ChartText.Set(/*lang=json*/ """{ "name": "A", }""", "end", "5")).Chart!.End);
-        Assert.Equal(5, ChartLoader.Load(ChartText.Set("{}", "end", "5")).Chart!.End);
-        Assert.Equal(5, ChartLoader.Load(ChartText.Set(/*lang=json*/ "{ \"name\": \"A\" // last\n}", "end", "5")).Chart!.End);
+        Assert.Contains("Don't panic - it's été", saved, StringComparison.Ordinal);
     }
 
     [Fact]
     public void KeysAreMatchedAsTheLoaderMatchesThem()
     {
-        var text = ChartText.Set(/*lang=json,strict*/ """{ "Name": "Old" }""", "name", "\"New\"");
+        var saved = LaneSetupWriter.WriteActors(/*lang=json,strict*/ """{ "Actors": [ { "id": "old" } ] }""", [new ActorSpec("new", "New", new Spot(0f, 5f), "you")]);
 
-        Assert.Equal("New", ChartLoader.Load(text).Chart!.Name);
-        Assert.DoesNotContain("Old", text, StringComparison.Ordinal);
+        Assert.Equal("new", Assert.Single(ChartLoader.Load(saved).Chart!.Actors).Id);
+        Assert.DoesNotContain("old", saved, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void StringsAndCommentsWithBracesDoNotConfuseIt()
-    {
-        const string tricky = /*lang=json*/ """
-            {
-              "name": "a } { ] [ \" quote",
-              // "end": 99, }
-              "description": "/* not a comment */"
-            }
-            """;
-
-        var chart = ChartLoader.Load(ChartText.Set(tricky, "end", "7")).Chart!;
-        Assert.Equal(7, chart.End);
-        Assert.Equal("a } { ] [ \" quote", chart.Name);
-        Assert.Equal("/* not a comment */", chart.Info.Description);
-    }
+    public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => LaneSetupWriter.WriteActors("[1]", []));
 
     [Fact]
-    public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => ChartText.Set("[1]", "end", "1"));
+    public void BrokenJsonIsRefusedAsAFormatProblem() => Assert.Throws<FormatException>(() => LaneSetupWriter.WriteActors("{ \"name\": ", []));
 }
 
 public class TrackTests
@@ -135,7 +113,6 @@ public class TrackTests
         var kept = TrackWriter.KeepWhole(text, chart, "boss", clip, 0);
         var after = Load(kept);
 
-        Assert.Contains("// my chart", kept, StringComparison.Ordinal);
         Assert.Equal(new TrackClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
         Assert.Equal(10.5, after.End);
 
@@ -348,7 +325,6 @@ public class SectionTests
         var saved = LaneSetupWriter.Write(text, new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), lane, actors);
         var after = ChartLoader.Load(saved).Chart!;
 
-        Assert.Contains("// keep", saved, StringComparison.Ordinal);
         Assert.Equal(new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), after.Arena);
         Assert.Equal(new Lane(14f, 3.5f), after.Lane);
         Assert.Equal(14f, after.Actors[0].At.Z);
@@ -431,7 +407,6 @@ public class LaneScaleTests
         Assert.All(after.Chart!.Events.OfType<ProjectileEvent>(), p => Assert.InRange(p.From.Z, 0.1f, 9f));
         Assert.Equal(7.5f, after.Chart.Events.OfType<ProjectileEvent>().First().From.Z, 2);
         Assert.Equal(8.25f, after.Chart.Events.OfType<PlaceEvent>().Single().At.Z, 2);
-        Assert.Contains("// The boss does one of its own moves", saved.Replace("\r\n", "\n"), StringComparison.Ordinal);
     }
 }
 

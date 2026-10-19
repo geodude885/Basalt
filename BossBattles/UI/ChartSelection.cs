@@ -56,7 +56,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             return;
         }
 
-        battle.Start(entry.Result.Chart, settings.ArenaOverride, entry.AssetFolder, entry.ScoreKey);
+        battle.Start(new BattleRequest(entry.Result.Chart) { ArenaOverride = settings.ArenaOverride, AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey });
     }
 
     public void RecordChosen(bool mime = false)

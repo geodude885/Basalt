@@ -40,7 +40,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (!BeginEditing(entry, arenaOverride)) return;
 
         Mime = mime;
-        StartStudioBattle(Chart!, BattleMode.Record, mime: mime);
+        battle.Start(StudioBattle(Chart!) with { Mode = BattleMode.Record, Mime = mime });
         State = battle.State == BattleState.Idle ? StudioState.Off : StudioState.Recording;
         Logger.Info($"[Studio] {(mime ? "miming" : "recording")} {ActorName} for {Chart!.Name} - STOP when done");
     }
@@ -74,8 +74,12 @@ internal class Studio(BattleController battle, GameAssets assets)
         {
             var punchedIn = TrackWriter.PunchedInTrack(Chart, _actorId, NewClip.Name, section.From, section.To, Mime);
             var chart = Chart with { Tracks = TrackWriter.TracksWithActorTrackReplaced(Chart, _actorId, punchedIn) };
-            StartStudioBattle(chart with { End = Math.Min(chart.End, section.To + EaseInSeconds) }, BattleMode.Review,
-                startAt: Math.Max(0, section.From - EaseInSeconds), pendingClip: NewClip);
+            battle.Start(StudioBattle(chart with { End = Math.Min(chart.End, section.To + EaseInSeconds) }) with
+            {
+                Mode = BattleMode.Review,
+                StartAt = section.From - EaseInSeconds,
+                PendingClip = NewClip,
+            });
         }
         else
         {
@@ -85,7 +89,7 @@ internal class Studio(BattleController battle, GameAssets assets)
                 Tracks = TrackWriter.TracksWithActorTrackReplaced(Chart, _actorId, whole),
                 End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + TrackWriter.EndPadding),
             };
-            StartStudioBattle(chart, BattleMode.Review, lane: _recordedLane, pendingClip: NewClip);
+            battle.Start(StudioBattle(chart) with { Mode = BattleMode.Review, Lane = _recordedLane, PendingClip = NewClip });
         }
 
         State = StudioState.Reviewing;
@@ -154,7 +158,7 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (Chart == null || Entry == null) return;
 
-        StartStudioBattle(Chart with { End = SelectedSection.To + 1 }, BattleMode.Review, startAt: Math.Max(0, SelectedSection.From - EaseInSeconds));
+        battle.Start(StudioBattle(Chart with { End = SelectedSection.To + 1 }) with { Mode = BattleMode.Review, StartAt = SelectedSection.From - EaseInSeconds });
         State = StudioState.PreviewingSection;
     }
 
@@ -165,7 +169,13 @@ internal class Studio(BattleController battle, GameAssets assets)
         _sectionBeingRecorded = SelectedSection;
         NewClip = null;
         Mime = mime;
-        StartStudioBattle(Chart, BattleMode.Record, startAt: Math.Max(0, SelectedSection.From - EaseInSeconds), recordSpot: GetActorSpot(SelectedSection.From), mime: mime);
+        battle.Start(StudioBattle(Chart) with
+        {
+            Mode = BattleMode.Record,
+            StartAt = SelectedSection.From - EaseInSeconds,
+            RecordSpot = GetActorSpot(SelectedSection.From),
+            Mime = mime,
+        });
         State = battle.State == BattleState.Idle ? StudioState.ChoosingSection : StudioState.Recording;
         Logger.Info($"[Studio] recording {ActorName} from {SelectedSection.From:0.0}s to {SelectedSection.To:0.0}s - it stops by itself");
     }
@@ -284,14 +294,8 @@ internal class Studio(BattleController battle, GameAssets assets)
         _sectionBeingRecorded = null;
     }
 
-    private void StartStudioBattle(
-        Chart chart,
-        BattleMode mode,
-        double startAt = 0,
-        Anchor? lane = null,
-        Clip? pendingClip = null,
-        System.Numerics.Vector2? recordSpot = null,
-        bool mime = false) => battle.Start(chart, ArenaOverride, Entry!.AssetFolder, scoreKey: null, mode, _actorId, lane, pendingClip, startAt, recordSpot, mime);
+    // The studio's battles keep no score.
+    private BattleRequest StudioBattle(Chart chart) => new(chart) { ArenaOverride = ArenaOverride, AssetFolder = Entry!.AssetFolder, RecordActor = _actorId };
 
     private System.Numerics.Vector2? GetActorSpot(double chartTime)
     {

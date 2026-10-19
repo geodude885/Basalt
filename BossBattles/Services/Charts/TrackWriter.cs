@@ -1,5 +1,4 @@
-using System.Globalization;
-using System.Text.Json;
+using System.Text.Json.Nodes;
 using BossBattles.Services.Clips;
 
 namespace BossBattles.Services.Charts;
@@ -59,19 +58,19 @@ public static class TrackWriter
     // The tracks written, the chart's format raised to one that has tracks, and its end moved to cover the last clip.
     private static string WriteTracks(string chartText, Chart chart, IReadOnlyList<Track> tracks, double lastClipEnd)
     {
-        var tracksJson = tracks.Select(track => new TrackDto
+        var chartJson = ChartJson.Parse(chartText);
+        chartJson["tracks"] = ChartJson.ToNode(tracks.Select(track => new TrackDto
         {
             Actor = track.ActorId,
             Clips = track.Clips.Select(c => new TrackClipDto { T = c.Time, Clip = c.Clip, From = c.From, To = c.To, Mime = c.Mime ? true : null }).ToList(),
-        }).ToList();
-        var text = ChartText.Set(chartText, "tracks", JsonSerializer.Serialize(tracksJson, ChartJson.Indented));
+        }).ToList());
 
-        var writtenFormat = ChartText.FindValue(chartText, "format") is { } format && int.TryParse(chartText[format], NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : 1;
-        if (writtenFormat < ChartLoader.TracksFormat) text = ChartText.Set(text, "format", ChartLoader.TracksFormat.ToString(CultureInfo.InvariantCulture));
+        var writtenFormat = chartJson["format"] is JsonValue format && format.TryGetValue<int>(out var number) ? number : 1;
+        if (writtenFormat < ChartLoader.TracksFormat) chartJson["format"] = ChartLoader.TracksFormat;
 
         var end = Math.Max(chart.End, Round(lastClipEnd + EndPadding));
-        if (end > chart.End) text = ChartText.Set(text, "end", end.ToString("0.###", CultureInfo.InvariantCulture));
-        return text;
+        if (end > chart.End) chartJson["end"] = end;
+        return ChartJson.Write(chartJson);
     }
 
     private static double Round(double seconds) => Math.Round(seconds, 3);

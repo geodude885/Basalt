@@ -185,7 +185,7 @@ internal static partial class SelfTest
         Perform(BattlePlayer.Controller, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
-        Mod.Battle.Start(WithLook(chart), null, assets, pendingClip: SyntheticClips.Sway(SelfTestChart.Clip, 1.5f));
+        Mod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f) });
         MelonCoroutines.Start(CheckRules());
         if (_arena != ArenaKind.Here) MelonCoroutines.Start(CheckActorHitbox());
         MelonCoroutines.Start(CheckSlides());

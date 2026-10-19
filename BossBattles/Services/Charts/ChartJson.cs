@@ -1,22 +1,40 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace BossBattles.Services.Charts;
 
-// A chart file's JSON, as ChartReader reads it and the writers put parts of it back. Charts are hand-written:
-// comments and trailing commas are allowed, and a name's case does not matter.
+// A chart file's JSON, as ChartReader reads it and the writers change it.
 internal static class ChartJson
 {
-    public static readonly JsonSerializerOptions Options = new()
+
+    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
-        PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    public static readonly JsonSerializerOptions Indented = new(Options) { WriteIndented = true };
+    // The chart as an object to change; setting "tracks" replaces a "Tracks" already there.
+    public static JsonObject Parse(string chartText)
+    {
+        try
+        {
+            return JsonNode.Parse(chartText, new JsonNodeOptions { PropertyNameCaseInsensitive = true }, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) as JsonObject
+                   ?? throw new FormatException("a chart is a JSON object: it must start with {");
+        }
+        catch (JsonException e)
+        {
+            throw new FormatException($"not valid chart JSON: {e.Message}", e);
+        }
+    }
+
+    public static JsonNode? ToNode<T>(T value) => JsonSerializer.SerializeToNode(value, Options);
+
+    public static string Write(JsonObject chart) => chart.ToJsonString(Options);
 }
 
 internal class ChartDto

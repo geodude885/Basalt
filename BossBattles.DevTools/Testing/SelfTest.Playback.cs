@@ -65,7 +65,7 @@ internal static partial class SelfTest
 
         Logger.Info($"[SelfTest] playing \"{chart.Name}\" ({entry.Stem}): {recorded.Count} recorded move(s) over {chart.End:0.0}s");
         _keepYouAlive = true;
-        Mod.Battle.Start(chart, null, entry.AssetFolder);
+        Mod.Battle.Start(new BattleRequest(chart) { AssetFolder = entry.AssetFolder });
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;

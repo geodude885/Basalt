@@ -3,6 +3,8 @@
 A chart is one JSON object. Comments (`//`, `/* */`) and trailing commas are allowed; field names
 are case-insensitive; fields the mod does not know are ignored, so a chart written for a newer
 version still loads in an older one as long as its `format` is one the older version reads.
+Saving from the game (lane setup's SAVE, a recording's KEEP) rewrites the chart as plain indented
+JSON, so comments and hand layout are not kept.
 
 Point an editor at [chart.schema.json](chart.schema.json) for completion and checking:
 

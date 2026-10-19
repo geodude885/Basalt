@@ -48,7 +48,7 @@ public class ModEntry : MelonMod
 
         _assets = new GameAssets();
         _actors = new ActorRegistry();
-        _battle = new BattleController(_actors, scores, _assets);
+        _battle = new BattleController(_actors, scores, _assets, _settings);
         _studio = new Studio(_battle, _assets);
         _charts = new ChartSelection(library, _settings, _battle, _studio, Path.Combine(folder, "Exports"));
         _picker = new ChartPicker(new PickerPanel(_charts, library, scores, _settings, _battle, _studio), pickerSpots, _assets);
@@ -126,10 +126,6 @@ public class ModEntry : MelonMod
     private void ApplySettings()
     {
         Logger.Level = _settings.LogLevel.Value;
-        _battle.CountdownSeconds = Math.Max(0f, _settings.Countdown.Value);
-        _battle.ShowBackstop = _settings.ShowBackstop.Value;
-        _battle.ShowPhaseBanners = _settings.ShowPhaseBanners.Value;
-        _battle.MusicVolume = Math.Clamp(_settings.MusicVolume.Value, 0f, 1f);
         _battle.Signals.Strength = _settings.ChartVisuals.Value;
         _picker.Open = _settings.ShowPicker.Value;
         _picker.Distance = Math.Clamp(_settings.PickerDistance.Value, 0.3f, 2f);

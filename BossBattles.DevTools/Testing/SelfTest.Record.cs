@@ -57,7 +57,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
 
         // The Ring loaded: your player is a new one.
-        if (BattlePlayer.Controller is not { } you)
+        if (BattlePlayer.Controller is not { } playerController)
         {
             Finish(["no local player while recording"]);
             yield break;
@@ -65,7 +65,7 @@ internal static partial class SelfTest
 
         if (Mod.Battle.Lane is { } recordLane)
         {
-            var at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] recording from lane x {at.x:0.00}, z {at.z:0.00} (the actor's spot is z 8)");
             if (new Vector2(at.x, at.z - 8f).magnitude > 0.5f) problems.Add($"recording did not start in the actor's place: lane x {at.x:0.0}, z {at.z:0.0}");
             if (_shots) Shoot(ShotFolder(), "5-recording", recordLane, at);
@@ -74,12 +74,12 @@ internal static partial class SelfTest
         // The performance: step to one side, spawn a cube and punch it, step back across, jump.
         // (A punch or kick with nothing in front of you never starts - the first run recorded none.)
         yield return Walk(new Vector2(1f, 0f), 0.8f);
-        Perform(you, "SpawnCube");
+        Perform(playerController, "SpawnCube");
         yield return new WaitForSeconds(0.6f);
-        Perform(you, "Straight");
+        Perform(playerController, "Straight");
         yield return new WaitForSeconds(0.8f);
         yield return Walk(new Vector2(-1f, 0f), 1.4f);
-        Perform(you, "Jump");
+        Perform(playerController, "Jump");
         yield return new WaitForSeconds(0.6f);
 
         // And turn, with the turn stick: the actor must end up facing the same way.
@@ -172,13 +172,13 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + 60f;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < from + 0.2) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        if (BattlePlayer.Controller is { } you)
+        if (BattlePlayer.Controller is { } playerController)
         {
-            var at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] section recording from lane x {at.x:0.00}, z {at.z:0.00}");
-            Perform(you, "SpawnCube");
+            Perform(playerController, "SpawnCube");
             yield return new WaitForSeconds(0.5f);
-            Perform(you, "Straight");
+            Perform(playerController, "Straight");
         }
 
         deadline = Time.realtimeSinceStartup + 60f;
@@ -225,9 +225,9 @@ internal static partial class SelfTest
         Mod.Picker.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
-        if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Controller is { } you)
+        if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Controller is { } playerController)
         {
-            var rig = ActorRig.From(you);
+            var rig = ActorRig.From(playerController);
             var eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);
             _showCamera?.Invoke(eye, rig.Feet + (rig.Facing * 5f));
             yield return null;
@@ -297,16 +297,16 @@ internal static partial class SelfTest
     }
 
     /// <summary>Runs one of your own moves by name - what the game does when it recognises the gesture.</summary>
-    private static void Perform(PlayerController you, string move)
+    private static void Perform(PlayerController playerController, string move)
     {
-        var stack = you.PlayerProcessor.availableStacks.ToArray().FirstOrDefault(s => string.Equals(s.CachedName, move, StringComparison.OrdinalIgnoreCase));
+        var stack = playerController.PlayerProcessor.availableStacks.ToArray().FirstOrDefault(s => string.Equals(s.CachedName, move, StringComparison.OrdinalIgnoreCase));
         if (stack == null)
         {
             Logger.Info($"[SelfTest] you have no move called {move}");
             return;
         }
 
-        you.PlayerProcessor.Execute(stack);
+        playerController.PlayerProcessor.Execute(stack);
     }
 
     /// <summary>A screenshot from beside the lane, looking along it at you.</summary>

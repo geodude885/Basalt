@@ -33,7 +33,7 @@ internal static class TestBench
 
     private static Actor? _actor;
     private static bool _mirroring;
-    private static bool _facingYou;
+    private static bool _facingPlayer;
     private static float _nextFacingCheck;
 
     public static Actor? Actor => _actor?.Controller != null ? _actor : null;
@@ -50,14 +50,14 @@ internal static class TestBench
             return;
         }
 
-        var you = BattlePlayer.Controller;
-        if (you == null) return;
+        var playerController = BattlePlayer.Controller;
+        if (playerController == null) return;
 
-        var yours = ActorRig.From(you);
-        var at = yours.Feet + (yours.Facing * SpawnDistance);
+        var playerRig = ActorRig.From(playerController);
+        var at = playerRig.Feet + (playerRig.Facing * SpawnDistance);
 
         _actor = new Actor("test", "Test Actor", "you");
-        Mod.Actors.Spawn(_actor, at, Quaternion.LookRotation(-yours.Facing));
+        Mod.Actors.Spawn(_actor, at, Quaternion.LookRotation(-playerRig.Facing));
         _mirroring = true;
     }
 
@@ -66,7 +66,7 @@ internal static class TestBench
         if (Actor == null) return;
 
         _mirroring = !_mirroring;
-        _facingYou = !_mirroring;
+        _facingPlayer = !_mirroring;
         Sticks = null;
         Logger.Info($"[Test.Control] {(_mirroring ? "mirroring you" : "bot control")}");
     }
@@ -92,12 +92,12 @@ internal static class TestBench
     /// <summary>Mirrors you, or reads the keys; plain keys drive the actor, Ctrl+ keys are the tools'.</summary>
     public static void Update()
     {
-        if (Actor is not { } actor || BattlePlayer.Controller is not { } you) return;
+        if (Actor is not { } actor || BattlePlayer.Controller is not { } playerController) return;
 
-        var yours = ActorRig.From(you);
+        var playerRig = ActorRig.From(playerController);
         if (_mirroring)
         {
-            actor.SetPose(ActorPose.Snapshot(yours));
+            actor.SetPose(ActorPose.Snapshot(playerRig));
             return;
         }
 
@@ -110,23 +110,23 @@ internal static class TestBench
         var turn = new Vector2(Axis(KeyCode.E, KeyCode.Q), 0f);
         Sticks = (new Vector2(Axis(KeyCode.D, KeyCode.A), Axis(KeyCode.W, KeyCode.S)), turn);
 
-        if (turn != Vector2.zero) _facingYou = false;
-        if (Input.GetKeyDown(KeyCode.F)) _facingYou = !_facingYou;
+        if (turn != Vector2.zero) _facingPlayer = false;
+        if (Input.GetKeyDown(KeyCode.F)) _facingPlayer = !_facingPlayer;
 
         foreach ((_, var stack) in Moves.Where(m => Input.GetKeyDown(m.Key)))
         {
             actor.RunMove(stack);
         }
 
-        if (!_facingYou || Time.time < _nextFacingCheck || actor.Player is not { } body) return;
+        if (!_facingPlayer || Time.time < _nextFacingCheck || actor.Player is not { } body) return;
         _nextFacingCheck = Time.time + FacingCheckInterval;
 
         var rig = ActorRig.From(body.Controller);
-        var toYou = yours.Head.position - rig.Head.position;
-        toYou.y = 0f;
-        if (toYou.sqrMagnitude < 0.01f) return;
+        var toPlayer = playerRig.Head.position - rig.Head.position;
+        toPlayer.y = 0f;
+        if (toPlayer.sqrMagnitude < 0.01f) return;
 
-        var angle = Vector3.SignedAngle(rig.Facing, toYou.normalized, Vector3.up);
+        var angle = Vector3.SignedAngle(rig.Facing, toPlayer.normalized, Vector3.up);
         if (Mathf.Abs(angle) >= FacingTolerance) body.Controller.PlayerMovement.Rotate(angle, false);
     }
 
@@ -135,7 +135,7 @@ internal static class TestBench
     {
         _actor = null;
         Sticks = null;
-        _facingYou = false;
+        _facingPlayer = false;
     }
 
     private static float Axis(KeyCode positive, KeyCode negative) =>

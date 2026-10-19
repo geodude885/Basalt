@@ -107,9 +107,9 @@ internal class Studio(BattleController battle, GameAssets assets)
             ? TrackWriter.KeepSection(chartText, Chart, _actorId, clip, section.From, section.To, Mime)
             : TrackWriter.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
-        if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } yours)
+        if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } playerMeasurement)
         {
-            var size = new BodySize(yours.Length, yours.ArmSpan);
+            var size = new BodySize(playerMeasurement.Length, playerMeasurement.ArmSpan);
             keptText = LaneSetupWriter.WriteActors(keptText, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
         }
 
@@ -261,9 +261,9 @@ internal class Studio(BattleController battle, GameAssets assets)
 
         if (!Recorder.Recording)
         {
-            if (BattlePlayer.Controller is not { } you || battle.Lane is not { } lane) return;
+            if (BattlePlayer.Controller is not { } playerController || battle.Lane is not { } lane) return;
             _recordedLane = lane;
-            Recorder.Start(you, lane);
+            Recorder.Start(playerController, lane);
             _recordingStartedAtChartTime = chartTime;
             if (IsSectionOrWholeClip) battle.Banner("<b>GO</b>", 0.8f);
         }

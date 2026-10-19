@@ -81,7 +81,7 @@ internal static partial class SelfTest
     public static void Update()
     {
         if (Enabled && !_sawSimulatedActor && Mod.Actors.Actors.Any(a => a.Ready)) _sawSimulatedActor = true;
-        KeepYouAlive();
+        KeepPlayerAlive();
     }
 
     private static IEnumerator Run()
@@ -166,11 +166,11 @@ internal static partial class SelfTest
         if (_arena == ArenaKind.Here)
         {
             // Somewhere flat and open: you stand at the lane's start, so you are moved there first.
-            var you = BattlePlayer.Controller;
-            var yours = ActorRig.From(you);
-            if (FlatLane(yours.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
+            var playerController = BattlePlayer.Controller;
+            var playerRig = ActorRig.From(playerController);
+            if (FlatLane(playerRig.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
-                you.PlayerMovement.Reposition(lane.Start + (Vector3.up * (yours.Head.position.y - yours.Vr.position.y)), Quaternion.LookRotation(lane.Direction));
+                playerController.PlayerMovement.Reposition(lane.Start + (Vector3.up * (playerRig.Head.position.y - playerRig.Vr.position.y)), Quaternion.LookRotation(lane.Direction));
                 Logger.Info($"[SelfTest] laying the lane at {lane.Start.Describe()} towards {lane.Direction.Describe()}");
                 yield return new WaitForSeconds(0.5f);
             }
@@ -293,9 +293,9 @@ internal static partial class SelfTest
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
-        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Controller is not { } you) yield break;
+        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Controller is not { } playerController) yield break;
 
-        var feet = ActorRig.From(you).Feet;
+        var feet = ActorRig.From(playerController).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
         Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
@@ -344,8 +344,8 @@ internal static partial class SelfTest
             FlatscreenControls.ScriptedWalk = Vector2.zero;
             yield return new WaitForSeconds(0.3f);
 
-            if (BattlePlayer.Controller is not { } you) break;
-            var at = Mod.Battle.ToLane(ActorRig.From(you).Feet);
+            if (BattlePlayer.Controller is not { } playerController) break;
+            var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");
         }

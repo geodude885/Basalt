@@ -31,11 +31,11 @@ internal partial class Projectiles(ActorRegistry actors)
     public void Spawn(int id, ProjectileEvent projectile, Anchor frame)
     {
         var origin = frame.ToWorld(projectile.From).ToUnity();
-        var towardYou = -frame.Forward.ToUnity();
+        var towardPlayer = -frame.Forward.ToUnity();
 
         // The floor before the pool fetch, which stands the structure at its origin in the ray's way.
         var floor = GameHelpers.HeightUnder(origin) ?? (origin.y - 1f);
-        var pooled = PoolManager.instance.GetPooledObject(projectile.Structure, origin, Quaternion.LookRotation(towardYou));
+        var pooled = PoolManager.instance.GetPooledObject(projectile.Structure, origin, Quaternion.LookRotation(towardPlayer));
         if (pooled == null)
         {
             Logger.Warning($"[Projectile.NoPool] #{id}: no pool called \"{projectile.Structure}\" - check the chart's structure names (Disc, Ball, Pillar, Wall, RockCube, BoulderBall, SmallRock, LargeRock)");
@@ -53,7 +53,7 @@ internal partial class Projectiles(ActorRegistry actors)
 
         actors.IgnoreStructure(pooled.gameObject, projectile.Telegraph + ActorGraceAfterLaunch);
 
-        var facing = Quaternion.LookRotation(towardYou);
+        var facing = Quaternion.LookRotation(towardPlayer);
         var shape = pooled.GetComponentInChildren<Collider>();
         var height = shape != null ? Math.Max(0.2f, shape.bounds.size.y) : 0.5f;
 

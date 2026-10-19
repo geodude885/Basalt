@@ -45,7 +45,7 @@ public class VisualsTests
     }
 
     [Fact]
-    public void ACueFadesFromYoursToItsValues()
+    public void ACueFadesFromThePlayersOwnToItsValues()
     {
         var cues = new[] { Cue(2, "Pack", 1, ("Saturation", 0f)) };
 
@@ -76,7 +76,7 @@ public class VisualsTests
     }
 
     [Fact]
-    public void OffFadesBackToYoursThenLetsGo()
+    public void OffFadesBackToThePlayersOwnThenLetsGo()
     {
         var cues = new[]
         {
@@ -133,11 +133,11 @@ public class LaneColourTests
     public void ReadsColoursEitherSpelling()
     {
         var uk = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "#33ccff", "walls": "#66ccff33" } }""").Chart!;
-        var us = ChartLoader.Load(/*lang=json,strict*/ """{ "colors": { "ends": "#ff3399" } }""").Chart!;
+        var americanSpelling = ChartLoader.Load(/*lang=json,strict*/ """{ "colors": { "ends": "#ff3399" } }""").Chart!;
 
         Assert.Equal(0.2f, uk.Colours.Walls!.Value.A, 3);
         Assert.Null(uk.Colours.Ends);
-        Assert.NotNull(us.Colours.Ends);
+        Assert.NotNull(americanSpelling.Colours.Ends);
         Assert.Null(ChartLoader.Load("{}").Chart!.Colours.Walls);
     }
 
@@ -194,7 +194,7 @@ public class PhaseColourTests
 public class ActorLookTests
 {
     [Fact]
-    public void ShiftstonesAreYoursUnlessNamed()
+    public void ShiftstonesAreThePlayersUnlessNamed()
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """
             {

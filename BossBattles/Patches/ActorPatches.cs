@@ -133,8 +133,8 @@ public static class ActorPatches
                 return;
             }
 
-            var you = BattlePlayer.Player;
-            if (you != null && controller.assignedPlayer != null && controller.assignedPlayer.Pointer == you.Pointer)
+            var localPlayer = BattlePlayer.Player;
+            if (localPlayer != null && controller.assignedPlayer != null && controller.assignedPlayer.Pointer == localPlayer.Pointer)
                 _battle.OnPlayerDamaged(previousHealth - newHealth, newHealth);
         });
     }

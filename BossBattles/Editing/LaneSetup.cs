@@ -38,7 +38,7 @@ internal class LaneSetup(GameAssets assets)
         _previewOutOfDate = true;
     }
 
-    public void StartLaneWhereYouStand()
+    public void StartLaneWherePlayerStands()
     {
         if (BattlePlayer.Rig is not { } rig) return;
 
@@ -58,7 +58,7 @@ internal class LaneSetup(GameAssets assets)
     }
 
     // The lane grows to reach you if you stand past its far end.
-    public void MoveFirstActorWhereYouStand()
+    public void MoveFirstActorWherePlayerStands()
     {
         if (BattlePlayer.Rig is not { } rig || _previewAnchor is not { } anchor || Actors.Count == 0) return;
 

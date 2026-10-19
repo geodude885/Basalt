@@ -49,9 +49,9 @@ internal static class Maps
         return spots != null && spots.transform.childCount > 0 ? spots.transform.GetChild(0).position : Vector3.zero;
     }
 
-    public static Anchor? CreateLaneAnchor(this ArenaSpec spec, ArenaKind kind, Vector3 yourFeet, Vector3 yourFacing)
+    public static Anchor? CreateLaneAnchor(this ArenaSpec spec, ArenaKind kind, Vector3 playerFeet, Vector3 playerFacing)
     {
-        if (kind == ArenaKind.Here || !spec.HasSpot) return new Anchor(yourFeet.ToNumerics(), Degrees.Wrap(spec.Facing ?? yourFacing.Bearing()));
+        if (kind == ArenaKind.Here || !spec.HasSpot) return new Anchor(playerFeet.ToNumerics(), Degrees.Wrap(spec.Facing ?? playerFacing.Bearing()));
 
         var origin = kind.GetArenaOrigin() ?? Vector3.zero;
         var spot = new Vector3(origin.x + spec.X!.Value, origin.y, origin.z + spec.Z!.Value);

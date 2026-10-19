@@ -126,10 +126,10 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         {
             var name = ChartFiles.FirstFreeName("My Chart", " ", candidate => library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
-            var you = BattlePlayer.Player;
-            var look = you?.Data?.VisualData?.ToPlayfabDataString();
-            var stones = you?.Controller == null ? null : Shiftstones.EquippedBy(you.Controller);
-            var username = you?.Data?.GeneralData?.PublicUsername;
+            var localPlayer = BattlePlayer.Player;
+            var look = localPlayer?.Data?.VisualData?.ToPlayfabDataString();
+            var stones = localPlayer?.Controller == null ? null : Shiftstones.EquippedBy(localPlayer.Controller);
+            var username = localPlayer?.Data?.GeneralData?.PublicUsername;
             var author = string.IsNullOrWhiteSpace(username) ? null : Regex.Replace(username, "<[^>]*>", "").Trim();
             var folder = ChartTemplate.Create(library.Folder, name, author, look, stones);
             ReloadCharts();

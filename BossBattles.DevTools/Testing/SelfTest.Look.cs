@@ -18,11 +18,11 @@ internal static partial class SelfTest
 
     private static IEnumerator RunLookTest(List<string> problems)
     {
-        var you = BattlePlayer.Player!;
-        var yours = you.Data.VisualData.ToPlayfabDataString();
+        var localPlayer = BattlePlayer.Player!;
+        var playerLook = localPlayer.Data.VisualData.ToPlayfabDataString();
         var plain = PlayerVisualData.Default.ToPlayfabDataString();
-        var stones = Shiftstones.EquippedBy(you.Controller);
-        Logger.Info($"[SelfTest] look: yours \"{yours}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
+        var stones = Shiftstones.EquippedBy(localPlayer.Controller);
+        Logger.Info($"[SelfTest] look: yours \"{playerLook}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
 
         // 1. A chart made in game.
         var folder = Mod.Charts.NewChart();
@@ -41,19 +41,19 @@ internal static partial class SelfTest
         }
         else
         {
-            if (boss.Look != yours) problems.Add($"the new chart's boss look is \"{boss.Look}\", not yours");
+            if (boss.Look != playerLook) problems.Add($"the new chart's boss look is \"{boss.Look}\", not yours");
             if (boss.Shiftstones == null || !boss.Shiftstones.SequenceEqual(stones)) problems.Add($"the new chart's boss stones are [{string.Join(", ", boss.Shiftstones ?? Array.Empty<string>())}], not yours [{string.Join(", ", stones)}]");
         }
 
-        if (made != null) yield return PlayAndShoot(made, folder, yours, "1-made", problems);
+        if (made != null) yield return PlayAndShoot(made, folder, playerLook, "1-made", problems);
 
         // 2. One part of the look changed, as someone editing the chart would.
-        var edited = EditOnePart(yours, plain, out var change);
+        var edited = EditOnePart(playerLook, plain, out var change);
         Logger.Info($"[SelfTest] look: changed {change}");
-        if (edited == yours) problems.Add("could not find a part of your look to change");
+        if (edited == playerLook) problems.Add("could not find a part of your look to change");
 
         var text = File.ReadAllText(file);
-        File.WriteAllText(file, text.Replace(yours, edited, StringComparison.Ordinal));
+        File.WriteAllText(file, text.Replace(playerLook, edited, StringComparison.Ordinal));
         var changed = ChartLoader.Load(File.ReadAllText(file)).Chart;
         if (changed?.Actors[0].Look != edited) problems.Add("the edited look was not read back from the chart");
         else yield return PlayAndShoot(changed, folder, edited, "2-edited", problems);
@@ -74,43 +74,43 @@ internal static partial class SelfTest
     }
 
     /// <summary>Your look with one part (the gloves when they differ) swapped for the default character's.</summary>
-    private static string EditOnePart(string yours, string plain, out string change)
+    private static string EditOnePart(string playerLook, string plain, out string change)
     {
-        var mine = yours.Split(':');
-        var theirs = plain.Split(':');
+        var playerLookParts = playerLook.Split(':');
+        var defaultLookParts = plain.Split(':');
         const int Outfit = 2;
-        var outfit = mine.Length > Outfit ? mine[Outfit].Split(',') : [];
-        var plainOutfit = theirs.Length > Outfit ? theirs[Outfit].Split(',') : [];
+        var outfit = playerLookParts.Length > Outfit ? playerLookParts[Outfit].Split(',') : [];
+        var plainOutfit = defaultLookParts.Length > Outfit ? defaultLookParts[Outfit].Split(',') : [];
         var glove = Array.FindIndex(outfit, part => part.StartsWith('g'));
         if (glove >= 0 && glove < plainOutfit.Length && outfit[glove] != plainOutfit[glove])
         {
             change = $"the gloves, {outfit[glove]} -> {plainOutfit[glove]}";
             outfit[glove] = plainOutfit[glove];
-            mine[Outfit] = string.Join(",", outfit);
-            return string.Join(":", mine);
+            playerLookParts[Outfit] = string.Join(",", outfit);
+            return string.Join(":", playerLookParts);
         }
 
-        foreach (var g in Enumerable.Range(1, Math.Max(0, Math.Min(mine.Length, theirs.Length) - 1)))
+        foreach (var g in Enumerable.Range(1, Math.Max(0, Math.Min(playerLookParts.Length, defaultLookParts.Length) - 1)))
         {
-            var a = mine[g].Split(',');
-            var b = theirs[g].Split(',');
+            var a = playerLookParts[g].Split(',');
+            var b = defaultLookParts[g].Split(',');
             var i = Enumerable.Range(0, Math.Min(a.Length, b.Length)).FirstOrDefault(i => a[i] != b[i], -1);
             if (i < 0) continue;
 
             change = $"part {g}.{i}: {a[i]} -> {b[i]}";
             a[i] = b[i];
-            mine[g] = string.Join(",", a);
-            return string.Join(":", mine);
+            playerLookParts[g] = string.Join(",", a);
+            return string.Join(":", playerLookParts);
         }
 
         change = "nothing";
-        return yours;
+        return playerLook;
     }
 
     /// <summary>Plays a chart in the Ring until its actor is up, checks what it wears, and clips a close-up.</summary>
     private static IEnumerator PlayAndShoot(Chart chart, string folder, string expected, string shot, List<string> problems)
     {
-        _keepYouAlive = true;
+        _keepPlayerAlive = true;
         var before = Mod.Actors.Actors.ToList();
         // Warm-up's spot: the template's 12 m lane fits across the Ring from there.
         Mod.Battle.Start(new BattleRequest(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }) { ArenaOverride = ArenaKind.Ring, AssetFolder = folder });
@@ -134,8 +134,8 @@ internal static partial class SelfTest
         var mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
         var chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
         Logger.Info($"[SelfTest] look {shot}: framing the body at {chest.Describe()}{(mesh == null ? " (no mesh found)" : "")}");
-        var towardYou = LaneOrigin is { } origin ? (origin - chest).Flat() : Vector3.forward;
-        _showCamera?.Invoke(chest + (towardYou * 1.8f) + (Vector3.up * 0.3f), chest);
+        var towardPlayer = LaneOrigin is { } origin ? (origin - chest).Flat() : Vector3.forward;
+        _showCamera?.Invoke(chest + (towardPlayer * 1.8f) + (Vector3.up * 0.3f), chest);
         yield return new WaitForSeconds(0.3f);
 
         var shots = Path.Combine(MelonEnvironment.UserDataDirectory, "BossBattles", "SelfTestShots", "Look");
@@ -143,7 +143,7 @@ internal static partial class SelfTest
         Shoot(shots, shot);
 
         Mod.Battle.Stop("look shot taken");
-        _keepYouAlive = false;
+        _keepPlayerAlive = false;
         yield return new WaitForSeconds(1f);
     }
 }

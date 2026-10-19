@@ -91,8 +91,8 @@ public static class FlatscreenControls
 
                 if (!Enabled || !IsFlatscreen) return true;
 
-                var you = BattlePlayer.Controller;
-                if (you == null || controller.Pointer != you.Pointer) return true;
+                var playerController = BattlePlayer.Controller;
+                if (playerController == null || controller.Pointer != playerController.Pointer) return true;
 
                 MovementInput.Apply(__instance, _walk, _turn);
                 return false;

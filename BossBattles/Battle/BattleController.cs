@@ -236,8 +236,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         {
             var request = Run!.Request;
             var chart = Run!.Chart;
-            var yours = ActorRig.From(BattlePlayer.Controller!);
-            var frame = request.Lane ?? request.ArenaSpec.CreateLaneAnchor(request.Arena, yours.Feet, yours.Facing);
+            var playerRig = ActorRig.From(BattlePlayer.Controller!);
+            var frame = request.Lane ?? request.ArenaSpec.CreateLaneAnchor(request.Arena, playerRig.Feet, playerRig.Facing);
             if (frame == null)
             {
                 Stop("no lane could be laid out");
@@ -418,8 +418,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         // Miming, you stand at the boss's end: "the player" is the lane's near end.
         return aim.AtPlayer && (Run?.Request.Miming ?? false)
             ? World(0f, 1.3f, 0f)
-            : aim.AtPlayer && BattlePlayer.Controller is { } you
-            ? ActorRig.From(you).Head.position + (Vector3.down * 0.25f)
+            : aim.AtPlayer && BattlePlayer.Controller is { } playerController
+            ? ActorRig.From(playerController).Head.position + (Vector3.down * 0.25f)
             : World(aim.X, aim.Y, 0f);
     }
 

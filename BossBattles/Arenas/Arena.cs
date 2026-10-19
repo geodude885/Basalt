@@ -42,13 +42,13 @@ internal class Arena(GameAssets assets)
         Boundary.Wall("BossBattles_WallLeft", At(-sideX, lane.Length / 2f), along, new Vector3(Boundary.Thickness, Boundary.Height, run), layer);
         Boundary.Wall("BossBattles_WallRight", At(sideX, lane.Length / 2f), along, new Vector3(Boundary.Thickness, Boundary.Height, run), layer);
 
-        if (zone is not { } yours) return;
+        if (zone is not { } playerZone) return;
 
-        if (yours.Length < lane.Length - 0.01f)
-            Boundary.Wall("BossBattles_ZoneEnd", At(0f, yours.Length + Boundary.PlayerEndGap + (Boundary.Thickness / 2f)), along, new Vector3(across, Boundary.Height, Boundary.Thickness), layer, zone: true);
+        if (playerZone.Length < lane.Length - 0.01f)
+            Boundary.Wall("BossBattles_ZoneEnd", At(0f, playerZone.Length + Boundary.PlayerEndGap + (Boundary.Thickness / 2f)), along, new Vector3(across, Boundary.Height, Boundary.Thickness), layer, zone: true);
 
-        var depth = yours.Length + behind + Boundary.PlayerEndGap + Boundary.Thickness;
-        var ceiling = origin.ToWorld(new System.Numerics.Vector3(0f, yours.Height + (Boundary.Thickness / 2f), (depth / 2f) - behind)).ToUnity();
+        var depth = playerZone.Length + behind + Boundary.PlayerEndGap + Boundary.Thickness;
+        var ceiling = origin.ToWorld(new System.Numerics.Vector3(0f, playerZone.Height + (Boundary.Thickness / 2f), (depth / 2f) - behind)).ToUnity();
         Boundary.Wall("BossBattles_ZoneCeiling", ceiling, along, new Vector3(across, Boundary.Thickness, depth), layer, zone: true);
     }
 
@@ -68,8 +68,8 @@ internal class Arena(GameAssets assets)
         Visuals.Line(At(halfWidth, Visuals.LineHeight, lane.Length / 2f), along, new Vector3(Visuals.LineThickness, Visuals.LineHeight, lane.Length), Part.Edge);
         Visuals.Line(At(0f, Visuals.LineHeight, 0f), along, new Vector3(lane.Width, Visuals.LineHeight, Visuals.LineThickness), Part.End);
         Visuals.Line(At(0f, Visuals.LineHeight, lane.Length), along, new Vector3(lane.Width, Visuals.LineHeight, Visuals.LineThickness), Part.End);
-        if (zone is { } yours && yours.Length < lane.Length - 0.01f)
-            Visuals.Line(At(0f, Visuals.LineHeight, yours.Length), along, new Vector3(lane.Width, Visuals.LineHeight, Visuals.LineThickness), Part.Zone);
+        if (zone is { } playerZone && playerZone.Length < lane.Length - 0.01f)
+            Visuals.Line(At(0f, Visuals.LineHeight, playerZone.Length), along, new Vector3(lane.Width, Visuals.LineHeight, Visuals.LineThickness), Part.Zone);
 
         if (frameBackstop)
         {

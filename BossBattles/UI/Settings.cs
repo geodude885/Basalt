@@ -82,7 +82,7 @@ internal class Settings
         PickerSide = Applied(Category.CreateEntry("PickerSide", 0f, "Picker sideways (m)",
             "How far to your right the picker appears; negative is left.", false, false, Slider(-1f, 1f, 2)));
         Editing = Category.CreateEntry("Editing", false, "Chart editing",
-            "Show the chart-making tools: RECORD on the picker (record an actor's performance into the chart), and the new chart, export and where-am-I keys. Off: just play.");
+            "Show the chart-making tools: RECORD on the picker (record an actor's performance into the chart), and the new chart, open folder and export keys. Off: just play.");
         PickerFixedInGym = Applied(Category.CreateEntry("PickerFixedInGym", true, "Fixed picker spot in the Gym",
             "In the Gym, Picker here sets a spot the picker then always stands at - saved in UserData/BossBattles/places.json. Off: it always comes to you."));
         Countdown = Applied(Category.CreateEntry("Countdown", 3f, "Countdown (s)", "Seconds to count down before a battle starts.",

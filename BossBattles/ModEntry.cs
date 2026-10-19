@@ -1,4 +1,3 @@
-using System.Globalization;
 using BossBattles.Actors;
 using BossBattles.Arenas;
 using BossBattles.Battle;
@@ -11,7 +10,6 @@ using BossBattles.Services.Scoring;
 using BossBattles.UI;
 using MelonLoader;
 using MelonLoader.Utils;
-using UnityEngine;
 
 [assembly: MelonInfo(typeof(BossBattles.ModEntry), "BossBattles", "1.0.0", "ACutiePi")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
@@ -73,7 +71,6 @@ public class ModEntry : MelonMod
             ("Folder", "Open chart folder", "Chart editing: open the chosen chart's folder, to edit it in the Boss Battles Chart Editor.", () => IfEditing(_charts.OpenChartFolder)),
             ("Record", "Record actor", "Chart editing: record the chosen chart's actor - you stand in its place and perform.", () => IfEditing(() => _charts.RecordChosen())),
             ("Export", "Export chart", "Chart editing: pack the chosen chart, its song and clips into UserData/BossBattles/Exports/<name>.bbchart.", () => IfEditing(_charts.ExportChosen)),
-            ("Where", "Where am I", "Chart editing: print your spot as a chart's arena line, in the Logger.", () => IfEditing(WhereAmI)),
             ("Gym", "Back to the Gym", "Leave the Ring or Pit.", _battle.ReturnToGym),
         })
         {
@@ -138,23 +135,5 @@ public class ModEntry : MelonMod
     {
         if (_settings.Editing.Value) action();
         else Logger.Info("turn on Chart editing in the BossBattles settings to use the chart-making tools");
-    }
-
-    // Prints your spot as a chart's "arena" line.
-    private static void WhereAmI()
-    {
-        if (BattlePlayer.Controller is not { } you) return;
-
-        var map = Maps.Current;
-        var rig = ActorRig.From(you);
-        var at = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
-        static string Number(float value)
-        {
-            return value.ToString("0.0#", CultureInfo.InvariantCulture);
-        }
-
-        Logger.Info(map == ArenaKind.Here
-            ? $"[Where] {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} is not a chart map (gym, ring, pit)"
-            : $"[Where] \"arena\": {{ \"map\": \"{map.ToString().ToLowerInvariant()}\", \"at\": {{ \"x\": {Number(at.x)}, \"z\": {Number(at.z)} }}, \"facing\": {rig.Facing.Bearing().ToString("0", CultureInfo.InvariantCulture)} }}");
     }
 }

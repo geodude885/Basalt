@@ -54,8 +54,7 @@ Turn on **Chart editing** in the settings. The picker then gains:
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your
-look and stones), *Open chart folder*, *Export chart* (a `.bbchart` in `UserData/BossBattles/Exports`)
-and *Where am I* (your spot as a chart's arena line).
+look and stones), *Open chart folder* and *Export chart* (a `.bbchart` in `UserData/BossBattles/Exports`).
 
 **The chart editor** is a separate desktop app for Windows, macOS and Linux, the Boss Battles Chart
 Editor: the song's waveform under a beat grid, projectiles on a top-down lane, phases, colours, and a

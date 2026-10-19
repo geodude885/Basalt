@@ -16,13 +16,13 @@ internal class MoveLock
     /// <summary>Your gesture recognition off, the same switch an actor's clip uses.</summary>
     public void Hold()
     {
-        var you = BattlePlayer.Controller;
-        if (you == null || _heldFor != null) return;
+        var playerController = BattlePlayer.Controller;
+        if (playerController == null || _heldFor != null) return;
 
         try
         {
-            you.PlayerProcessor.RemoveAllStackInputSources();
-            _heldFor = you;
+            playerController.PlayerProcessor.RemoveAllStackInputSources();
+            _heldFor = playerController;
             Logger.Debug("[Battle.MovesHeld] until GO");
         }
         catch (Exception e)
@@ -34,16 +34,16 @@ internal class MoveLock
     /// <summary>Your moves back, without the spawn moves <paramref name="rule"/> disallows.</summary>
     public void Release(SpawnRule rule = SpawnRule.All)
     {
-        var you = _heldFor;
+        var playerController = _heldFor;
         _heldFor = null;
-        if (you == null) return;
+        if (playerController == null) return;
 
         try
         {
             // Re-initialising rebuilds the move list from every move you own, so the rule clips it after.
-            you.PlayerProcessor.InitializeStackInputSources(true);
-            if (rule != SpawnRule.All) Withhold(you, rule);
-            if (_withheld.Count > 0) DropWithheldGestures(you);
+            playerController.PlayerProcessor.InitializeStackInputSources(true);
+            if (rule != SpawnRule.All) Withhold(playerController, rule);
+            if (_withheld.Count > 0) DropWithheldGestures(playerController);
         }
         catch (Exception e)
         {
@@ -53,9 +53,9 @@ internal class MoveLock
 
     public void GiveSpawnsBack()
     {
-        var you = _withheldFrom;
+        var playerController = _withheldFrom;
         _withheldFrom = null;
-        if (you == null || _withheld.Count == 0)
+        if (playerController == null || _withheld.Count == 0)
         {
             _withheld.Clear();
             return;
@@ -63,9 +63,9 @@ internal class MoveLock
 
         try
         {
-            you.PlayerProcessor.RemoveAllStackInputSources();
-            foreach (var stack in _withheld) you.PlayerProcessor.availableStacks.Add(stack);
-            you.PlayerProcessor.InitializeStackInputSources(true);
+            playerController.PlayerProcessor.RemoveAllStackInputSources();
+            foreach (var stack in _withheld) playerController.PlayerProcessor.availableStacks.Add(stack);
+            playerController.PlayerProcessor.InitializeStackInputSources(true);
             Logger.Debug($"[Battle.SpawnsReturned] {string.Join(", ", _withheld.Select(s => s.CachedName))}");
         }
         catch (Exception e)
@@ -84,16 +84,16 @@ internal class MoveLock
         _withheld.Clear();
     }
 
-    private void Withhold(PlayerController you, SpawnRule rule)
+    private void Withhold(PlayerController playerController, SpawnRule rule)
     {
-        var stacks = you.PlayerProcessor.availableStacks;
+        var stacks = playerController.PlayerProcessor.availableStacks;
         _withheld.AddRange(stacks.ToArray().Where(stack =>
             stack != null
             && SpawnMoves.Contains(stack.CachedName, StringComparer.OrdinalIgnoreCase)
             && !(rule == SpawnRule.Discs && string.Equals(stack.CachedName, "Disc", StringComparison.OrdinalIgnoreCase))));
         foreach (var stack in _withheld) stacks.Remove(stack);
 
-        _withheldFrom = you;
+        _withheldFrom = playerController;
         Logger.Debug($"[Battle.SpawnsWithheld] {rule}: {string.Join(", ", _withheld.Select(s => s.CachedName))}");
     }
 
@@ -102,10 +102,10 @@ internal class MoveLock
     /// (<c>MoveManager.FetchOwnedMoves</c>), not <c>availableStacks</c>. Each handle goes, and its pose
     /// input unless an allowed move shares it.
     /// </summary>
-    private void DropWithheldGestures(PlayerController you)
+    private void DropWithheldGestures(PlayerController playerController)
     {
-        var handles = you.PlayerProcessor.activeStackHandles;
-        var poses = you.PlayerPoseSystem;
+        var handles = playerController.PlayerProcessor.activeStackHandles;
+        var poses = playerController.PlayerPoseSystem;
         var dropped = new List<string>();
 
         foreach (var handle in handles.ToArray())

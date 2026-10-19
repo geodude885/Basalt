@@ -168,14 +168,14 @@ public sealed class ChartPackageTests : IDisposable
         Assert.Equal(new[] { "chart.json", "song.wav", "cover.png", "clips/wave.json" }, packed.Included);
 
         // Shared: someone else drops it into their own, empty-but-for-this chart folder.
-        var theirs = Path.Combine(_root, "Theirs", "Charts");
-        Directory.CreateDirectory(theirs);
-        File.Copy(package, Path.Combine(theirs, Path.GetFileName(package)));
+        var otherPlayersFolder = Path.Combine(_root, "Theirs", "Charts");
+        Directory.CreateDirectory(otherPlayersFolder);
+        File.Copy(package, Path.Combine(otherPlayersFolder, Path.GetFileName(package)));
 
-        var their = new ChartLibrary(theirs, Path.Combine(_root, "Theirs", "Cache"));
-        Assert.Equal(0, their.Reload());
+        var otherPlayersLibrary = new ChartLibrary(otherPlayersFolder, Path.Combine(_root, "Theirs", "Cache"));
+        Assert.Equal(0, otherPlayersLibrary.Reload());
 
-        var entry = Assert.Single(their.Entries);
+        var entry = Assert.Single(otherPlayersLibrary.Entries);
         Assert.True(entry.Result.Ok, string.Join("; ", entry.Result.Errors));
         Assert.Equal(ChartSource.Package, entry.Source);
         Assert.Equal("Folder Song", entry.Name);
@@ -193,11 +193,11 @@ public sealed class ChartPackageTests : IDisposable
         var zip = Path.Combine(_root, "Theirs", "Folder-Song.zip");
         ChartPackage.Pack(library.Entries[0], zip);
 
-        var theirs = Path.GetDirectoryName(zip)!;
-        var their = new ChartLibrary(theirs, Path.Combine(_root, "TheirCache"));
-        their.Reload();
+        var otherPlayersFolder = Path.GetDirectoryName(zip)!;
+        var otherPlayersLibrary = new ChartLibrary(otherPlayersFolder, Path.Combine(_root, "TheirCache"));
+        otherPlayersLibrary.Reload();
 
-        Assert.Equal("Folder Song", Assert.Single(their.Playable).Name);
+        Assert.Equal("Folder Song", Assert.Single(otherPlayersLibrary.Playable).Name);
     }
 
     [Fact]

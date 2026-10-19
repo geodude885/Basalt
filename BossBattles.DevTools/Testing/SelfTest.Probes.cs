@@ -11,7 +11,7 @@ internal static partial class SelfTest
 {
     private static readonly float[] LaneCheckHeights = { 0.3f, 1.2f };
 
-    private static bool _keepYouAlive;
+    private static bool _keepPlayerAlive;
 
     private static Vector3? LaneOrigin => LanePoint(0f, 0f, 0f);
 
@@ -88,11 +88,11 @@ internal static partial class SelfTest
     }
 
     /// <summary>Tops your health up while a long test chart plays, so it runs to the end.</summary>
-    private static void KeepYouAlive()
+    private static void KeepPlayerAlive()
     {
-        if (!_keepYouAlive || BattlePlayer.Player is not { Controller: not null } you) return;
+        if (!_keepPlayerAlive || BattlePlayer.Player is not { Controller: not null } playerController) return;
 
-        var hp = you.Data.HealthPoints;
-        if (hp < PlayerHealth.MAX_PLAYER_HEALTH) you.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, hp, false);
+        var hp = playerController.Data.HealthPoints;
+        if (hp < PlayerHealth.MAX_PLAYER_HEALTH) playerController.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, hp, false);
     }
 }

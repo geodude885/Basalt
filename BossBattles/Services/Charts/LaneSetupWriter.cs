@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -54,9 +53,6 @@ public static class LaneSetupWriter
         var moved = actors.Select(a => Math.Abs(a.At.Z - lane.Length) < 0.01f || a.At.Z > resized.Length ? a with { At = a.At with { Z = resized.Length } } : a).ToList();
         return (resized, moved);
     }
-
-    // A number as a chart writes it.
-    public static string Format(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
     private static JsonNode? ActorsJson(IReadOnlyList<ActorSpec> actors) => ChartJson.ToNode(actors.Select(actor => new ActorDto
     {

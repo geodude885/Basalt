@@ -27,9 +27,9 @@ internal record ActorPose(
         (rig.LeftHand.localPosition, rig.LeftHand.localRotation),
         (rig.RightHand.localPosition, rig.RightHand.localRotation));
 
-    public static ActorPose DefaultPose(ActorRig yours)
+    public static ActorPose DefaultPose(ActorRig playerRig)
     {
-        var eye = yours.Head.localPosition.y;
+        var eye = playerRig.Head.localPosition.y;
         if (eye < 1f) eye = 1.6f;
 
         return new ActorPose(

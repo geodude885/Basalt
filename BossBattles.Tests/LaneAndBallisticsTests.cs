@@ -9,7 +9,7 @@ public class AnchorTests
     private const float Tolerance = 1e-4f;
 
     [Fact]
-    public void LaneAxesFollowYourFacing()
+    public void LaneAxesFollowThePlayersFacing()
     {
         // Facing +X: down the lane is +X, lane-right is -Z (Unity is left-handed).
         var frame = Anchor.Facing(new Vector3(10, 0, 5), new Vector3(1, 0.3f, 0));

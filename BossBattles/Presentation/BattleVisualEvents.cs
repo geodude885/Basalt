@@ -37,7 +37,7 @@ internal class BattleVisualEvents
         ReShade.SetShaderGlobal("running", 1f);
         ReShade.SetShaderGlobal("time", (float)chartTime);
 
-        if (BattlePlayer.Player?.Data is { } you) ReShade.SetShaderGlobal("health", you.HealthPoints / (float)PlayerHealth.MAX_PLAYER_HEALTH);
+        if (BattlePlayer.Player?.Data is { } playerData) ReShade.SetShaderGlobal("health", playerData.HealthPoints / (float)PlayerHealth.MAX_PLAYER_HEALTH);
 
         if (chart.Tempo is not { } tempo) return;
 

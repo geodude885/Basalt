@@ -20,12 +20,12 @@ public static class LookTimeline
         var looks = new Dictionary<string, PackLook>(StringComparer.OrdinalIgnoreCase);
         foreach (var pack in cues.Where(c => c.Time <= time).GroupBy(c => c.Pack, StringComparer.OrdinalIgnoreCase))
         {
-            var mine = pack.OrderBy(c => c.Time).ToList();
+            var packCues = pack.OrderBy(c => c.Time).ToList();
             var values = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             var on = false;
 
             // Each cue fades from the look so far, frozen where the next cue cut in.
-            foreach ((var cue, var cueEnd) in mine.Zip(mine.Skip(1).Select(c => c.Time).Append(time)))
+            foreach ((var cue, var cueEnd) in packCues.Zip(packCues.Skip(1).Select(c => c.Time).Append(time)))
             {
                 var k = cue.Fade <= 0 ? 1 : Math.Clamp((cueEnd - cue.Time) / cue.Fade, 0, 1);
 

@@ -66,9 +66,9 @@ internal partial class Actor
         _colliders ??= controller.GetComponentsInChildren<Collider>(true);
         Collider[] structureColliders = structure.GetComponentsInChildren<Collider>(true);
 
-        foreach (var mine in _colliders)
+        foreach (var actorCollider in _colliders)
         {
-            foreach (var theirs in structureColliders) Physics.IgnoreCollision(mine, theirs, true);
+            foreach (var structureCollider in structureColliders) Physics.IgnoreCollision(actorCollider, structureCollider, true);
         }
 
         MelonCoroutines.Start(RestoreCollisionWhenClearOfColliders(_colliders, structureColliders, structure.transform, seconds));
@@ -121,7 +121,7 @@ internal partial class Actor
         }
     }
 
-    private IEnumerator RestoreCollisionWhenClearOfColliders(Collider[] mine, Collider[] structureColliders, Transform structure, float seconds)
+    private IEnumerator RestoreCollisionWhenClearOfColliders(Collider[] actorColliders, Collider[] structureColliders, Transform structure, float seconds)
     {
         var until = Time.time + seconds;
         while (Time.time < until && structure != null && Controller is { } controller)
@@ -132,12 +132,12 @@ internal partial class Actor
             yield return null;
         }
 
-        foreach (var a in mine)
+        foreach (var actorCollider in actorColliders)
         {
-            if (a == null) continue;
-            foreach (var b in structureColliders)
+            if (actorCollider == null) continue;
+            foreach (var structureCollider in structureColliders)
             {
-                if (b != null) Physics.IgnoreCollision(a, b, false);
+                if (structureCollider != null) Physics.IgnoreCollision(actorCollider, structureCollider, false);
             }
         }
     }

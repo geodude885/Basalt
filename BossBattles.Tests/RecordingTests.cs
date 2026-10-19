@@ -450,7 +450,7 @@ public class FacingTests
 public class ZoneAndRulesTests
 {
     [Fact]
-    public void WithoutAZoneYouKeepTwoMetresFromTheFarEnd()
+    public void WithoutAZoneThePlayerKeepsTwoMetresFromTheFarEnd()
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 } }""").Chart!;
 

@@ -30,8 +30,8 @@ internal static partial class SelfTest
         foreach (var recentProjectile in new[] { false, true })
         {
             var chest = mesh.bounds.center + (Vector3.up * 0.2f);
-            var towardYou = (origin - chest).Flat();
-            var from = chest + (towardYou * 4f);
+            var towardPlayer = (origin - chest).Flat();
+            var from = chest + (towardPlayer * 4f);
             var along = (chest - from).normalized;
 
             var pooled = PoolManager.instance.GetPooledObject("Ball", from, Quaternion.identity);

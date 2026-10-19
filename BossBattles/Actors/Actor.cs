@@ -247,13 +247,13 @@ internal partial class Actor(string id, string name, string customisationString,
 
     private PlayerVisualData ResolveLook()
     {
-        var yours = PlayerVisualData.FromPlayfabDataString(BattlePlayer.Player!.Data.VisualData.ToPlayfabDataString());
+        var playerLook = PlayerVisualData.FromPlayfabDataString(BattlePlayer.Player!.Data.VisualData.ToPlayfabDataString());
 
         switch (PlayerCustomisation.Trim().ToLowerInvariant())
         {
             case "":
             case "you":
-                return yours;
+                return playerLook;
             case "default":
                 return PlayerVisualData.Default;
             case "defaultmasc":
@@ -271,7 +271,7 @@ internal partial class Actor(string id, string name, string customisationString,
         catch (Exception e)
         {
             Logger.Warning($"[Actor.LookInvalid] {this}: \"{PlayerCustomisation}\" is not a look the game can read ({e.Message}) - using yours");
-            return yours;
+            return playerLook;
         }
     }
 

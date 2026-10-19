@@ -17,8 +17,8 @@ Point an editor at [chart.schema.json](chart.schema.json) for completion and che
 In game, *New chart* in the settings window makes `Charts/my-chart/chart.json`
 from a template that plays as it is, with a comment on every part, and picks it. Edit it and save:
 charts reload by themselves between battles, and one that does not load shows its problems on the
-picker. Put a `song.wav` and `cover.png` beside it and uncomment their lines. *Where am I* prints
-your spot in an arena as an `"arena"` line. *Export chart* packs the finished chart to share.
+picker. Put a `song.wav` and `cover.png` beside it and uncomment their lines. *SETUP* on the picker
+walks the lane in place and writes the `"arena"` line. *Export chart* packs the finished chart to share.
 
 ## Where a chart lives
 
@@ -40,8 +40,8 @@ Recorded clips are kept in the chart's own `clips/`.
 - **Lane:** `x` across (0 = the centre line, positive to your right looking down the lane), `y` up
   from the floor, `z` from your end (0) to the far end (`lane.length`). Metres.
 - **Arena:** `x`/`z` metres from the arena's centre - the Gym: world coordinates. `facing` is a
-  compass bearing in degrees: 0 = world +Z, 90 = world +X. *Where am I* prints your own spot in
-  exactly this form.
+  compass bearing in degrees: 0 = world +Z, 90 = world +X. Lane setup's *LANE HERE* writes your own
+  spot in exactly this form.
 - **Time:** seconds from GO (`t`, phase `start`), or beats (`beat`, `startBeat`) when the chart
   has a `bpm`. With a song, time follows the song: chart time 0 is `music.start` seconds into it.
 

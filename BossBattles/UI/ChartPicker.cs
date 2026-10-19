@@ -109,7 +109,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         if (want && !_shown)
         {
             if (!Ensure()) return;
-            if (panel.Placement == PickerPlacement.Beside || !PlaceAtSavedSpot()) PlaceInFrontOfYou();
+            if (panel.Placement == PickerPlacement.Beside || !PlaceAtSavedSpot()) PlaceInFrontOfPlayer();
             _root!.SetActive(true);
             _nextRefresh = 0f;
         }
@@ -123,11 +123,11 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
 
         if (Time.time >= _nextRefresh) Refresh();
         // Following you: brought back when you walk away from it.
-        if (panel.FollowsYou && BattlePlayer.Controller is { } you)
+        if (panel.FollowsPlayer && BattlePlayer.Controller is { } playerController)
         {
-            var away = _root!.transform.position - ActorRig.From(you).Head.position;
+            var away = _root!.transform.position - ActorRig.From(playerController).Head.position;
             away.y = 0f;
-            if (away.magnitude > 1.6f) PlaceInFrontOfYou();
+            if (away.magnitude > 1.6f) PlaceInFrontOfPlayer();
         }
 
         foreach (var button in _buttons) button.Settle();
@@ -140,7 +140,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         Open = true;
         if (_root == null || !_shown) return;
 
-        PlaceInFrontOfYou();
+        PlaceInFrontOfPlayer();
         if (!FixedInGym || !ArenaKind.Gym.IsLoaded()) return;
 
         var position = _root.transform.position;
@@ -269,10 +269,10 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
 
     private void CheckPokes()
     {
-        var you = BattlePlayer.Controller;
-        if (you == null) return;
+        var playerController = BattlePlayer.Controller;
+        if (playerController == null) return;
 
-        var rig = ActorRig.From(you);
+        var rig = ActorRig.From(playerController);
         var left = ButtonAt(rig.LeftHand.position);
         var right = ButtonAt(rig.RightHand.position);
 
@@ -294,12 +294,12 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
     private Button? ButtonAt(Vector3 point) =>
         _buttons.FirstOrDefault(b => !b.Native && b.Root.activeSelf && b.Contains(point, PokeMargin));
 
-    private void PlaceInFrontOfYou()
+    private void PlaceInFrontOfPlayer()
     {
-        var you = BattlePlayer.Controller;
-        if (you == null || _root == null) return;
+        var playerController = BattlePlayer.Controller;
+        if (playerController == null || _root == null) return;
 
-        var rig = ActorRig.From(you);
+        var rig = ActorRig.From(playerController);
         var facing = rig.Facing;
         var right = Vector3.Cross(Vector3.up, facing);
 

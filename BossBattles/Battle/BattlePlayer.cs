@@ -9,7 +9,6 @@ using UnityEngine;
 
 namespace BossBattles.Battle;
 
-/// <summary>You in a battle: placed in the lane, kept inside it, open to the game's hits, and on full health at either end.</summary>
 internal class BattlePlayer
 {
     private PlayerHealth? _invincibleBefore;
@@ -20,7 +19,7 @@ internal class BattlePlayer
 
     public static PlayerController? Controller => Player?.Controller;
 
-    public static ActorRig? Rig => Controller is { } you ? ActorRig.From(you) : null;
+    public static ActorRig? Rig => Controller is { } playerController ? ActorRig.From(playerController) : null;
 
     public static Vector3 Head => Rig?.Head.position ?? Vector3.zero;
 
@@ -30,12 +29,12 @@ internal class BattlePlayer
     /// </summary>
     public void Place(Vector3 floor, Quaternion facing)
     {
-        if (Controller is not { } you) return;
+        if (Controller is not { } playerController) return;
 
-        var rig = ActorRig.From(you);
+        var rig = ActorRig.From(playerController);
         var eyeHeight = rig.Head.position.y - rig.Vr.position.y;
-        you.PlayerMovement.Reposition(floor + (Vector3.up * eyeHeight), facing);
-        MelonCoroutines.Start(CorrectPlacement(you, floor, facing, eyeHeight, ++_placement));
+        playerController.PlayerMovement.Reposition(floor + (Vector3.up * eyeHeight), facing);
+        MelonCoroutines.Start(CorrectPlacement(playerController, floor, facing, eyeHeight, ++_placement));
     }
 
     /// <summary>
@@ -44,10 +43,10 @@ internal class BattlePlayer
     /// </summary>
     public void KeepInLane(Anchor frame, Chart chart, bool zoned)
     {
-        if (Time.time < _nextLaneCheck || Controller is not { } you) return;
+        if (Time.time < _nextLaneCheck || Controller is not { } playerController) return;
         _nextLaneCheck = Time.time + 0.1f;
 
-        var rig = ActorRig.From(you);
+        var rig = ActorRig.From(playerController);
         var at = frame.ToLocal(rig.Feet.ToNumerics()).ToUnity();
         float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
         var far = zoned ? chart.Zone.Length + 0.3f : chart.Lane.Length + 0.75f;
@@ -59,7 +58,7 @@ internal class BattlePlayer
         var floor = rig.Feet;
         var shift = new Vector3(inside.x - floor.x, 0f, inside.z - floor.z);
         if (tooHigh) shift.y = -(above - chart.Zone.Height);
-        var physics = you.PlayerPhysics;
+        var physics = playerController.PlayerPhysics;
         foreach (var body in new[] { physics.PhysicsRigidbody, physics.VRrigidbody })
         {
             if (body == null) continue;
@@ -79,11 +78,11 @@ internal class BattlePlayer
     /// </summary>
     public void KeepVulnerable()
     {
-        if (Controller is not { } you) return;
+        if (Controller is not { } playerController) return;
 
         try
         {
-            var health = you.PlayerHealth;
+            var health = playerController.PlayerHealth;
             if (health.IsInvincible)
             {
                 _invincibleBefore ??= health;
@@ -123,29 +122,29 @@ internal class BattlePlayer
 
     public static void FullHealth()
     {
-        var you = Player;
-        if (you?.Controller == null) return;
+        var localPlayer = Player;
+        if (localPlayer?.Controller == null) return;
 
-        var hp = you.Data.HealthPoints;
-        if (hp < PlayerHealth.MAX_PLAYER_HEALTH) you.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, hp, false);
+        var hp = localPlayer.Data.HealthPoints;
+        if (hp < PlayerHealth.MAX_PLAYER_HEALTH) localPlayer.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, hp, false);
         Logger.Debug($"[Battle.FullHealth] {hp} -> {PlayerHealth.MAX_PLAYER_HEALTH}");
     }
 
-    private IEnumerator CorrectPlacement(PlayerController you, Vector3 floor, Quaternion facing, float eyeHeight, int placement)
+    private IEnumerator CorrectPlacement(PlayerController playerController, Vector3 floor, Quaternion facing, float eyeHeight, int placement)
     {
         yield return null;
         yield return null;
-        if (placement != _placement || you == null) yield break;
+        if (placement != _placement || playerController == null) yield break;
 
-        var feet = ActorRig.From(you).Feet;
+        var feet = ActorRig.From(playerController).Feet;
         var off = new Vector3(floor.x - feet.x, 0f, floor.z - feet.z);
         if (off.magnitude > 0.15f)
         {
-            you.PlayerMovement.Reposition(floor + off + (Vector3.up * eyeHeight), facing);
+            playerController.PlayerMovement.Reposition(floor + off + (Vector3.up * eyeHeight), facing);
             yield return null;
             yield return null;
-            if (placement != _placement || you == null) yield break;
-            feet = ActorRig.From(you).Feet;
+            if (placement != _placement || playerController == null) yield break;
+            feet = ActorRig.From(playerController).Feet;
         }
 
         var left = new Vector2(floor.x - feet.x, floor.z - feet.z).magnitude;

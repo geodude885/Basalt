@@ -19,7 +19,7 @@ internal class PickerPanel(ChartSelection charts, ChartLibrary library, JsonBook
     // Out of the way while you perform or walk the lane.
     public PickerPlacement Placement => studio.State is StudioState.Recording or StudioState.Setup ? PickerPlacement.Beside : PickerPlacement.InFront;
 
-    public bool FollowsYou => studio.State == StudioState.Setup;
+    public bool FollowsPlayer => studio.State == StudioState.Setup;
 
     public bool Wanted(bool pickerOpen) => studio.State switch
     {
@@ -54,8 +54,8 @@ internal class PickerPanel(ChartSelection charts, ChartLibrary library, JsonBook
                     new PickerButton("wider", "WIDER", Orange, () => studio.LaneSetup.ResizeLane(0f, 0.5f)),
                     new PickerButton("narrower", "NARROWER", Orange, () => studio.LaneSetup.ResizeLane(0f, -0.5f)),
                     new PickerButton("map", "MAP", Blue, studio.LaneSetup.SwitchToNextMap),
-                    new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneSetup.StartLaneWhereYouStand),
-                    new PickerButton("actorhere", "ACTOR HERE", Blue, studio.LaneSetup.MoveFirstActorWhereYouStand),
+                    new PickerButton("lanehere", "LANE HERE", Blue, studio.LaneSetup.StartLaneWherePlayerStands),
+                    new PickerButton("actorhere", "ACTOR HERE", Blue, studio.LaneSetup.MoveFirstActorWherePlayerStands),
                     new PickerButton("save", "SAVE", Green, () => charts.Saved(studio.SaveChartOptions)),
                     new PickerButton("cancel", "CANCEL", Red, studio.ExitChartOptions),
                 ];

@@ -86,13 +86,13 @@ internal class MoveEffects
     {
         if (_spawns != null) return true;
 
-        var you = BattlePlayer.Controller;
-        if (you == null) return false;
+        var playerController = BattlePlayer.Controller;
+        if (playerController == null) return false;
 
         try
         {
             var spawns = new Dictionary<string, Effects>(StringComparer.OrdinalIgnoreCase);
-            foreach (var stack in you.PlayerProcessor.availableStacks.ToArray())
+            foreach (var stack in playerController.PlayerProcessor.availableStacks.ToArray())
             {
                 if (stack == null) continue;
 

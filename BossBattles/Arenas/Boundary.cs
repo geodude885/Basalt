@@ -24,7 +24,7 @@ internal class Boundary
     private float _nextReapply;
     private float _nextFullReapply;
 
-    // Invisible wall!
+    // Invisible walls!
     public void Wall(string name, Vector3 centre, Quaternion rotation, Vector3 size, int layer, bool zone = false)
     {
         var wall = GameHelpers.Shape(PrimitiveType.Cube, name, centre, rotation, size);

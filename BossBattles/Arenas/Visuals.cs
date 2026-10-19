@@ -20,9 +20,9 @@ internal class Visuals(GameAssets assets)
     private static readonly Vector3 ActorMarkerSize = new(0.35f, 0.9f, 0.35f);
 
     private readonly List<(Part Part, Renderer Renderer, Material Material)> _painted = [];
-    private Dictionary<Part, Color> _now = [];
-    private Dictionary<Part, Color> _from = [];
-    private Dictionary<Part, Color> _to = [];
+    private Dictionary<Part, Color> _currentColours = [];
+    private Dictionary<Part, Color> _lerpFromColours = [];
+    private Dictionary<Part, Color> _lerpToColours = [];
     private float _fadeStart;
     private float _fadeSeconds;
 
@@ -36,23 +36,23 @@ internal class Visuals(GameAssets assets)
         ActorMarker,
     }
 
-    public void Colour(LaneColours colours) => _now = Targets(colours);
+    public void Colour(LaneColours colours) => _currentColours = Targets(colours);
 
     public void Line(Vector3 centre, Quaternion rotation, Vector3 size, Part part) =>
-        Remember(Make("BossBattles_Lane", centre, rotation, size, assets.Colour(_now[part])), part);
+        Remember(Make("BossBattles_Lane", centre, rotation, size, assets.Colour(_currentColours[part])), part);
 
     public void ActorMarker(Vector3 feet) =>
-        Remember(Make("BossBattles_ActorMarker", feet + (Vector3.up * ActorMarkerSize.y), Quaternion.identity, ActorMarkerSize, assets.Colour(_now[Part.ActorMarker]), PrimitiveType.Cylinder), Part.ActorMarker);
+        Remember(Make("BossBattles_ActorMarker", feet + (Vector3.up * ActorMarkerSize.y), Quaternion.identity, ActorMarkerSize, assets.Colour(_currentColours[Part.ActorMarker]), PrimitiveType.Cylinder), Part.ActorMarker);
 
     public void Pane(Vector3 centre, Quaternion rotation, Vector3 size) =>
-        Remember(Make("BossBattles_Pane", centre, rotation, size, assets.Glass(_now[Part.Pane])), Part.Pane);
+        Remember(Make("BossBattles_Pane", centre, rotation, size, assets.Glass(_currentColours[Part.Pane])), Part.Pane);
 
     public void Recolour(LaneColours colours, float seconds)
     {
         if (_painted.Count == 0) return;
 
-        _from = new Dictionary<Part, Color>(_now);
-        _to = Targets(colours);
+        _lerpFromColours = new Dictionary<Part, Color>(_currentColours);
+        _lerpToColours = Targets(colours);
         _fadeStart = Time.time;
         _fadeSeconds = seconds;
         Tick();
@@ -60,29 +60,29 @@ internal class Visuals(GameAssets assets)
 
     public void Tick()
     {
-        if (_to.Count == 0) return;
+        if (_lerpToColours.Count == 0) return;
 
         var k = _fadeSeconds <= 0f ? 1f : Mathf.Clamp01((Time.time - _fadeStart) / _fadeSeconds);
-        foreach ((var part, var target) in _to)
+        foreach ((var part, var target) in _lerpToColours)
         {
-            var from = _from.TryGetValue(part, out var f) ? f : target;
+            var from = _lerpFromColours.TryGetValue(part, out var f) ? f : target;
             var to = target;
 
             // A pane fading in or out keeps its hue and only changes opacity.
             if (part == Part.Pane && from.a <= 0f) from = new Color(to.r, to.g, to.b, 0f);
             if (part == Part.Pane && to.a <= 0f) to = new Color(from.r, from.g, from.b, 0f);
-            _now[part] = Color.Lerp(from, to, k);
+            _currentColours[part] = Color.Lerp(from, to, k);
         }
 
         foreach ((var part, var renderer, var material) in _painted.Where(p => p.Renderer != null && p.Material != null))
         {
-            var colour = _now[part];
+            var colour = _currentColours[part];
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", colour);
             if (material.HasProperty("_Color")) material.SetColor("_Color", colour);
             renderer.enabled = part != Part.Pane || colour.a > 0.004f;
         }
 
-        if (k >= 1f) _to = [];
+        if (k >= 1f) _lerpToColours = [];
     }
 
     private static Dictionary<Part, Color> Targets(LaneColours colours)
@@ -116,7 +116,7 @@ internal class Visuals(GameAssets assets)
     {
         var renderer = cube.GetComponent<Renderer>();
         _painted.Add((part, renderer, renderer.material));
-        if (part == Part.Pane && _now[Part.Pane].a <= 0.004f) renderer.enabled = false;
+        if (part == Part.Pane && _currentColours[Part.Pane].a <= 0.004f) renderer.enabled = false;
     }
     public void Destroy()
     {
@@ -127,6 +127,6 @@ internal class Visuals(GameAssets assets)
     public void Forget()
     {
         _painted.Clear();
-        _to = [];
+        _lerpToColours = [];
     }
 }

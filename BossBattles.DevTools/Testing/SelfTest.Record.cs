@@ -124,7 +124,7 @@ internal static partial class SelfTest
             yield return null;
         }
 
-        var actor = Mod.Actors.All.Count > 0 ? Mod.Actors.All[0] : null;
+        var actor = Mod.Actors.Actors.Count > 0 ? Mod.Actors.Actors[0] : null;
         if (Mod.Studio.State != StudioState.Deciding) problems.Add($"the review did not end in a decision (studio {Mod.Studio.State})");
         if (actor == null)
         {

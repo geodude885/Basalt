@@ -7,17 +7,17 @@ namespace BossBattles.Actors;
 
 internal partial class Actor
 {
-    private Playing? _clip;
-    private (ClipFingers Left, ClipFingers Right)? _fingers;
+    private Playback? _clip;
+    private (ClipFingers Left, ClipFingers Right)? _clipFingers;
 
     public bool PlayingClip => Controller != null && _clip != null;
 
     public ClipFingers Fingers(InputManager.Hand hand)
-        => _fingers is { } fingerPosition ? (hand == InputManager.Hand.Left ? fingerPosition.Left : fingerPosition.Right) : default;
+        => _clipFingers is { } fingerPosition ? (hand == InputManager.Hand.Left ? fingerPosition.Left : fingerPosition.Right) : default;
 
     public void SetPose(ActorPose pose) => _pose = pose;
 
-    /// <summary>Plays <paramref name="clip"/> from clip time <paramref name="from"/> to <paramref name="to"/>, or its end.</summary>
+    // Leave `to` as null to play to end
     public void PlayClip(Clip clip, double from, double? to, Anchor origin, Func<double> clock, bool mime = false)
     {
         if (Controller is not { } controller || clip.Frames.Count == 0) return;
@@ -26,7 +26,7 @@ internal partial class Actor
 
         var nextMove = 0;
         while (nextMove < clip.Moves.Count && clip.Moves[nextMove].Time < from) nextMove++;
-        _clip = new Playing(clip, from, clock(), to, origin, clock) { NextMove = nextMove, Mime = mime };
+        _clip = new Playback(clip, from, clock(), to, origin, clock) { NextMove = nextMove, Mime = mime };
 
         try
         {
@@ -44,7 +44,7 @@ internal partial class Actor
     {
         if (_clip == null) return;
         _clip = null;
-        _fingers = null;
+        _clipFingers = null;
 
         if (Controller is not { } controller) return;
         try
@@ -57,7 +57,7 @@ internal partial class Actor
         }
     }
 
-    /// <summary>Runs actor's moves by its stack name (e.g. "Straight"), no gesture.</summary>
+    // Run actor moves directly via stack name (e.g. `Straight`)
     public bool RunMove(string name)
     {
         if (Controller is not { } controller) return false;
@@ -105,7 +105,7 @@ internal partial class Actor
 
         var frame = playing.Clip.Sample((float)clipTime);
         ApplyClipPose(frame);
-        _fingers = frame.LeftFingers is { } left && frame.RightFingers is { } right ? (left, right) : null;
+        _clipFingers = frame.LeftFingers is { } left && frame.RightFingers is { } right ? (left, right) : null;
 
         while (playing.NextMove < playing.Clip.Moves.Count && playing.Clip.Moves[playing.NextMove].Time <= clipTime)
         {
@@ -147,7 +147,7 @@ internal partial class Actor
         Player!.Controller.PlayerMovement.Rotate(angle, false);
     }
 
-    private record Playing(Clip Clip, double From, double StartedAt, double? To, Anchor Lane, Func<double> Clock)
+    private record Playback(Clip Clip, double From, double StartedAt, double? To, Anchor Lane, Func<double> Clock)
     {
         public int NextMove { get; set; }
 

@@ -91,7 +91,7 @@ internal static partial class SelfTest
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
             var t = Mod.Battle.ChartTime;
-            var actor = Mod.Actors.All.FirstOrDefault(a => a.PlayingClip);
+            var actor = Mod.Actors.Actors.FirstOrDefault(a => a.PlayingClip);
             if (actor != null) samples.Add((t, FastestStructureOf(actor)));
 
             if (_shots && shotTimes.Count > 0 && t >= shotTimes.Peek())

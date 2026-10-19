@@ -5,9 +5,9 @@ namespace BossBattles.Actors;
 
 internal class ActorRegistry
 {
-    private readonly List<Actor> _actors = [];
 
-    public IReadOnlyList<Actor> All => _actors;
+    public IReadOnlyList<Actor> Actors => _actors;
+    private readonly List<Actor> _actors = [];
 
     public void Spawn(Actor actor, Vector3 floorPosition, Quaternion facing)
     {

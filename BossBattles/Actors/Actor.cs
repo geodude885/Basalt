@@ -22,8 +22,7 @@ internal partial class Actor(string id, string name, string customisationString,
     public IReadOnlyList<string>? Stones { get; } = stones;
     public BodySize? Measurement { get; init; }
     public Player? Player { get; private set; }
-
-    // The body while it has one. Unity's own null check: a destroyed controller is not null to `?.` or `is`, only to `==`.
+    // Can't use normal null coalesce on destroyed unity objs
     public PlayerController? Controller => Player?.Controller is { } controller && controller != null ? controller : null;
 
     public bool Ready { get => Controller != null && field; private set; }
@@ -33,7 +32,6 @@ internal partial class Actor(string id, string name, string customisationString,
 
     public bool IsBodyOf(Player player) => Player != null && Player.Pointer == player.Pointer;
 
-    public override string ToString() => $"{Name} [{Id}]";
     private const float SpawnTimeoutSeconds = 5f;
     private const float VisualsTimeoutSeconds = 10f;
 
@@ -349,6 +347,6 @@ internal partial class Actor(string id, string name, string customisationString,
         _colliders = null;
         _planted = false;
         _clip = null;
-        _fingers = null;
+        _clipFingers = null;
     }
 }

@@ -111,14 +111,14 @@ internal static partial class SelfTest
     private static IEnumerator PlayAndShoot(Chart chart, string folder, string expected, string shot, List<string> problems)
     {
         _keepYouAlive = true;
-        var before = Mod.Actors.All.ToList();
+        var before = Mod.Actors.Actors.ToList();
         // Warm-up's spot: the template's 12 m lane fits across the Ring from there.
         Mod.Battle.Start(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }, ArenaKind.Ring, folder);
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         // This battle's actor - the last one, despawned, can still be listed.
-        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && !before.Contains(a));
+        var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && !before.Contains(a));
         if (actor?.Player == null)
         {
             problems.Add($"{shot}: no actor came up");

@@ -18,7 +18,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready);
+        var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready);
         var mesh = actor?.Player?.Controller?.GetComponentInChildren<SkinnedMeshRenderer>();
         if (actor == null || mesh == null || LaneOrigin is not { } origin)
         {

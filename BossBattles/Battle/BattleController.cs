@@ -255,7 +255,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         switch (State)
         {
             case BattleState.SpawningActors:
-                if (actors.All.All(a => a.Ready) || Time.time >= _spawnDeadline) BeginCountdown();
+                if (actors.Actors.All(a => a.Ready) || Time.time >= _spawnDeadline) BeginCountdown();
                 break;
 
             case BattleState.Countdown:
@@ -391,12 +391,12 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
 
     private void BeginCountdown()
     {
-        var ready = actors.All.Count(a => a.Ready);
-        if (ready < actors.All.Count) Logger.Warning($"[Battle.ActorsLate] {actors.All.Count - ready} of {actors.All.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
+        var ready = actors.Actors.Count(a => a.Ready);
+        if (ready < actors.Actors.Count) Logger.Warning($"[Battle.ActorsLate] {actors.Actors.Count - ready} of {actors.Actors.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
 
         _countdownEnds = Time.time + CountdownSeconds;
         _musicDeadline = _countdownEnds + MusicWaitSeconds;
-        _arena.Boundary.LetActorsThrough(actors.All.SelectMany(a => a.Colliders));
+        _arena.Boundary.LetActorsThrough(actors.Actors.SelectMany(a => a.Colliders));
         _moves.Hold();
         Signals.PreloadChartPacks(Chart!);
         State = BattleState.Countdown;
@@ -419,7 +419,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         if (_music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
         if (Chart.Music != null) _music.Play(Chart.Music.Start + StartAt, Chart.Music.Volume);
         _board.Show("<b>GO</b>", 1f);
-        foreach (var actor in actors.All) actor.FullHeal();
+        foreach (var actor in actors.Actors) actor.FullHeal();
         _sweeper.Reset();
         Signals.Begin(Chart);
 
@@ -530,7 +530,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 
-        foreach (var actor in actors.All) actor.AllowFreePlacement();
+        foreach (var actor in actors.Actors) actor.AllowFreePlacement();
         Finished?.Invoke(result);
     }
 
@@ -542,7 +542,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
 
     private Actor? ActorById(string id)
     {
-        var actor = actors.All.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
+        var actor = actors.Actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
         if (actor?.Controller == null) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
         return actor?.Controller != null ? actor : null;
     }

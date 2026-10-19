@@ -118,7 +118,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         // This battle's actor - the last one, despawned, can still be listed.
-        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists && !before.Contains(a));
+        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && !before.Contains(a));
         if (actor?.Player == null)
         {
             problems.Add($"{shot}: no actor came up");

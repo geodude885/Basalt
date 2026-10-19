@@ -36,7 +36,7 @@ internal static class TestBench
     private static bool _facingYou;
     private static float _nextFacingCheck;
 
-    public static Actor? Actor => _actor is { Exists: true } ? _actor : null;
+    public static Actor? Actor => _actor?.Controller != null ? _actor : null;
 
     /// <summary>The test actor's sticks while it is bot-controlled; null while it mirrors you.</summary>
     public static (Vector2 Walk, Vector2 Turn)? Sticks { get; private set; }
@@ -75,9 +75,9 @@ internal static class TestBench
     {
         if (Actor is not { } actor) return;
 
-        if (actor.Planted) actor.AllowFreePlacement();
+        if (actor.IsKeptInPlace) actor.AllowFreePlacement();
         else actor.KeepInPlace();
-        Logger.Info(actor.Planted ? "[Test.Plant] planted" : "[Test.Plant] unplanted");
+        Logger.Info(actor.IsKeptInPlace ? "[Test.Plant] planted" : "[Test.Plant] unplanted");
     }
 
     public static void CycleKnockback()

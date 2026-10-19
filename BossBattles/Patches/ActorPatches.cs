@@ -93,7 +93,7 @@ public static class ActorPatches
             PatchGuard.Run(nameof(ActorHealthAsRemote), () =>
             {
                 var controller = __instance.ParentController;
-                if (controller == null || _actors.Find(controller)?.Exists != true) return;
+                if (controller == null || _actors.Find(controller) == null) return;
                 if (controller.controllerType != ControllerType.Local) return;
 
                 controller.controllerType = ControllerType.Remote;

@@ -377,7 +377,9 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
     private IEnumerator PlaceWhenSettled(Actor actor, Vector3 spot, float yaw, int session)
     {
         yield return new WaitForSecondsRealtime(ActorSettleSeconds);
-        if (session == _session && actor.Exists && State is not (BattleState.Idle or BattleState.Running or BattleState.Finished)) actor.Place(spot, yaw);
+        if (session == _session && actor.Controller != null
+            && State is not (BattleState.Idle or BattleState.Running or BattleState.Finished))
+            actor.Place(spot, yaw);
     }
 
     private void KeepLane()
@@ -541,8 +543,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
     private Actor? ActorById(string id)
     {
         var actor = actors.All.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
-        if (actor == null || !actor.Exists) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
-        return actor is { Exists: true } ? actor : null;
+        if (actor?.Controller == null) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
+        return actor?.Controller != null ? actor : null;
     }
 
     private Vector3 World(float x, float y, float z) => _frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();

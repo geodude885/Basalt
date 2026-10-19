@@ -20,7 +20,7 @@ internal static class ActorSoundScope
 
         PatchGuard.Run(nameof(ActorSoundScope), () =>
         {
-            if (actors.Find(controller)?.Exists != true) return;
+            if (actors.Find(controller) == null) return;
 
             _depth++;
             entered = true;

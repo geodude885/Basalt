@@ -18,7 +18,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready && a.Exists);
+        var actor = Mod.Actors.All.FirstOrDefault(a => a.Ready);
         var mesh = actor?.Player?.Controller?.GetComponentInChildren<SkinnedMeshRenderer>();
         if (actor == null || mesh == null || LaneOrigin is not { } origin)
         {
@@ -67,9 +67,9 @@ internal static partial class SelfTest
         {
             actor.Player!.Controller.PlayerHealth.ReduceHealth(amount, true);
             yield return new WaitForSeconds(0.3f);
-            var hp = actor.Exists ? actor.Player!.Data.HealthPoints : (short)0;
-            Logger.Info($"[SelfTest] lethal hit of {amount}: the actor {(actor.Exists ? $"lives on {hp} HP" : "is gone")}");
-            if (!actor.Exists || hp <= 0) _hitboxProblem = (_hitboxProblem == null ? "" : _hitboxProblem + "; ") + $"a hit of {amount} killed the actor";
+            var hp = actor.Controller != null ? actor.Player!.Data.HealthPoints : (short)0;
+            Logger.Info($"[SelfTest] lethal hit of {amount}: the actor {(actor.Controller != null ? $"lives on {hp} HP" : "is gone")}");
+            if (actor.Controller == null || hp <= 0) _hitboxProblem = (_hitboxProblem == null ? "" : _hitboxProblem + "; ") + $"a hit of {amount} killed the actor";
         }
     }
 }

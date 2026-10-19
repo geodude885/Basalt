@@ -19,7 +19,7 @@ public class DevToolsEntry : MelonMod
 
     /// <summary>Orbits the battle's first actor, the test actor, or you.</summary>
     private readonly DesktopCamera _camera = new(
-        () => Mod.Actors.All.FirstOrDefault(a => a.Exists)?.HeadPosition ?? Camera.main?.transform.position,
+        () => Mod.Actors.All.FirstOrDefault(a => a.Controller != null)?.HeadPosition ?? Camera.main?.transform.position,
         message => Logger.Info($"[DesktopCamera] {message}"));
 
     public override void OnInitializeMelon()

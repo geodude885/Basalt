@@ -80,7 +80,7 @@ internal static partial class SelfTest
     /// <summary>Called each frame: notes whether an actor was ever seen as a simulated player.</summary>
     public static void Update()
     {
-        if (Enabled && !_sawSimulatedActor && Mod.Actors.All.Any(a => a.Ready && a.Exists)) _sawSimulatedActor = true;
+        if (Enabled && !_sawSimulatedActor && Mod.Actors.All.Any(a => a.Ready)) _sawSimulatedActor = true;
         KeepYouAlive();
     }
 
@@ -300,7 +300,7 @@ internal static partial class SelfTest
         Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
 
-        foreach (var actor in Mod.Actors.All.Where(a => a.Exists))
+        foreach (var actor in Mod.Actors.All.Where(a => a.Controller != null))
         {
             var spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
             if (spec == null) continue;

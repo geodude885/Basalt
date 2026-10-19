@@ -27,7 +27,7 @@ internal class ActorRegistry
         _actors.Clear();
     }
 
-    public Actor? Find(Player? player) => player == null ? null : _actors.FirstOrDefault(a => a.Owns(player));
+    public Actor? Find(Player? player) => player == null ? null : _actors.FirstOrDefault(a => a.IsBodyOf(player));
 
     public Actor? Find(PlayerController? controller) => controller == null ? null : Find(controller.assignedPlayer);
 

@@ -14,9 +14,6 @@ using UnityEngine.InputSystem.XR;
 
 namespace BossBattles.Actors;
 
-/// <summary>
-/// A simulated player. Created as a Local player, drawn as a Remote one, so it has a body and its sounds play in the world.
-/// </summary>
 internal partial class Actor(string id, string name, string customisationString, IReadOnlyList<string>? stones = null)
 {
     public string Id { get; } = id;
@@ -24,16 +21,17 @@ internal partial class Actor(string id, string name, string customisationString,
     public string PlayerCustomisation { get; } = customisationString;
     public IReadOnlyList<string>? Stones { get; } = stones;
     public BodySize? Measurement { get; init; }
+    public Player? Player { get; private set; }
 
-    public bool Exists => _player != null && _player.Controller != null;
-    public bool Ready { get => Exists && field; private set; }
+    // The body while it has one. Unity's own null check: a destroyed controller is not null to `?.` or `is`, only to `==`.
+    public PlayerController? Controller => Player?.Controller is { } controller && controller != null ? controller : null;
 
-    public Player? Player => Exists ? _player : null;
-    public Vector3? HeadPosition => Exists && _rig != null ? _rig.Head.position : null;
+    public bool Ready { get => Controller != null && field; private set; }
+    public Vector3? HeadPosition => Controller != null && _rig != null ? _rig.Head.position : null;
 
     public event Action<Actor>? OnReady;
 
-    public bool Owns(Player player) => _player != null && _player.Pointer == player.Pointer;
+    public bool IsBodyOf(Player player) => Player != null && Player.Pointer == player.Pointer;
 
     public override string ToString() => $"{Name} [{Id}]";
     private const float SpawnTimeoutSeconds = 5f;
@@ -41,7 +39,6 @@ internal partial class Actor(string id, string name, string customisationString,
 
     private static readonly string[] PlayerUiPaths = { "NameTag", "UI/LocalUI", "UI/RemoteUI" };
 
-    private Player? _player;
     private ActorRig? _rig;
     private ActorPose? _pose;
     private bool _spawning;
@@ -51,7 +48,7 @@ internal partial class Actor(string id, string name, string customisationString,
     /// <summary>Creates the body asynchronously, see <see cref="OnReady"/>.</summary>
     public void Spawn(Vector3 floorPosition, Quaternion facing)
     {
-        if (_spawning || Exists)
+        if (_spawning || Controller != null)
         {
             Logger.Info($"[Actor.SpawnSkipped] {this}: {(_spawning ? "already spawning" : "already exists")}");
             return;
@@ -69,11 +66,11 @@ internal partial class Actor(string id, string name, string customisationString,
 
     public void Despawn()
     {
-        if (_player != null)
+        if (Player != null)
         {
-            PlayerManager.instance?.AllPlayers?.Remove(_player);
-            if (_player.Controller != null) UnityEngine.Object.Destroy(_player.Controller.gameObject);
-            Logger.Info($"[Actor.Despawned] {this}: {_player.Describe()}");
+            PlayerManager.instance?.AllPlayers?.Remove(Player);
+            if (Controller is { } controller) UnityEngine.Object.Destroy(controller.gameObject);
+            Logger.Info($"[Actor.Despawned] {this}: {Player.Describe()}");
         }
 
         Forget();
@@ -81,16 +78,14 @@ internal partial class Actor(string id, string name, string customisationString,
 
     public void ForgetSceneObjects()
     {
-        if (_player != null) PlayerManager.instance?.AllPlayers?.Remove(_player);
+        if (Player != null) PlayerManager.instance?.AllPlayers?.Remove(Player);
         Forget();
     }
 
     public void Update()
     {
-        if (!Exists || _rig == null) return;
+        if (Controller is not { } controller || _rig == null) return;
 
-        // Ensure actor got flipped back to local simulation
-        var controller = _player!.Controller;
         if (controller.controllerType != ControllerType.Local)
         {
             controller.controllerType = ControllerType.Local;
@@ -105,7 +100,7 @@ internal partial class Actor(string id, string name, string customisationString,
 
     public void LateUpdate()
     {
-        if (!Exists || _rig == null) return;
+        if (Controller == null || _rig == null) return;
 
         foreach (var part in _playerUi)
         {
@@ -146,7 +141,7 @@ internal partial class Actor(string id, string name, string customisationString,
         }
 
         _spawning = false;
-        if (Exists) MelonCoroutines.Start(FinishWhenVisible(player));
+        if (Controller != null) MelonCoroutines.Start(FinishWhenVisible(player));
     }
 
     private Player Create(Vector3 floorPosition, Quaternion facing)
@@ -197,7 +192,7 @@ internal partial class Actor(string id, string name, string customisationString,
         foreach (var driver in body.GetComponentsInChildren<TrackedPoseDriver>(true)) driver.enabled = false;
         foreach (var source in body.GetComponentsInChildren<AudioSource>(true)) source.spatialBlend = 1f;
 
-        _player = player;
+        Player = player;
 
         // Only add to player list until visible to avoid stucture physics issues
         SetInPlayerList(true);
@@ -217,13 +212,14 @@ internal partial class Actor(string id, string name, string customisationString,
     private IEnumerator FinishWhenVisible(Player player)
     {
         var start = Time.realtimeSinceStartup;
-        while (Owns(player) && Exists && !player.Controller.PlayerVisuals.VisualsAreReadyAndApplied
+
+        while (IsBodyOf(player) && Controller != null && !player.Controller.PlayerVisuals.VisualsAreReadyAndApplied
                && Time.realtimeSinceStartup - start < VisualsTimeoutSeconds)
         {
             yield return null;
         }
 
-        if (!Owns(player) || !Exists) yield break;
+        if (!IsBodyOf(player) || Controller == null) yield break;
 
         try
         {
@@ -245,10 +241,10 @@ internal partial class Actor(string id, string name, string customisationString,
 
     private void SetInPlayerList(bool inList)
     {
-        if (_player is null) return;
+        if (Player is null) return;
         var players = PlayerManager.instance.AllPlayers;
-        players.Remove(_player);
-        if (inList) players.Add(_player);
+        players.Remove(Player);
+        if (inList) players.Add(Player);
     }
 
     private PlayerVisualData ResolveLook()
@@ -345,10 +341,10 @@ internal partial class Actor(string id, string name, string customisationString,
 
     private void Forget()
     {
-        _player = null;
+        Player = null;
+        Ready = false;
         _rig = null;
         _pose = null;
-        Ready = false;
         _playerUi = [];
         _colliders = null;
         _planted = false;

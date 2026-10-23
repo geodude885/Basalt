@@ -87,7 +87,7 @@ map; the spot is kept only when the override is the chart's own map.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `file` | path | required | A song in the chart's folder or package - a path inside it, no `..`. |
-| `start` | seconds | 0 | How far into the song chart time 0 is: skip an intro, or put beat 0 on the first downbeat. |
+| `start` | seconds | 0 | How far into the song chart time 0 is: skip an intro, or put beat 0 on the first downbeat. Negative starts the song that many seconds after chart time 0, with silence before it. |
 | `volume` | 0-1 | 1 | The chart's own level, times the player's music volume. |
 
 Songs can be **MP3, OGG Vorbis or WAV** (PCM 8/16/24/32-bit or 32-bit float). The game ships

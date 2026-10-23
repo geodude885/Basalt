@@ -271,7 +271,6 @@ internal class ChartReader(ChartDto dto)
             Errors.Add($"music.file \"{file}\" must be one of {string.Join(", ", MusicExtensions)}");
 
         var start = music.Start ?? 0;
-        if (start < 0) Errors.Add($"music.start cannot be negative (got {Format(start)})");
 
         var volume = music.Volume ?? 1f;
         if (volume is < 0f or > 1f) Errors.Add($"music.volume must be 0 to 1 (got {Format(volume)})");

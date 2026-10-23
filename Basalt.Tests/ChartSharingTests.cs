@@ -29,6 +29,10 @@ public class ChartHeaderTests
     }
 
     [Fact]
+    public void ANegativeMusicStartIsSilenceBeforeTheSong() =>
+        Assert.Equal(new MusicSpec("song.ogg", -1.5), Load(/*lang=json,strict*/ """{ "music": { "file": "song.ogg", "start": -1.5 } }""").Music);
+
+    [Fact]
     public void ReadsACover() => Assert.Equal("art/cover.png", Load(/*lang=json,strict*/ """{ "cover": "art/cover.png" }""").Cover);
 
     [Fact]
@@ -71,7 +75,6 @@ public class ChartHeaderTests
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "C:/music/song.ogg" } }""", "inside the chart's folder")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "song.flac" } }""", "must be one of")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "song.ogg", "volume": 2 } }""", "music.volume")]
-    [InlineData(/*lang=json,strict*/ """{ "music": { "file": "song.ogg", "start": -1 } }""", "music.start")]
     [InlineData(/*lang=json,strict*/ """{ "cover": "../cover.png" }""", "inside the chart's folder")]
     [InlineData(/*lang=json,strict*/ """{ "cover": "cover.gif" }""", "must be one of")]
     public void BadHeadersAreReported(string json, string expected)

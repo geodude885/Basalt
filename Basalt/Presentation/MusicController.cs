@@ -24,6 +24,7 @@ internal class MusicController
     private AudioSource? _source;
     private AudioClip? _clip;
     private double _dspStart;
+    private double _songEndsAt;
     private bool _started;
     private int _loadNumber;
 
@@ -34,7 +35,7 @@ internal class MusicController
     // The player's music volume; the chart's own multiplies it.
     public float Volume { get; set; } = 1f;
 
-    public bool Ended => _started && _clip != null && AudioSettings.dspTime - _dspStart > _clip.length + 0.5;
+    public bool Ended => _started && _clip != null && AudioSettings.dspTime - _dspStart > _songEndsAt + 0.5;
 
     // Seconds since the song started (negative just before); null with no song playing.
     public double? Clock => _started ? AudioSettings.dspTime - _dspStart : null;
@@ -72,7 +73,8 @@ internal class MusicController
         _source.volume = Mathf.Clamp01(Volume * chartVolume * MaxVolume);
         _source.time = (float)Math.Clamp(start, 0, Math.Max(0, _clip.length - 0.01));
         _dspStart = AudioSettings.dspTime + ScheduleAheadSeconds;
-        _source.PlayScheduled(_dspStart);
+        _songEndsAt = _clip.length - start;
+        _source.PlayScheduled(_dspStart + Math.Max(0, -start));
         _started = true;
         Logger.Debug($"[Music.Playing] {_clip.name} from {start:0.00}s at volume {_source.volume:0.00}");
     }

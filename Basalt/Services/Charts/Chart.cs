@@ -126,7 +126,10 @@ public record ArenaSpec(ArenaKind Map, float? X = null, float? Z = null, float? 
     public bool HasSpot => X != null && Z != null;
 }
 
-/// <summary>A song beside the chart; <see cref="Start"/> is how far into it chart time 0 is.</summary>
+/// <summary>
+/// A song beside the chart; <see cref="Start"/> is how far into it chart time 0 is - negative when the
+/// song starts after chart time 0, with silence before it.
+/// </summary>
 public record MusicSpec(string File, double Start = 0, float Volume = 1f);
 
 public readonly record struct Lane(float Length, float Width);

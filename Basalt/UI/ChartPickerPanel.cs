@@ -27,8 +27,8 @@ internal class ChartPickerPanel(ChartSelection charts, ChartLibrary library, Jso
     public bool Wanted() => studio.State switch
     {
         StudioState.Recording => battle.State == BattleState.Running,
-        StudioState.Setup or StudioState.ChoosingSection => true,
-        StudioState.Reviewing or StudioState.PreviewingSection => false,
+        StudioState.Setup => true,
+        StudioState.Reviewing => false,
         StudioState.Deciding => battle.BetweenBattles,
         _ => !Maps.IsCurrentlyOnline && battle.BetweenBattles,
     };
@@ -62,19 +62,6 @@ internal class ChartPickerPanel(ChartSelection charts, ChartLibrary library, Jso
                     new PickerButton("save", "SAVE", Green, () => charts.Saved(studio.SaveChartOptions)),
                     new PickerButton("cancel", "CANCEL", Red, studio.ExitChartOptions),
                 ];
-
-            case StudioState.ChoosingSection:
-                return
-                [
-                    new PickerButton("fromearlier", "FROM -", Orange, () => studio.NudgeRecordingSection(start: true, -1)),
-                    new PickerButton("fromlater", "FROM +", Orange, () => studio.NudgeRecordingSection(start: true, 1)),
-                    new PickerButton("toearlier", "TO -", Orange, () => studio.NudgeRecordingSection(start: false, -1)),
-                    new PickerButton("tolater", "TO +", Orange, () => studio.NudgeRecordingSection(start: false, 1)),
-                    new PickerButton("preview", "PREVIEW", Blue, studio.PreviewSelectedSection),
-                    new PickerButton("record", "RECORD", Red, () => studio.RecordSection()),
-                    new PickerButton("mime", "MIME", Orange, () => studio.RecordSection(mime: true)),
-                    new PickerButton("back", "BACK", Orange, studio.CloseSection),
-                ];
         }
 
         var buttons = new List<PickerButton>
@@ -105,7 +92,6 @@ internal class ChartPickerPanel(ChartSelection charts, ChartLibrary library, Jso
         buttons.Add(new PickerButton("setup", "SETUP", Blue, () => studio.OpenChartOptions(chosen)));
         buttons.Add(new PickerButton("record", "RECORD", Red, () => charts.RecordChosen()));
         buttons.Add(new PickerButton("mime", "MIME", Orange, () => charts.RecordChosen(mime: true)));
-        if (chosen.HasActorTrack) buttons.Add(new PickerButton("rerecord", "RE-RECORD", Red, () => studio.ChooseRecordingSection(chosen)));
         if (Studio.CanUndo(chosen)) buttons.Add(new PickerButton("undo", "UNDO", Orange, () => charts.Saved(() => Studio.Undo(chosen))));
         return buttons;
     }
@@ -116,15 +102,13 @@ internal class ChartPickerPanel(ChartSelection charts, ChartLibrary library, Jso
         {
             case StudioState.Recording:
                 (var seconds, var moves) = studio.Progress;
-                var what = studio.IsSectionOrWholeClip ? $"{studio.SelectedSection.From:0.0}s to {studio.SelectedSection.To:0.0}s - stops by itself" : "STOP when done";
                 return studio.Mime
-                    ? new PickerCard($"<color=#ffa040>MIMING</color>\n{studio.ActorName}\n<size=60%>{seconds:0.0}s</size>\n<size=45%>throw the chart's shots by hand - nothing spawns. {what}</size>")
-                    : new PickerCard($"<color=#ff5050>RECORDING</color>\n{studio.ActorName}\n<size=60%>{seconds:0.0}s  |  {moves} move{(moves == 1 ? "" : "s")}</size>\n<size=45%>{what}</size>");
+                    ? new PickerCard($"<color=#ffa040>MIMING</color>\n{studio.ActorName}\n<size=60%>{seconds:0.0}s</size>\n<size=45%>throw the chart's shots by hand - nothing spawns. STOP when done</size>")
+                    : new PickerCard($"<color=#ff5050>RECORDING</color>\n{studio.ActorName}\n<size=60%>{seconds:0.0}s  |  {moves} move{(moves == 1 ? "" : "s")}</size>\n<size=45%>STOP when done</size>");
 
             case StudioState.Deciding when studio.NewClip is { } clip:
-                var span = studio.IsSectionOrWholeClip ? $"{studio.SelectedSection.From:0.0}s to {studio.SelectedSection.To:0.0}s" : $"{clip.Duration - clip.Start:0.0}s";
                 return new PickerCard(
-                    $"<size=45%>{(studio.IsSectionOrWholeClip ? "SECTION" : "CLIP")}</size>\n{clip.Name}\n<size=55%>{span}  |  {clip.Moves.Count} move{(clip.Moves.Count == 1 ? "" : "s")}</size>\n" +
+                    $"<size=45%>CLIP</size>\n{clip.Name}\n<size=55%>{clip.Duration - clip.Start:0.0}s  |  {clip.Moves.Count} move{(clip.Moves.Count == 1 ? "" : "s")}</size>\n" +
                     $"<size=45%>keep it in {studio.Entry?.Name}, record again, watch it again, or throw it away</size>");
 
             case StudioState.Setup:
@@ -136,16 +120,6 @@ internal class ChartPickerPanel(ChartSelection charts, ChartLibrary library, Jso
                     $"<size=45%>LANE SETUP</size>\n{studio.Entry?.Name}\n<size=50%>{where}\n" +
                     $"{lane.Length:0.#} m long  |  {lane.Width:0.#} m wide{(actor == null ? "" : $"  |  actor at {actor.At.X:0.#}, {actor.At.Z:0.#}")}</size>\n" +
                     "<size=38%>walk the preview: LANE HERE starts the lane where you stand, facing the way you face; ACTOR HERE puts the actor where you stand</size>");
-
-            case StudioState.ChoosingSection:
-                // The section on a bar of the chart's length: |-----#####--------|
-                var section = studio.SelectedSection;
-                var chartLength = Math.Max(studio.Chart?.End ?? section.To, section.To);
-                var timeline = string.Concat(Enumerable.Range(0, 28).Select(i => (i + 0.5) * chartLength / 28).Select(t => t >= section.From && t < section.To ? '#' : '-'));
-                return new PickerCard(
-                    $"<size=45%>RE-RECORD</size>\n{studio.ActorName}\n<size=55%>{section.From:0.0}s to {section.To:0.0}s</size>\n" +
-                    $"<size=45%><mspace=0.55em>|{timeline}|</mspace></size>\n" +
-                    $"<size=38%>PREVIEW plays it; RECORD starts {Studio.EaseInSeconds:0} s before, where the actor stood</size>");
         }
 
         return DescribeChosenChart();

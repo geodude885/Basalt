@@ -63,7 +63,7 @@ internal class ChartPicker(ChartPickerPanel panel, JsonBook<SavedSpot> spots, Ga
     private const float SidewaysToRight = 0f;
 
     // Behind you while miming, far enough back to be clear of your arms.
-    private const float DistanceBehind = 1.2f;
+    private const float DistanceBehind = 1f;
 
     private static readonly Color CardColour = new(0.08f, 0.08f, 0.1f);
     private static readonly Color PressedColour = new(1f, 0.9f, 0.4f);

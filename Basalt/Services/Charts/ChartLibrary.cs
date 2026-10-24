@@ -33,8 +33,6 @@ public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source
 
     public bool CanEdit => Result.Chart != null && Source != ChartSource.Package;
 
-    public bool HasActorTrack => CanEdit && Result.Chart!.Tracks.Any(t => t.ActorId == Result.Chart.DefaultActor.Id && t.Clips.Count > 0);
-
     /// <summary>A best-score key that survives renaming the file.</summary>
     public string ScoreKey => $"{Name}|{Result.Chart?.Info.Author}";
 }

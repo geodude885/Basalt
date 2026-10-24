@@ -49,7 +49,6 @@ Turn on **Chart editing** in the settings. The picker then gains:
 - **RECORD:** perform as the boss, from its end of the lane and to the song. Watch it performed at
   you, then KEEP, AGAIN, REPLAY or DISCARD. **MIME** records movement only, with the chart's
   projectiles flying, for a boss that pretends to throw them.
-- **RE-RECORD:** choose a section by the beat, preview it, and record it again; it is spliced in.
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your

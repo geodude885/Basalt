@@ -143,73 +143,8 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
 
         CheckKept(file, clip, problems);
-        yield return RunSectionTest(file, problems);
         yield return RunSetupTest(file, problems);
         _recordProblems = problems;
-    }
-
-    /// <summary>Re-records the middle of the clip: choose it, record it (a spawn and a punch), keep it, check the splice, undo it.</summary>
-    private static IEnumerator RunSectionTest(string file, List<string> problems)
-    {
-        var entry = Reloaded(file);
-        if (entry is not { HasActorTrack: true })
-        {
-            problems.Add("after keeping, the chart has no track to re-record");
-            yield break;
-        }
-
-        Mod.Studio.ChooseRecordingSection(entry);
-        yield return new WaitForSeconds(0.5f);
-        if (!Mod.Picker.ButtonIds.Contains("fromlater")) problems.Add($"choosing a section shows {string.Join(", ", Mod.Picker.ButtonIds)}");
-        Mod.Picker.Press("fromlater");
-        yield return new WaitForSeconds(0.4f);
-        (var from, var to) = Mod.Studio.SelectedSection;
-        Logger.Info($"[SelfTest] section {from:0.0}-{to:0.0}s");
-        if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "7-section");
-
-        if (!Mod.Picker.InvokeGameButton("record") && !Mod.Picker.Press("record")) problems.Add("no RECORD button for the section");
-
-        var deadline = Time.realtimeSinceStartup + 60f;
-        while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < from + 0.2) && Time.realtimeSinceStartup < deadline) yield return null;
-
-        if (BattlePlayer.Controller is { } playerController)
-        {
-            var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
-            Logger.Info($"[SelfTest] section recording from lane x {at.x:0.00}, z {at.z:0.00}");
-            Perform(playerController, "SpawnCube");
-            yield return new WaitForSeconds(0.5f);
-            Perform(playerController, "Straight");
-        }
-
-        deadline = Time.realtimeSinceStartup + 60f;
-        while (Mod.Studio.State is StudioState.Recording or StudioState.Reviewing && Time.realtimeSinceStartup < deadline) yield return null;
-
-        var section = Mod.Studio.NewClip;
-        if (Mod.Studio.State != StudioState.Deciding || section == null || !Mod.Studio.IsSectionOrWholeClip)
-        {
-            problems.Add($"the section did not stop by itself and come up for review (studio {Mod.Studio.State})");
-            Mod.Studio.CloseSection();
-            yield break;
-        }
-
-        Logger.Info($"[SelfTest] section clip {section.Name}: {section.Duration:0.00}s, moves {string.Join(", ", section.Moves.Select(m => $"{m.Move}@{m.Time:0.00}"))}");
-        if (section.Moves.Count < 2) problems.Add($"the section recorded {section.Moves.Count} of 2 moves");
-        if (section.Start != 0 || section.Duration > to - from + 0.2) problems.Add($"the section clip runs {section.Start:0.0}-{section.Duration:0.0}s, longer than its {to - from:0.0}s section");
-
-        Mod.Picker.Press("keep");
-        yield return new WaitForSeconds(0.5f);
-
-        var spliced = ChartLoader.Load(File.ReadAllText(file)).Chart;
-        var clips = spliced?.Tracks.SingleOrDefault()?.Clips ?? Array.Empty<TrackClip>();
-        Logger.Info($"[SelfTest] spliced track: {string.Join(" | ", clips.Select(t => $"{t.Time:0.0}s {t.Clip} from {t.From:0.0}{(t.To is { } x ? $" to {x:0.0}" : "")}"))}");
-        if (clips.Count != 3 || clips[1].Clip != section.Name) problems.Add($"keeping the section made {clips.Count} clips, not clip-1 / {section.Name} / clip-1");
-
-        // Undo puts the single clip back.
-        entry = Reloaded(file);
-        if (!Studio.CanUndo(entry)) problems.Add("no undo after keeping the section");
-        Studio.Undo(entry);
-        var afterUndo = ChartLoader.Load(File.ReadAllText(file)).Chart?.Tracks.SingleOrDefault()?.Clips.Count ?? 0;
-        if (afterUndo != 1) problems.Add($"undo left {afterUndo} clips, not 1");
     }
 
     /// <summary>Lane setup: two metres longer, half a metre wider, saved - and the rest of the chart left alone.</summary>

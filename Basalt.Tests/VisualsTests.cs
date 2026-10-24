@@ -303,11 +303,6 @@ public class MimeClipTests
 
         var whole = TrackWriter.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
         Assert.True(ChartLoader.Load(whole).Chart!.Tracks[0].Clips[0].Mime);
-
-        var punched = TrackWriter.PunchIn(new[] { new TrackClip(0, "old", 0) }, "new", 2, 3, mime: true);
-        Assert.False(punched[0].Mime);
-        Assert.True(punched[1].Mime);
-        Assert.False(punched[2].Mime);
     }
 }
 

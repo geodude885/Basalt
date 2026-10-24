@@ -205,108 +205,8 @@ public class TrackTests
     }
 }
 
-public class SectionTests
+public class LaneSetupTests
 {
-    private static readonly TrackClip[] Whole = { new(0, "clip-1", 0) };
-
-    [Fact]
-    public void ASectionStartsOnTheMiddleThirdSnappedToBeats()
-    {
-        // 120 bpm: a beat every half second, so 10 s / 3 snaps to 3.5 and 20 s / 3 to 6.5.
-        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "bpm": 120, "end": 10 }""").Chart!;
-
-        Assert.Equal(new RecordingSection(3.5, 6.5), RecordingSection.MiddleThirdOf(chart));
-    }
-
-    [Fact]
-    public void NudgingMovesByBeatsAndKeepsTheSectionAtLeastABeatLong()
-    {
-        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "bpm": 120, "end": 10 }""").Chart!;
-        var section = new RecordingSection(3, 4);
-
-        Assert.Equal(new RecordingSection(2, 4), section.MoveStartByBeats(chart, -2));
-        Assert.Equal(new RecordingSection(3.5, 4), section.MoveStartByBeats(chart, 5));
-        Assert.Equal(new RecordingSection(3, 3.5), section.MoveEndByBeats(chart, -5));
-        Assert.Equal(new RecordingSection(0, 4), section.MoveStartByBeats(chart, -20));
-    }
-
-    [Fact]
-    public void PunchingIntoOneClipCutsItAndResumesIt()
-    {
-        var result = TrackWriter.PunchIn(Whole, "clip-2", 4, 8);
-
-        Assert.Equal(new[]
-        {
-            new TrackClip(0, "clip-1", 0, 4),
-            new TrackClip(4, "clip-2", 0, 4),
-            new TrackClip(8, "clip-1", 8),
-        }, result);
-    }
-
-    [Fact]
-    public void PunchingAgainOverAnEarlierPunchReplacesWhatItCovers()
-    {
-        var once = TrackWriter.PunchIn(Whole, "clip-2", 4, 8);
-        var twice = TrackWriter.PunchIn(once, "clip-3", 6, 10);
-
-        Assert.Equal(new[]
-        {
-            new TrackClip(0, "clip-1", 0, 4),
-            new TrackClip(4, "clip-2", 0, 2),
-            new TrackClip(6, "clip-3", 0, 4),
-            new TrackClip(10, "clip-1", 10),
-        }, twice);
-    }
-
-    [Fact]
-    public void PunchingFromTheStartOrOverEverythingLeavesNothingStale()
-    {
-        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 3), new TrackClip(3, "clip-1", 3) }, TrackWriter.PunchIn(Whole, "clip-2", 0, 3));
-        Assert.Equal(new[] { new TrackClip(0, "clip-2", 0, 30) }, TrackWriter.PunchIn(new[] { new TrackClip(0, "clip-1", 0, 20) }, "clip-2", 0, 30));
-    }
-
-    [Fact]
-    public void ASplicedTrackLoadsAndPlaysInOrder()
-    {
-        const string text = /*lang=json,strict*/ """{ "format": 2, "actors": [ { "id": "boss" } ], "tracks": [ { "actor": "boss", "clips": [ { "t": 0, "clip": "clip-1", "from": 0 } ] } ] }""";
-        var chart = ChartLoader.Load(text).Chart!;
-        Clip clip = new("clip-2", new[] { Frame(0f), Frame(4f) });
-
-        var after = ChartLoader.Load(TrackWriter.KeepSection(text, chart, "boss", clip, 4, 8)).Chart!;
-        var plays = new ChartRunner(after).Schedule.OfType<PlayClip>().ToList();
-
-        Assert.Equal(new[] { "clip-1", "clip-2", "clip-1" }, plays.Select(p => p.Clip));
-        Assert.Equal(new double?[] { 4, 4, null }, plays.Select(p => p.To));
-    }
-
-    [Fact]
-    public void StartingPartWayBringsForwardWhatIsInForce()
-    {
-        var chart = ChartLoader.Load(/*lang=json,strict*/ """
-            {
-              "format": 2,
-              "actors": [ { "id": "boss" } ],
-              "phases": [ { "name": "A", "start": 0 }, { "name": "B", "start": 3 } ],
-              "events": [
-                { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 9 }, "speed": 5 } },
-                { "t": 5.2, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 9 }, "speed": 5, "telegraph": 0.5 } },
-                { "t": 6, "move": "Straight" }
-              ],
-              "tracks": [ { "clips": [ { "t": 0, "clip": "clip-1" } ] } ]
-            }
-            """).Chart!;
-
-        var runner = new ChartRunner(chart, startAt: 5);
-        var first = runner.Advance(5).ToList();
-
-        Assert.Equal("B", Assert.Single(first.OfType<EnterPhase>()).Phase.Name);
-        Assert.Equal(5, Assert.Single(first.OfType<PlayClip>()).From);
-        Assert.Single(first.OfType<SpawnProjectile>());
-        Assert.Empty(first.OfType<LaunchProjectile>());
-        Assert.Single(first.OfType<PlaceActor>());
-        Assert.Contains(runner.Advance(6), c => c is RunMove);
-    }
-
     [Fact]
     public void LaneSetupSavesArenaLaneAndActorsAndKeepsTheRest()
     {
@@ -341,12 +241,6 @@ public class SectionTests
         Assert.Equal(new Lane(LaneSetupWriter.MaxLength, LaneSetupWriter.MinWidth), lane);
         Assert.Equal(LaneSetupWriter.MaxLength, moved[0].At.Z);
         Assert.Equal(6f, moved[1].At.Z);
-    }
-
-    private static ClipFrame Frame(float t)
-    {
-        var pose = new ClipPose(Vector3.Zero, Quaternion.Identity);
-        return new ClipFrame(t, pose, pose, pose, Vector2.Zero);
     }
 }
 

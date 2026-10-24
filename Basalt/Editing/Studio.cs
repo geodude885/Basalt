@@ -8,7 +8,6 @@ namespace Basalt.Editing;
 internal class Studio(BattleController battle, GameAssets assets)
 {
     public const double MaxRecordingLength = 600;
-    public const double EaseInSeconds = 2;
 
     public ClipRecorder Recorder { get; private set; } = new();
 
@@ -17,15 +16,11 @@ internal class Studio(BattleController battle, GameAssets assets)
     public StudioState State { get; private set; } = StudioState.Off;
     public Clip? NewClip { get; private set; }
     public bool Mime { get; private set; }
-    public RecordingSection SelectedSection { get; private set; }
     public LaneSetup LaneSetup { get; } = new(assets);
 
     private Anchor? _recordedLane;
     private double _recordingStartedAtChartTime;
     private string _actorId = "";
-
-    private RecordingSection? _sectionBeingRecorded;
-    public bool IsSectionOrWholeClip => _sectionBeingRecorded != null;
 
     public string ActorName => Chart?.Actors.FirstOrDefault(a => a.Id == _actorId)?.Name ?? _actorId;
     public (double Seconds, int Moves) Progress => (Recorder.Length, Recorder.MoveCount);
@@ -54,13 +49,10 @@ internal class Studio(BattleController battle, GameAssets assets)
 
         if (NewClip == null)
         {
-            State = IsSectionOrWholeClip ? StudioState.ChoosingSection : StudioState.Off;
+            State = StudioState.Off;
             Logger.Info("[Studio] nothing was recorded");
             return;
         }
-
-        if (_sectionBeingRecorded is { } section)
-            _sectionBeingRecorded = section with { To = Math.Min(section.To, _recordingStartedAtChartTime + NewClip.Duration) };
 
         ReviewRecording();
     }
@@ -69,28 +61,13 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (NewClip == null || Chart == null || Entry == null) return;
 
-        if (_sectionBeingRecorded is { } section)
+        var whole = TrackWriter.WholeClipTrack(NewClip, _recordingStartedAtChartTime, Mime);
+        var chart = Chart with
         {
-            var punchedIn = TrackWriter.PunchedInTrack(Chart, _actorId, NewClip.Name, section.From, section.To, Mime);
-            var chart = Chart with { Tracks = TrackWriter.TracksWithActorTrackReplaced(Chart, _actorId, punchedIn) };
-            battle.Start(StudioBattle(chart with { End = Math.Min(chart.End, section.To + EaseInSeconds) }) with
-            {
-                Mode = BattleMode.Review,
-                StartAt = section.From - EaseInSeconds,
-                PendingClip = NewClip,
-            });
-        }
-        else
-        {
-            var whole = TrackWriter.WholeClipTrack(NewClip, _recordingStartedAtChartTime, Mime);
-            var chart = Chart with
-            {
-                Tracks = TrackWriter.TracksWithActorTrackReplaced(Chart, _actorId, whole),
-                End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + TrackWriter.EndPadding),
-            };
-            battle.Start(StudioBattle(chart) with { Mode = BattleMode.Review, Lane = _recordedLane, PendingClip = NewClip });
-        }
-
+            Tracks = TrackWriter.TracksWithActorTrackReplaced(Chart, _actorId, whole),
+            End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + TrackWriter.EndPadding),
+        };
+        battle.Start(StudioBattle(chart) with { Mode = BattleMode.Review, Lane = _recordedLane, PendingClip = NewClip });
         State = StudioState.Reviewing;
     }
 
@@ -102,9 +79,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         ChartClips().Save(clip);
 
         var chartText = File.ReadAllText(Entry.File);
-        var keptText = _sectionBeingRecorded is { } section
-            ? TrackWriter.KeepSection(chartText, Chart, _actorId, clip, section.From, section.To, Mime)
-            : TrackWriter.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
+        var keptText = TrackWriter.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
         if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } playerMeasurement)
         {
@@ -115,9 +90,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         ChartFiles.SaveKeepingBackup(Entry.File, chartText, keptText);
         battle.Stop("clip kept");
 
-        var what = _sectionBeingRecorded is { } kept
-            ? $"kept {clip.Name} over {kept.From:0.0}-{kept.To:0.0}s ({clip.Moves.Count} moves) in {Entry.Name}"
-            : $"kept {clip.Name} ({clip.Duration - clip.Start:0.0}s, {clip.Moves.Count} moves) in {Entry.Name}";
+        var what = $"kept {clip.Name} ({clip.Duration - clip.Start:0.0}s, {clip.Moves.Count} moves) in {Entry.Name}";
         StopEditing();
         Logger.Debug($"[Studio.Kept] {what}");
         return what;
@@ -126,63 +99,12 @@ internal class Studio(BattleController battle, GameAssets assets)
     public void DiscardClip()
     {
         battle.Stop("clip discarded");
-        NewClip = null;
-        if (IsSectionOrWholeClip) State = StudioState.ChoosingSection;
-        else StopEditing();
+        StopEditing();
     }
 
     public void RestartRecording()
     {
-        if (Entry == null) return;
-        if (IsSectionOrWholeClip) RecordSection(Mime);
-        else StartRecording(Entry, Mime);
-    }
-
-    public void ChooseRecordingSection(ChartEntry entry)
-    {
-        if (!entry.HasActorTrack || !BeginEditing(entry)) return;
-
-        battle.Stop("choosing a section");
-        SelectedSection = RecordingSection.MiddleThirdOf(Chart!);
-        State = StudioState.ChoosingSection;
-    }
-
-    public void NudgeRecordingSection(bool start, int beats)
-    {
-        if (Chart == null) return;
-        SelectedSection = start ? SelectedSection.MoveStartByBeats(Chart, beats) : SelectedSection.MoveEndByBeats(Chart, beats);
-    }
-
-    public void PreviewSelectedSection()
-    {
-        if (Chart == null || Entry == null) return;
-
-        battle.Start(StudioBattle(Chart with { End = SelectedSection.To + 1 }) with { Mode = BattleMode.Review, StartAt = SelectedSection.From - EaseInSeconds });
-        State = StudioState.PreviewingSection;
-    }
-
-    public void RecordSection(bool mime = false)
-    {
-        if (Chart == null || Entry == null) return;
-
-        _sectionBeingRecorded = SelectedSection;
-        NewClip = null;
-        Mime = mime;
-        battle.Start(StudioBattle(Chart) with
-        {
-            Mode = BattleMode.Record,
-            StartAt = SelectedSection.From - EaseInSeconds,
-            RecordSpot = GetActorSpot(SelectedSection.From),
-            Mime = mime,
-        });
-        State = battle.State == BattleState.Idle ? StudioState.ChoosingSection : StudioState.Recording;
-        Logger.Info($"[Studio] recording {ActorName} from {SelectedSection.From:0.0}s to {SelectedSection.To:0.0}s - it stops by itself");
-    }
-
-    public void CloseSection()
-    {
-        battle.Stop("section closed");
-        StopEditing();
+        if (Entry != null) StartRecording(Entry, Mime);
     }
 
     public void OpenChartOptions(ChartEntry entry)
@@ -222,15 +144,6 @@ internal class Studio(BattleController battle, GameAssets assets)
                 if (battle.Mode != BattleMode.Review || battle.BetweenBattles) State = StudioState.Deciding;
                 break;
 
-            case StudioState.PreviewingSection:
-                if (battle.Mode != BattleMode.Review || battle.BetweenBattles)
-                {
-                    battle.Stop("section previewed");
-                    State = StudioState.ChoosingSection;
-                }
-
-                break;
-
             case StudioState.Setup:
                 LaneSetup.RebuildPreviewIfOutOfDate();
                 break;
@@ -251,25 +164,16 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (battle.State != BattleState.Running) return;
         var chartTime = battle.ChartTime;
 
-        var startsAt = _sectionBeingRecorded?.From ?? 0;
-        if (!Recorder.Recording && chartTime < startsAt)
-        {
-            battle.Banner($"{Math.Ceiling(startsAt - chartTime):0}", 0.2f);
-            return;
-        }
-
         if (!Recorder.Recording)
         {
             if (BattlePlayer.Controller is not { } playerController || battle.Lane is not { } lane) return;
             _recordedLane = lane;
             Recorder.Start(playerController, lane);
             _recordingStartedAtChartTime = chartTime;
-            if (IsSectionOrWholeClip) battle.Banner("GO", 0.8f);
         }
 
         Recorder.Update(chartTime);
-        var sectionOver = _sectionBeingRecorded is { } section && chartTime >= section.To;
-        if (sectionOver || battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
+        if (battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
     }
 
     private bool BeginEditing(ChartEntry entry)
@@ -289,22 +193,9 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         State = StudioState.Off;
         NewClip = null;
-        _sectionBeingRecorded = null;
     }
 
     private BattleRequest StudioBattle(Chart chart) => new(chart) { AssetFolder = Entry!.AssetFolder, RecordActor = _actorId };
-
-    private System.Numerics.Vector2? GetActorSpot(double chartTime)
-    {
-        if (Chart == null || Entry == null) return null;
-
-        var playing = new ChartRunner(Chart, chartTime).Schedule.OfType<PlayClip>().FirstOrDefault(t => t.ActorId == _actorId && t.Time <= chartTime);
-        if (playing == null) return null;
-
-        var clips = ChartClips();
-        clips.Reload();
-        return clips.Find(playing.Clip)?.Sample((float)playing.From).Offset;
-    }
 
     private ClipLibrary ChartClips() => new(Path.Combine(Entry!.AssetFolder, ChartPackage.ClipsFolder));
 }

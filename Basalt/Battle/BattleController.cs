@@ -70,13 +70,11 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
 
     // Seconds into the chart: the song's clock when there is one, else game time; -1 before GO.
     public double ChartTime => Run is { State: BattleState.Running or BattleState.Finished } run
-        ? run.Request.StartAt + (_music.Clock ?? (Time.time - run.StartedAt))
+        ? _music.Clock ?? (Time.time - run.StartedAt)
         : -1;
 
     public Anchor? Lane => Run is { LaidOut: true } run ? run.Frame : null;
     public Vector3 ToLane(Vector3 world) => (Run?.Frame ?? default).ToLocal(world.ToNumerics()).ToUnity();
-
-    public void Banner(string text, float seconds) => _board.Show(text, seconds);
 
     public void Start(BattleRequest request)
     {
@@ -247,9 +245,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
 
             if (request.Recording)
             {
-                // In the actor's place, facing down the lane as it will; a section starts where it stood then.
-                var spot = request.RecordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
-                _player.Place(spot, Quaternion.Euler(0f, Run.Frame.ActorYaw(performer.At.Facing), 0f));
+                _player.Place(World(performer.At.X, 0f, performer.At.Z), Quaternion.Euler(0f, Run.Frame.ActorYaw(performer.At.Facing), 0f));
             }
             else
             {
@@ -257,7 +253,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
             }
 
             _arena.Build(Run.Frame, chart.Lane, showBackstop: true, walls: true, zone: request.Recording ? null : chart.Zone,
-                colours: chart.ColoursIn(chart.Phases.LastOrDefault(p => p.Start <= request.StartAt)), panes: chart.EverShowsWalls);
+                colours: chart.ColoursIn(chart.Phases.LastOrDefault(p => p.Start <= 0)), panes: chart.EverShowsWalls);
             if (request.Recording)
             {
                 _board.SetPosition(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
@@ -333,10 +329,10 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
                 Tracks = [],
                 End = double.MaxValue,
             }
-            : chart, request.StartAt);
+            : chart);
         Run.StartedAt = Time.time;
         if (_music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
-        if (chart.Music != null) _music.Play(chart.Music.Start + request.StartAt, chart.Music.Volume);
+        if (chart.Music != null) _music.Play(chart.Music.Start, chart.Music.Volume);
         _board.Show("GO", 1f);
         foreach (var actor in actors.Actors) actor.FullHeal();
         _sweeper.Reset();
@@ -365,7 +361,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
                     if (enter.Time > 0 && settings.ShowPhaseBanners.Value) _board.Show($"{enter.Phase.Name}{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
                     Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
                     if (enter.Time > 0) Signals.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
-                    _arena.Visuals.Recolour(Run.Chart.ColoursIn(enter.Phase), enter.Time > 0 && enter.Time > Run.Request.StartAt ? PhaseColourFadeSeconds : 0f);
+                    _arena.Visuals.Recolour(Run.Chart.ColoursIn(enter.Phase), enter.Time > 0 ? PhaseColourFadeSeconds : 0f);
                     break;
 
                 case PlaceActor place:

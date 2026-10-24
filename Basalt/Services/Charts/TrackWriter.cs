@@ -13,47 +13,11 @@ public static class TrackWriter
     public static string KeepWhole(string chartText, Chart chart, string actorId, Clip clip, double at, bool mime = false) =>
         WriteTracks(chartText, chart, TracksWithActorTrackReplaced(chart, actorId, WholeClipTrack(clip, at, mime)), at + clip.Duration - clip.Start);
 
-    public static string KeepSection(string chartText, Chart chart, string actorId, Clip clip, double from, double to, bool mime = false) =>
-        WriteTracks(chartText, chart, TracksWithActorTrackReplaced(chart, actorId, PunchedInTrack(chart, actorId, clip.Name, from, to, mime)), to);
-
     public static IReadOnlyList<TrackClip> WholeClipTrack(Clip clip, double startsAtChartTime, bool mime) =>
         [new TrackClip(Round(startsAtChartTime), clip.Name, Round(clip.Start)) { Mime = mime }];
 
-    public static IReadOnlyList<TrackClip> PunchedInTrack(Chart chart, string actorId, string clipName, double from, double to, bool mime) =>
-        PunchIn(chart.Tracks.FirstOrDefault(t => t.ActorId == actorId)?.Clips ?? [], clipName, from, to, mime);
-
     public static List<Track> TracksWithActorTrackReplaced(Chart chart, string actorId, IReadOnlyList<TrackClip> actorClips) =>
         chart.Tracks.Where(t => t.ActorId != actorId).Append(new Track(actorId, actorClips)).ToList();
-
-    // The actor's clips with chart time `from` to `to` replaced by the clip `name`, played from its start.
-    public static IReadOnlyList<TrackClip> PunchIn(IReadOnlyList<TrackClip> clips, string name, double from, double to, bool mime = false)
-    {
-        var track = new List<TrackClip>();
-
-        // Before the section: each clip as it was, except that one still playing at `from` is cut off there.
-        var nextClipStarts = clips.Skip(1).Select(c => (double?)c.Time).Append(null);
-        foreach ((var clip, var nextClipStart) in clips.Zip(nextClipStarts).TakeWhile(pair => pair.First.Time < from))
-        {
-            var stillPlayingAtFrom = nextClipStart == null || nextClipStart > from;
-            var cutOffAt = Math.Min(clip.To ?? double.MaxValue, clip.From + (from - clip.Time));
-            track.Add(stillPlayingAtFrom ? clip with { To = Round(cutOffAt) } : clip);
-        }
-
-        // The section itself.
-        track.Add(new TrackClip(Round(from), name, 0, Round(to - from)) { Mime = mime });
-
-        // After it: a clip that would still have been playing at `to` picks up where it would have been, then the
-        // clips that start from `to` on, as they were.
-        var lastStartedBy = clips.LastOrDefault(c => c.Time <= to);
-        if (lastStartedBy != null && lastStartedBy.Time < to)
-        {
-            var resumeFrom = lastStartedBy.From + (to - lastStartedBy.Time);
-            if (lastStartedBy.To == null || resumeFrom < lastStartedBy.To) track.Add(lastStartedBy with { Time = Round(to), From = Round(resumeFrom) });
-        }
-
-        track.AddRange(clips.Where(c => c.Time >= to));
-        return track;
-    }
 
     // The tracks written, the chart's format raised to one that has tracks, and its end moved to cover the last clip.
     private static string WriteTracks(string chartText, Chart chart, IReadOnlyList<Track> tracks, double lastClipEnd)

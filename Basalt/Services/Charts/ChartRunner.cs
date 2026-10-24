@@ -17,19 +17,11 @@ public class ChartRunner
     private int _next;
     private double _now = double.NegativeInfinity;
 
-    /// <param name="chart">The chart.</param>
-    /// <param name="startAt">
-    /// Chart time to start from. What is in force then is brought forward (the phase, actors' spots,
-    /// a clip part-way through, a projectile telegraphing); what had finished is dropped.
-    /// </param>
-    public ChartRunner(Chart chart, double startAt = 0)
+    public ChartRunner(Chart chart)
     {
         Chart = chart;
-        StartAt = startAt;
-        _schedule = startAt > 0 ? StartingPartWay(BuildSchedule(chart), startAt) : BuildSchedule(chart);
+        _schedule = BuildSchedule(chart);
     }
-
-    public double StartAt { get; }
 
     public Chart Chart { get; }
 
@@ -47,24 +39,6 @@ public class ChartRunner
         var first = _next;
         while (_next < _schedule.Count && _schedule[_next].Time <= now) _next++;
         return _next == first ? Array.Empty<ChartCommand>() : _schedule.GetRange(first, _next - first);
-    }
-
-    // What is in force at `startAt` happens at once - the phase, each actor's latest spot, a clip part way through,
-    // a projectile already telegraphing - then everything still to come. What had already finished is dropped.
-    private static List<ChartCommand> StartingPartWay(List<ChartCommand> schedule, double startAt)
-    {
-        var currentPhase = schedule.OfType<EnterPhase>().Where(p => p.Time <= startAt).TakeLast(1);
-        var latestSpots = schedule.OfType<PlaceActor>().Where(p => p.Time <= startAt).GroupBy(p => p.ActorId).Select(spots => spots.Last());
-        var clipsStillPlaying = schedule.OfType<PlayClip>()
-            .Where(c => c.Time <= startAt && (c.To == null || c.Time + (c.To - c.From) > startAt))
-            .Select(c => c with { From = c.From + (startAt - c.Time) });
-        var launchedAfterStart = schedule.OfType<LaunchProjectile>().Where(l => l.Time >= startAt).Select(l => l.Id).ToHashSet();
-        var projectilesTelegraphing = schedule.OfType<SpawnProjectile>().Where(s => s.Time < startAt && launchedAfterStart.Contains(s.Id));
-
-        var broughtForward = currentPhase.Cast<ChartCommand>().Concat(latestSpots).Concat(clipsStillPlaying).Concat(projectilesTelegraphing)
-            .Select(command => command with { Time = startAt });
-        var stillToCome = schedule.Where(c => c.Time > startAt || (c.Time == startAt && c is not (EnterPhase or PlaceActor or PlayClip)));
-        return broughtForward.Concat(stillToCome).ToList();
     }
 
     private static List<ChartCommand> BuildSchedule(Chart chart)

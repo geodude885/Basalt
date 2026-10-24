@@ -23,12 +23,6 @@ internal record BattleRequest(Chart Chart)
     // A clip not yet saved, found by name before the chart's own clips.
     public Clip? PendingClip { get; init; }
 
-    // Chart time to start from, for a section.
-    public double StartAt { get; init => field = Math.Max(0, value); }
-
-    // Recording: where in the lane to stand instead of the actor's spot.
-    public System.Numerics.Vector2? RecordSpot { get; init; }
-
     // Recording a mime: you throw the chart's shots by hand.
     public bool Mime { get; init; }
 

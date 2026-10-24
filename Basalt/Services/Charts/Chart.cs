@@ -19,7 +19,7 @@ public record Chart(
 
     public ChartInfo Info { get; init; } = ChartInfo.None;
 
-    public ArenaSpec Arena { get; init; } = ArenaSpec.Here;
+    public ArenaSpec Arena { get; init; } = ArenaSpec.Default;
 
     /// <summary>A song played from GO, which the chart's clock follows.</summary>
     public MusicSpec? Music { get; init; }
@@ -101,29 +101,22 @@ public record ChartInfo(string? Author, string? Description, string? Difficulty)
 
 public enum ArenaKind
 {
-    /// <summary>Wherever you stand, the lane running the way you face.</summary>
-    Here,
-
-    /// <summary>The Gym, in world coordinates.</summary>
+    // The Gym, in world coordinates.
     Gym,
 
-    /// <summary>The Ring (Map0), from its centre.</summary>
+    // The Ring (Map0), from its centre.
     Ring,
 
-    /// <summary>The Pit (Map1), from its centre.</summary>
+    // The Pit (Map1), from its centre.
     Pit,
 }
 
-/// <summary>
-/// Where a chart is played: you stand at <see cref="X"/>, <see cref="Z"/> metres from the arena's
-/// centre (Gym: world origin), the lane running along compass <see cref="Facing"/> (default north). Without a
-/// spot the lane starts where you stand, the way you face.
-/// </summary>
-public record ArenaSpec(ArenaKind Map, float? X = null, float? Z = null, float? Facing = null)
+// Where a chart is played: you stand at X, Z metres from the map's centre (the Gym: the world origin), and the lane
+// runs along compass Facing. A chart that names a map but no spot starts at its centre, facing north.
+public record ArenaSpec(ArenaKind Map, float X = 0f, float Z = 0f, float Facing = 0f)
 {
-    public static ArenaSpec Here { get; } = new(ArenaKind.Here);
-
-    public bool HasSpot => X != null && Z != null;
+    // For a chart with no arena at all: the Ring, 6 m south of its centre facing north, which a 12 m lane fits across.
+    public static ArenaSpec Default { get; } = new(ArenaKind.Ring, 0f, -6f, 0f);
 }
 
 /// <summary>

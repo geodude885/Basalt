@@ -2,20 +2,18 @@ using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Presentation;
 using Basalt.Services.Charts;
-using UnityEngine;
 
 namespace Basalt.Editing;
 
 // A preview lane you walk around, resized and moved from the panel, then written into the chart.
 internal class LaneSetup(GameAssets assets)
 {
-    public ArenaSpec ArenaSpec { get; private set; } = ArenaSpec.Here;
+    public ArenaSpec ArenaSpec { get; private set; } = ArenaSpec.Default;
     public Lane Lane { get; private set; }
 
     public Arena ArenaPreview { get; private set; } = new(assets);
     public List<ActorSpec> Actors = [];
 
-    private (Vector3 Feet, Vector3 Facing)? _laneStartedFrom;
     private Anchor? _previewAnchor;
     private bool _previewOutOfDate;
 
@@ -25,7 +23,6 @@ internal class LaneSetup(GameAssets assets)
         ArenaSpec = chart.Arena;
         Lane = chart.Lane;
         Actors = chart.Actors.ToList();
-        _laneStartedFrom = null;
         _previewOutOfDate = true;
 
         if (!ArenaSpec.Map.IsLoaded()) ArenaSpec.Map.Load();
@@ -40,20 +37,10 @@ internal class LaneSetup(GameAssets assets)
 
     public void StartLaneWherePlayerStands()
     {
-        if (BattlePlayer.Rig is not { } rig) return;
+        if (BattlePlayer.Rig is not { } rig || Maps.Current is not { } map) return;
 
-        var map = Maps.Current;
-        _laneStartedFrom = (rig.Feet, rig.Facing);
-        if (map == ArenaKind.Here)
-        {
-            ArenaSpec = ArenaSpec.Here;
-        }
-        else
-        {
-            var fromArenaOrigin = rig.Feet - (map.GetArenaOrigin() ?? Vector3.zero);
-            ArenaSpec = new ArenaSpec(map, MathF.Round(fromArenaOrigin.x, 2), MathF.Round(fromArenaOrigin.z, 2), MathF.Round(rig.Facing.Bearing()));
-        }
-
+        var fromArenaOrigin = rig.Feet - map.GetArenaOrigin();
+        ArenaSpec = new ArenaSpec(map, MathF.Round(fromArenaOrigin.x, 2), MathF.Round(fromArenaOrigin.z, 2), MathF.Round(rig.Facing.Bearing()));
         _previewOutOfDate = true;
     }
 
@@ -75,7 +62,6 @@ internal class LaneSetup(GameAssets assets)
     {
         var next = (ArenaKind)(((int)ArenaSpec.Map + 1) % Enum.GetValues<ArenaKind>().Length);
         ArenaSpec = new ArenaSpec(next);
-        _laneStartedFrom = null;
         _previewOutOfDate = true;
         if (!next.IsLoaded()) next.Load();
     }
@@ -89,11 +75,8 @@ internal class LaneSetup(GameAssets assets)
 
     public void RebuildPreviewIfOutOfDate()
     {
-        if (!_previewOutOfDate || BattlePlayer.Rig is not { } rig) return;
-        if (ArenaSpec.Map != ArenaKind.Here && !ArenaSpec.Map.IsLoaded()) return;
-
-        _laneStartedFrom ??= (rig.Feet, rig.Facing);
-        if (ArenaSpec.CreateLaneAnchor(ArenaSpec.Map, _laneStartedFrom.Value.Feet, _laneStartedFrom.Value.Facing) is not { } anchor) return;
+        if (!_previewOutOfDate || !ArenaSpec.Map.IsLoaded()) return;
+        if (ArenaSpec.CreateLaneAnchor() is not { } anchor) return;
 
         _previewAnchor = anchor;
         _previewOutOfDate = false;

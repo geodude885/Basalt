@@ -17,8 +17,8 @@ public static class LaneSetupWriter
         chart["arena"] = ChartJson.ToNode(new ArenaDto
         {
             Map = arena.Map.ToString().ToLowerInvariant(),
-            At = arena.HasSpot ? new PointDto { X = Round(arena.X!.Value), Z = Round(arena.Z!.Value) } : null,
-            Facing = arena.Facing is { } facing ? Round(facing) : null,
+            At = new PointDto { X = Round(arena.X), Z = Round(arena.Z) },
+            Facing = Round(arena.Facing),
         });
         chart["lane"] = ChartJson.ToNode(new LaneDto { Length = Round(lane.Length), Width = Round(lane.Width) });
         chart["actors"] = ActorsJson(actors);

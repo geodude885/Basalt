@@ -41,8 +41,8 @@ internal class BattleInfoBoard(GameAssets assets)
     {
         var outcome = result.Survived ? "SURVIVED" : "DEFEATED";
         Show(
-            $"<b>{result.Chart}</b>\n" +
-            $"{outcome}   rank <b>{result.Rank}</b>\n" +
+            $"{result.Chart}\n" +
+            $"{outcome}   rank {result.Rank}\n" +
             $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +
             $"<size=70%>damage taken {result.DamageTaken} ({result.HitsTaken} hits)  |  " +
             $"boss damage {result.ActorDamage:0.#}  |  {result.Seconds:0.0}s</size>");

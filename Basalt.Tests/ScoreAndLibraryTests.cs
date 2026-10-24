@@ -74,6 +74,23 @@ public sealed class ChartLibraryTests : IDisposable
     }
 
     [Fact]
+    public void ChartsSharingANameAreOneSongWithItsDifficultiesHardestFirst()
+    {
+        Directory.CreateDirectory(_folder);
+        File.WriteAllText(Path.Combine(_folder, "a-hard.json"), /*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""");
+        File.WriteAllText(Path.Combine(_folder, "b-other.json"), /*lang=json,strict*/ """{ "name": "Other" }""");
+        File.WriteAllText(Path.Combine(_folder, "c-easy.json"), /*lang=json,strict*/ """{ "name": "song", "difficulty": "easy" }""");
+        File.WriteAllText(Path.Combine(_folder, "d-wild.json"), /*lang=json,strict*/ """{ "name": "Song", "difficulty": "Wild" }""");
+        File.WriteAllText(Path.Combine(_folder, "e-none.json"), /*lang=json,strict*/ """{ "name": "Song" }""");
+        var library = new ChartLibrary(_folder);
+        library.Reload();
+
+        Assert.Equal(new[] { "a-hard", "b-other" }, library.Songs.Select(e => e.Stem));
+        Assert.Equal(new[] { "a-hard", "c-easy", "d-wild", "e-none" }, library.DifficultiesOf(library.Entries[0]).Select(e => e.Stem));
+        Assert.Single(library.DifficultiesOf(library.Entries[1]));
+    }
+
+    [Fact]
     public void AFolderWithChartsIsNeverWrittenTo()
     {
         Directory.CreateDirectory(_folder);

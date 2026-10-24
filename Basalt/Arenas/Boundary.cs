@@ -8,6 +8,7 @@ internal class Boundary
 {
 
     public const float Height = 8f;
+    public const float WallLengthThroughFloor = 2f;
     public const float Thickness = 2f;
 
     // Gaps between lane edge and collider

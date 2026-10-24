@@ -35,7 +35,7 @@ internal static partial class SelfTest
     /// <summary>Every line the mod logged; a run fails on any warning or error.</summary>
     private static readonly List<(LogLevel Level, string Line)> Lines = [];
     private static bool _started;
-    private static ArenaKind _arena = ArenaKind.Here;
+    private static ArenaKind _arena = ArenaKind.Gym;
     private static bool _sawSimulatedActor;
     private static bool _shots;
     private static Action<Vector3, Vector3>? _showCamera;
@@ -163,19 +163,19 @@ internal static partial class SelfTest
         {
             result = r;
         }
-        if (_arena == ArenaKind.Here)
+        // In the Gym, its own lane somewhere flat and open near you rather than at the Gym's origin.
+        Anchor? gymLane = null;
+        if (_arena == ArenaKind.Gym)
         {
-            // Somewhere flat and open: you stand at the lane's start, so you are moved there first.
-            var playerController = BattlePlayer.Controller;
-            var playerRig = ActorRig.From(playerController);
+            var playerRig = ActorRig.From(BattlePlayer.Controller);
             if (FlatLane(playerRig.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
-                playerController.PlayerMovement.Reposition(lane.Start + (Vector3.up * (playerRig.Head.position.y - playerRig.Vr.position.y)), Quaternion.LookRotation(lane.Direction));
+                gymLane = Anchor.Facing(lane.Start.ToNumerics(), lane.Direction.ToNumerics());
                 Logger.Info($"[SelfTest] laying the lane at {lane.Start.Describe()} towards {lane.Direction.Describe()}");
-                yield return new WaitForSeconds(0.5f);
             }
             else
             {
+                gymLane = Anchor.Facing(playerRig.Feet.ToNumerics(), playerRig.Facing.ToNumerics());
                 Logger.Info("[SelfTest] no flat, open spot for the lane near you - laying it where you stand");
             }
         }
@@ -185,9 +185,9 @@ internal static partial class SelfTest
         Perform(BattlePlayer.Controller, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
-        Mod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f) });
+        Mod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f), Lane = gymLane });
         MelonCoroutines.Start(CheckRules());
-        if (_arena != ArenaKind.Here) MelonCoroutines.Start(CheckActorHitbox());
+        if (_arena != ArenaKind.Gym) MelonCoroutines.Start(CheckActorHitbox());
         MelonCoroutines.Start(CheckSlides());
         if (_shots) MelonCoroutines.Start(TakeShots());
         MelonCoroutines.Start(CheckPlacement());
@@ -203,7 +203,6 @@ internal static partial class SelfTest
     /// <summary>The picker appears in the Gym and a press changes its card; the press is undone after.</summary>
     private static IEnumerator CheckPicker()
     {
-        Mod.Picker.Open = true;
         var deadline = Time.realtimeSinceStartup + 5f;
         while (!Mod.Picker.Visible && Time.realtimeSinceStartup < deadline) yield return null;
 
@@ -229,6 +228,38 @@ internal static partial class SelfTest
         Mod.Picker.Press("prev");
         if (string.IsNullOrWhiteSpace(before) || before == after) _pickerProblem = $"pressing next did not change the picker's card (\"{before}\")";
         Logger.Info($"[SelfTest] picker ({(gameButton ? "the game's NEXT button" : "the mod's own buttons")}): {Regex.Replace(before, "<[^>]+>", "").Replace('\n', ' ')} -> {Regex.Replace(after, "<[^>]+>", "").Replace('\n', ' ')}");
+
+        yield return CheckDifficulties();
+    }
+
+    /// <summary>For each song with more than one chart, its difficulty buttons choose each; the first is chosen again after.</summary>
+    private static IEnumerator CheckDifficulties()
+    {
+        var songsTried = 0;
+        foreach (var _ in Mod.Charts.Library.Songs)
+        {
+            var difficultyButtons = Mod.Picker.ButtonIds.Where(id => id.StartsWith("difficulty:", StringComparison.Ordinal)).ToList();
+            if (difficultyButtons.Count > 1)
+            {
+                songsTried++;
+                var startedOn = Mod.Charts.Chosen;
+                foreach (var button in difficultyButtons)
+                {
+                    Mod.Picker.Press(button);
+                    yield return new WaitForSeconds(0.2f);
+                    if (Mod.Charts.Chosen?.Stem != button["difficulty:".Length..]) _pickerProblem = $"pressing {button} chose {Mod.Charts.Chosen?.Stem}";
+                }
+
+                if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "0-difficulties");
+                if (startedOn != null) Mod.Charts.ChooseDifficulty(startedOn);
+                Logger.Info($"[SelfTest] difficulties of {startedOn?.Name}: {string.Join(", ", difficultyButtons)}");
+            }
+
+            Mod.Charts.StepSong(1);
+            yield return new WaitForSeconds(0.2f);
+        }
+
+        Logger.Info($"[SelfTest] songs with difficulties: {songsTried}");
     }
 
     /// <summary>A cover image drawn here shows on the picker's card.</summary>
@@ -248,7 +279,7 @@ internal static partial class SelfTest
         File.WriteAllBytes(path, ImageConversion.EncodeToPNG(image));
         UnityEngine.Object.Destroy(image);
 
-        Mod.Picker.Override = new PickerCard("<b>Cover test</b>\n<size=50%>a chart with a cover</size>", path);
+        Mod.Picker.Override = new PickerCard("Cover test<\n<size=50%>a chart with a cover</size>", path);
         yield return new WaitForSeconds(0.5f);
         if (!Mod.Picker.ShowingCover) _pickerProblem = "a chart's cover image did not show on the picker";
 
@@ -266,7 +297,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.3f);
 
         // Only in place: loading the Ring or Pit takes the Gym's structures with it anyway.
-        if (_arena == ArenaKind.Here && LastCleared < 1) _rulesProblem = "the cube spawned before the battle was not cleared off the map";
+        if (_arena == ArenaKind.Gym && LastCleared < 1) _rulesProblem = "the cube spawned before the battle was not cleared off the map";
         if (Available("SpawnCube") || !Available("Disc"))
             _rulesProblem = $"a discs-only chart did not take the other spawn moves away (and leave the disc): moves {string.Join(", ", You?.PlayerProcessor.availableStacks.ToArray().Select(m => m?.CachedName) ?? [])}";
 
@@ -315,7 +346,7 @@ internal static partial class SelfTest
         }
     }
 
-    /// <summary>After the battle, walking and dashing into each wall must leave you inside the lane.</summary>
+    /// <summary>After the battle, walking and dashing into each wall and the zone's front corners must leave you inside the lane, on its floor.</summary>
     private static IEnumerator CheckWalls()
     {
         if (!FlatscreenControls.IsFlatscreen || Mod.Battle.Chart?.Lane is not { } lane) yield break;
@@ -327,6 +358,8 @@ internal static partial class SelfTest
             ("left", new Vector2(-1f, 0f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("back", new Vector2(0f, -1f), 3f, p => p.z >= -1.6f),
             ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Chart?.Zone.Length ?? lane.Length) + 0.9f),
+            ("forward left", new Vector2(-0.7f, 0.7f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
+            ("forward right", new Vector2(0.7f, 0.7f), 5f, p => p.x <= (lane.Width / 2f) + 0.9f),
         };
 
         foreach ((var name, var stick, var seconds, var inside) in walks)
@@ -346,8 +379,9 @@ internal static partial class SelfTest
 
             if (BattlePlayer.Controller is not { } playerController) break;
             var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
-            Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, z {at.z:0.00}");
+            Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, y {at.y:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");
+            if (at.y < -0.3f) problems.Add($"walking {name} sank {-at.y:0.0} m through the floor");
         }
 
         FlatscreenControls.ScriptedWalk = null;

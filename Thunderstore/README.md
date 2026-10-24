@@ -16,18 +16,17 @@ looks - older versions just skip them.
 difficulty, arena, length, song and your best - over PREV / START / NEXT. Push its buttons with
 either hand. It comes back after each battle with the results.
 
-The settings window (UIFramework) has the chart, an arena override, music volume, where the picker
-appears, and buttons to start and stop, reload charts, bring the picker to you and go back to the
-Gym. In the Gym, *Chart picker here* fixes the picker where it stands; turn off *Fixed picker spot
-in the Gym* to have it always come to you.
+The settings window (UIFramework) has *Stop battle*, *Chart picker here* - in the Gym it then stays
+where you put it - the chart-making tools, section names on the board, and how strongly a chart's
+shader looks apply.
 
 - **Arenas.** Starting a chart takes you to its arena: the Ring and Pit load solo, and you are put
-  on the chart's spot facing down the lane. *Here* is wherever you stand.
+  on the chart's spot facing down the lane - every time, so a restart starts from the same place.
 - **Walls.** Invisible walls fence the lane: they stop players, not structures, so shots can cut
   across it. Your **zone** ends at a pale line short of the boss and 3.5 m up.
 - **Rules.** A chart can let you spawn only discs, or nothing; your spawn moves come back afterwards.
   Every battle starts on a clear floor.
-- **Music** plays through the game's music volume, times the *Music volume* setting. The chart
+- **Music** plays through the game's music volume. The chart
   follows the song's clock, so it stays on the beat.
 - **Scoring.** Surviving is worth 1000; damage on the boss scores 10 a point, times the section's
   multiplier; each point of damage you take costs 25. Rank: S untouched, A up to
@@ -54,7 +53,7 @@ Turn on **Chart editing** in the settings. The picker then gains:
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your
-look and stones), *Open chart folder* and *Export chart* (a `.bbchart` in `UserData/Basalt/Exports`).
+look and stones) and *Open chart folder*.
 
 **The chart editor** is a separate desktop app for Windows, macOS and Linux, Basalt
 Editor: the song's waveform under a beat grid, projectiles on a top-down lane, phases, colours, and a

@@ -36,16 +36,15 @@
       "properties": {
         "map": {
           "enum": [
-            "here",
             "gym",
             "ring",
             "pit"
           ],
-          "default": "here"
+          "default": "ring"
         },
         "at": {
           "type": "object",
-          "description": "Where you stand: metres from the arena's centre (Gym: world). Where am I, in the settings, prints yours.",
+          "description": "Where you stand: metres from the map's centre (the Gym: world). Default 0, 0. Lane setup in game writes yours.",
           "properties": {
             "x": {
               "type": "number"
@@ -61,9 +60,10 @@
         },
         "facing": {
           "type": "number",
-          "description": "Compass degrees the lane runs from you: 0 = +Z, 90 = +X."
+          "description": "Compass degrees the lane runs from you: 0 = +Z, 90 = +X. Default 0."
         }
-      }
+      },
+      "description": "Where it is played. Without one: the Ring, at { x: 0, z: -6 } facing north."
     },
     "music": {
       "type": "object",

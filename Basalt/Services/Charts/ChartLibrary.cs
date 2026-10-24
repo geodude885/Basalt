@@ -29,6 +29,8 @@ public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source
 
     public string AssetFolder => Folder ?? Path.GetDirectoryName(File) ?? "";
 
+    public string? Difficulty => Result.Chart?.Info.Difficulty;
+
     public bool CanEdit => Result.Chart != null && Source != ChartSource.Package;
 
     public bool HasActorTrack => CanEdit && Result.Chart!.Tracks.Any(t => t.ActorId == Result.Chart.DefaultActor.Id && t.Clips.Count > 0);
@@ -44,6 +46,8 @@ public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source
 public class ChartLibrary(string folder, string? packageCache = null)
 {
     public const string FolderChartFile = "chart.json";
+
+    private static readonly string[] KnownDifficulties = { "Expert", "Hard", "Normal", "Easy" };
 
     // Each starter chart's hash when it was written, so a newer mod can tell one was never edited.
     private const string StarterHashesFile = ".starters";
@@ -86,9 +90,27 @@ public class ChartLibrary(string folder, string? packageCache = null)
         return startersWritten;
     }
 
+    // One chart per song - the first of each name - in library order.
+    public IReadOnlyList<ChartEntry> Songs => _entries.DistinctBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+    // The charts of the same song as `entry` - those sharing its name - hardest first: Expert, Hard, Normal, Easy,
+    // then any other difficulty alphabetically, then those that give none.
+    public IReadOnlyList<ChartEntry> DifficultiesOf(ChartEntry entry) =>
+        _entries.Where(e => string.Equals(e.Name, entry.Name, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(e => DifficultyRank(e.Difficulty))
+            .ThenBy(e => e.Difficulty, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     public ChartEntry? Find(string name) =>
         _entries.FirstOrDefault(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase))
         ?? _entries.FirstOrDefault(e => string.Equals(e.Stem, name, StringComparison.OrdinalIgnoreCase));
+
+    private static int DifficultyRank(string? difficulty)
+    {
+        if (difficulty == null) return int.MaxValue;
+        var known = Array.FindIndex(KnownDifficulties, d => string.Equals(d, difficulty, StringComparison.OrdinalIgnoreCase));
+        return known >= 0 ? known : KnownDifficulties.Length;
+    }
 
     // An empty folder gets every starter chart. Otherwise a starter still exactly as it was written is brought up
     // to date, and one that was edited or deleted is left alone.

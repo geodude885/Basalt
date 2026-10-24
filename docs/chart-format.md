@@ -18,7 +18,7 @@ In game, *New chart* in the settings window makes `Charts/my-chart/chart.json`
 from a template that plays as it is, with a comment on every part, and picks it. Edit it and save:
 charts reload by themselves between battles, and one that does not load shows its problems on the
 picker. Put a `song.wav` and `cover.png` beside it and uncomment their lines. *SETUP* on the picker
-walks the lane in place and writes the `"arena"` line. *Export chart* packs the finished chart to share.
+walks the lane in place and writes the `"arena"` line. Basalt Editor packs a finished chart to share.
 
 ## Where a chart lives
 
@@ -29,7 +29,7 @@ walks the lane in place and writes the `"arena"` line. *Export chart* packs the 
 | Package | `Charts/<name>.bbchart` | inside the package |
 
 A **package** (`.bbchart`) is a zip of a chart folder: `chart.json` at the top (or inside one
-top-level folder), the song and cover, and `clips/<clip>.json` for each clip the chart plays. *Export chart* in game
+top-level folder), the song and cover, and `clips/<clip>.json` for each clip the chart plays. Basalt Editor
 makes one. A package may not contain paths reaching outside itself, more than 512 entries, or more
 than 256 MB unpacked.
 
@@ -54,7 +54,7 @@ Recorded clips are kept in the chart's own `clips/`.
 | `author` | string | - | Shown in the picker. |
 | `difficulty` | string | - | Free text, e.g. Easy / Normal / Hard / Expert. |
 | `description` | string | - | One or two lines for the picker. |
-| `arena` | object | here | Where it is played - below. |
+| `arena` | object | the Ring, at `{ x: 0, z: -6 }` facing north | Where it is played - below. |
 | `music` | object | - | A song - below. |
 | `cover` | path | - | A PNG or JPG beside the chart, shown on the picker (square looks best; up to 16 MB, though 512 px is plenty). |
 | `bpm` | number or list | - | Beats per minute, for `beat` / `startBeat` times - or tempo changes: `[ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]` (the first at beat 0; each holds until the next). |
@@ -73,14 +73,12 @@ Recorded clips are kept in the chart's own `clips/`.
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `map` | `here` / `gym` / `ring` / `pit` | `here` | Starting the chart takes you there. |
-| `at` | `{ x, z }` | - | Where you stand. The lane runs `lane.length` from here along `facing`. |
-| `facing` | degrees | your facing, or north with `at` | The compass direction the lane runs from you. |
+| `map` | `gym` / `ring` / `pit` | `ring` | Starting the chart takes you there. |
+| `at` | `{ x, z }` | `{ x: 0, z: 0 }` | Where you stand, from the map's centre. The lane runs `lane.length` from here along `facing`. |
+| `facing` | degrees | 0 (north) | The compass direction the lane runs from you. |
 
-Without `at`, the lane starts wherever you stand - in the Ring and Pit, where the map puts you - and
-runs the way you face, or along `facing`. Lane setup in game saves an `at` and `facing` for you. `here`
-takes no `at` or `facing`. The player's arena override (setting) replaces the
-map; the spot is kept only when the override is the chart's own map.
+A chart is always played from its spot, so every run, and every restart, starts from the same place.
+Lane setup in game saves an `at` and `facing` for you.
 
 ### `music`
 
@@ -88,7 +86,7 @@ map; the spot is kept only when the override is the chart's own map.
 |---|---|---|---|
 | `file` | path | required | A song in the chart's folder or package - a path inside it, no `..`. |
 | `start` | seconds | 0 | How far into the song chart time 0 is: skip an intro, or put beat 0 on the first downbeat. Negative starts the song that many seconds after chart time 0, with silence before it. |
-| `volume` | 0-1 | 1 | The chart's own level, times the player's music volume. |
+| `volume` | 0-1 | 1 | The chart's own level; the game's music volume applies too. |
 
 Songs can be **MP3, OGG Vorbis or WAV** (PCM 8/16/24/32-bit or 32-bit float). The game ships
 without Unity's audio decoding, so the mod decodes them itself (NLayer and NVorbis, in `UserLibs`)

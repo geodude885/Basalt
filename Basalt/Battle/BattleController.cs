@@ -34,6 +34,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;
     private const float PhaseBannerSeconds = 2f;
+    private const float CountdownSeconds = 3f;
     private const float PhaseColourFadeSeconds = 1f;
 
     // A newly ready actor placed at once had not settled, and went on falling.
@@ -73,15 +74,13 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         : -1;
 
     public Anchor? Lane => Run is { LaidOut: true } run ? run.Frame : null;
-
-    // A world point in lane coordinates: x across, z along, in metres.
     public Vector3 ToLane(Vector3 world) => (Run?.Frame ?? default).ToLocal(world.ToNumerics()).ToUnity();
 
     public void Banner(string text, float seconds) => _board.Show(text, seconds);
 
     public void Start(BattleRequest request)
     {
-        if (Maps.Online)
+        if (Maps.IsCurrentlyOnline)
         {
             Logger.Info("[Battle.NotStarted] not in a park or match - charts play in the Gym");
             return;
@@ -113,9 +112,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         }
 
         var arena = request.Arena;
-        Logger.Info($"[Battle] {chart.Name} in {(arena == ArenaKind.Here ? "place" : $"the {arena}")}{(chart.Music != null ? $" to {chart.Music.File}" : "")}: {chart.Actors.Count} actor(s), {chart.Events.Count} events, {chart.End:0.#}s");
+        Logger.Info($"[Battle] {chart.Name} in the {arena}{(chart.Music != null ? $" to {chart.Music.File}" : "")}: {chart.Actors.Count} actor(s), {chart.Events.Count} events, {chart.End:0.#}s");
 
-        // Loading the arena even when already there: actors are only placed while a battle is being set up.
         Run = new BattleRun(request, chartClips);
         if (arena.IsLoaded()) Prepare();
         else arena.Load();
@@ -179,8 +177,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
             case BattleState.Countdown:
                 KeepLane();
                 var left = run.CountdownEnds - Time.time;
-                if (left > 0f) _board.Show($"<b>{run.Chart.Name}</b>\n{Mathf.CeilToInt(left)}");
-                else if (_music.Loading && Time.time < run.MusicDeadline) _board.Show($"<b>{run.Chart.Name}</b>\nloading music {_music.Progress * 100:0}%");
+                if (left > 0f) _board.Show($"{run.Chart.Name}\n{Mathf.CeilToInt(left)}");
+                else if (_music.Loading && Time.time < run.MusicDeadline) _board.Show($"{run.Chart.Name}\nloading music {_music.Progress * 100:0}%");
                 else BeginRunning();
                 break;
 
@@ -236,8 +234,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         {
             var request = Run!.Request;
             var chart = Run!.Chart;
-            var playerRig = ActorRig.From(BattlePlayer.Controller!);
-            var frame = request.Lane ?? request.ArenaSpec.CreateLaneAnchor(request.Arena, playerRig.Feet, playerRig.Facing);
+            var frame = request.Lane ?? chart.Arena.CreateLaneAnchor();
             if (frame == null)
             {
                 Stop("no lane could be laid out");
@@ -254,22 +251,22 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
                 var spot = request.RecordSpot is { } at ? World(at.X, 0f, at.Y) : World(performer.At.X, 0f, performer.At.Z);
                 _player.Place(spot, Quaternion.Euler(0f, Run.Frame.ActorYaw(performer.At.Facing), 0f));
             }
-            else if (request.Arena.IsMatchMap() || request.ArenaSpec.HasSpot || request.Lane != null)
+            else
             {
                 _player.Place(Run.Frame.Position.ToUnity(), Quaternion.LookRotation(Run.Frame.Forward.ToUnity()));
             }
 
-            _arena.Build(Run.Frame, chart.Lane, settings.ShowBackstop.Value, walls: true, zone: request.Recording ? null : chart.Zone,
+            _arena.Build(Run.Frame, chart.Lane, showBackstop: true, walls: true, zone: request.Recording ? null : chart.Zone,
                 colours: chart.ColoursIn(chart.Phases.LastOrDefault(p => p.Start <= request.StartAt)), panes: chart.EverShowsWalls);
             if (request.Recording)
             {
                 _board.SetPosition(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
-                _board.Show($"<b>Recording {performer.Name}</b>\nget ready");
+                _board.Show($"Recording {performer.Name}\nget ready");
             }
             else
             {
                 _board.SetPosition(World(0f, 2.6f, Math.Min(3f, chart.Lane.Length / 2f)), Run.Frame.Position.ToUnity());
-                _board.Show($"<b>{chart.Name}</b>\n{(request.Mode == BattleMode.Review ? "clip review" : "get ready")}");
+                _board.Show($"{chart.Name}\n{(request.Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
             foreach (var spec in request.Recording ? Enumerable.Empty<ActorSpec>() : chart.Actors)
@@ -314,7 +311,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         var ready = actors.Actors.Count(a => a.Ready);
         if (ready < actors.Actors.Count) Logger.Warning($"[Battle.ActorsLate] {actors.Actors.Count - ready} of {actors.Actors.Count} actor(s) not ready after {ActorSpawnTimeoutSeconds}s - starting anyway");
 
-        Run.CountdownEnds = Time.time + Math.Max(0f, settings.Countdown.Value);
+        Run.CountdownEnds = Time.time + CountdownSeconds;
         Run.MusicDeadline = Run.CountdownEnds + MusicWaitSeconds;
         _arena.Boundary.LetActorsThrough(actors.Actors.SelectMany(a => a.Colliders));
         _moves.Hold();
@@ -339,9 +336,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
             : chart, request.StartAt);
         Run.StartedAt = Time.time;
         if (_music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicWaitSeconds}s - playing without music");
-        _music.Volume = Math.Clamp(settings.MusicVolume.Value, 0f, 1f);
         if (chart.Music != null) _music.Play(chart.Music.Start + request.StartAt, chart.Music.Volume);
-        _board.Show("<b>GO</b>", 1f);
+        _board.Show("GO", 1f);
         foreach (var actor in actors.Actors) actor.FullHeal();
         _sweeper.Reset();
         Signals.Begin(chart);
@@ -366,7 +362,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
             {
                 case EnterPhase enter:
                     Run.Phase = enter.Phase;
-                    if (enter.Time > 0 && settings.ShowPhaseBanners.Value) _board.Show($"<b>{enter.Phase.Name}</b>{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
+                    if (enter.Time > 0 && settings.ShowPhaseBanners.Value) _board.Show($"{enter.Phase.Name}{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
                     Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
                     if (enter.Time > 0) Signals.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
                     _arena.Visuals.Recolour(Run.Chart.ColoursIn(enter.Phase), enter.Time > 0 && enter.Time > Run.Request.StartAt ? PhaseColourFadeSeconds : 0f);

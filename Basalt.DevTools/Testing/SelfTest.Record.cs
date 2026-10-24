@@ -50,7 +50,7 @@ internal static partial class SelfTest
             yield break;
         }
 
-        Mod.Studio.StartRecording(entry, null);
+        Mod.Studio.StartRecording(entry);
 
         var deadline = Time.realtimeSinceStartup + 90f;
         while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
@@ -158,7 +158,7 @@ internal static partial class SelfTest
             yield break;
         }
 
-        Mod.Studio.ChooseRecordingSection(entry, null);
+        Mod.Studio.ChooseRecordingSection(entry);
         yield return new WaitForSeconds(0.5f);
         if (!Mod.Picker.ButtonIds.Contains("fromlater")) problems.Add($"choosing a section shows {string.Join(", ", Mod.Picker.ButtonIds)}");
         Mod.Picker.Press("fromlater");

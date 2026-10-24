@@ -13,7 +13,7 @@ internal class MusicController
     private const double ScheduleAheadSeconds = 0.15;
     private const float FadeSeconds = 1.5f;
 
-    private const float MaxVolume = 0.7f;
+    private const float MaxVolume = 0.56f;
     private const long MonoAboveSamples = 32_000_000;
 
     private const int ChunksDecodedAhead = 30;
@@ -31,9 +31,6 @@ internal class MusicController
     public bool Loading { get; private set; }
 
     public float Progress { get; private set; }
-
-    // The player's music volume; the chart's own multiplies it.
-    public float Volume { get; set; } = 1f;
 
     public bool Ended => _started && _clip != null && AudioSettings.dspTime - _dspStart > _songEndsAt + 0.5;
 
@@ -63,14 +60,13 @@ internal class MusicController
         MelonCoroutines.Start(Decode(path, written, _loadNumber));
     }
 
-    // Clock runs from `start` seconds into the song.
     public void Play(double start, float chartVolume)
     {
         if (_clip == null || !EnsureSource()) return;
 
         _source!.Stop();
         _source.clip = _clip;
-        _source.volume = Mathf.Clamp01(Volume * chartVolume * MaxVolume);
+        _source.volume = Mathf.Clamp01(chartVolume * MaxVolume);
         _source.time = (float)Math.Clamp(start, 0, Math.Max(0, _clip.length - 0.01));
         _dspStart = AudioSettings.dspTime + ScheduleAheadSeconds;
         _songEndsAt = _clip.length - start;

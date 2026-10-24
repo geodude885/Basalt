@@ -1,7 +1,11 @@
+using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
 using Basalt.DevTools.Testing;
+using Il2CppRUMBLE.Players.Subsystems;
 using MelonLoader;
+using MelonLoader.Utils;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [assembly: MelonInfo(typeof(Basalt.DevTools.DevToolsEntry), "Basalt.DevTools", "1.0.0", "ACutiePi")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
@@ -22,6 +26,8 @@ public class DevToolsEntry : MelonMod
         () => Mod.Actors.Actors.FirstOrDefault(a => a.Controller != null)?.HeadPosition ?? Camera.main?.transform.position,
         message => Logger.Info($"[DesktopCamera] {message}"));
 
+    private MelonPreferences_Entry<bool> _invincibleInCharts = null!;
+
     public override void OnInitializeMelon()
     {
         if (Mod.Picker is null)
@@ -33,6 +39,12 @@ public class DevToolsEntry : MelonMod
         FlatscreenControls.Log = message => Logger.Info($"[Flatscreen] {message}");
         Logger.Debug($"[Init] flatscreen controls: {FlatscreenControls.Apply(HarmonyInstance)} methods");
         SelfTest.Configure(_camera.ShowFixed, _camera.CapturePng);
+
+        var settings = MelonPreferences.CreateCategory("BasaltDevTools", "Basalt DevTools");
+        settings.SetFilePath(Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "devtools.cfg"));
+        _invincibleInCharts = settings.CreateEntry("InvincibleInCharts", false, "Invincible in charts",
+            "While a chart plays (not while recording), your health is kept full: hits still count against the score.");
+        UIFramework.UI.RegisterMelon(this, settings);
         Logger.Info($"Basalt.DevTools loaded. {Keys}");
     }
 
@@ -42,6 +54,7 @@ public class DevToolsEntry : MelonMod
         {
             HandleKeys();
             HandleClick();
+            KeepInvincibleInCharts();
             TestBench.Update();
             FlatscreenControls.Update();
             SelfTest.Update();
@@ -54,6 +67,15 @@ public class DevToolsEntry : MelonMod
 
     public override void OnLateUpdate() => _camera.LateUpdate();
 
+    private void KeepInvincibleInCharts()
+    {
+        if (!_invincibleInCharts.Value || Mod.Battle.State != BattleState.Running || Mod.Battle.Mode == BattleMode.Record) return;
+        if (BattlePlayer.Player is not { Controller: not null } localPlayer) return;
+
+        var health = localPlayer.Data.HealthPoints;
+        if (health < PlayerHealth.MAX_PLAYER_HEALTH) localPlayer.Controller.PlayerHealth.SetHealth((short)PlayerHealth.MAX_PLAYER_HEALTH, health, false);
+    }
+
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)
     {
         TestBench.Forget();
@@ -61,10 +83,12 @@ public class DevToolsEntry : MelonMod
         SelfTest.OnSceneLoaded(sceneName);
     }
 
-    /// <summary>A mouse click presses the picker button under the cursor, through the desktop camera when it shows.</summary>
+    // A mouse click presses the picker button under the cursor, through the desktop camera when it shows. A click on
+    // a window drawn over the game (UIFramework's settings) is that window's, and must not reach the picker behind it.
     private void HandleClick()
     {
-        if (!Input.GetMouseButtonDown(0) || Mod.Picker is not { } picker || (_camera.Camera ?? Camera.main) is not { } camera) return;
+        if (!Input.GetMouseButtonDown(0) || EventSystem.current?.IsPointerOverGameObject() == true) return;
+        if (Mod.Picker is not { } picker || (_camera.Camera ?? Camera.main) is not { } camera) return;
 
         var ray = camera.ScreenPointToRay(Input.mousePosition);
         var unitBox = new Bounds(Vector3.zero, Vector3.one);

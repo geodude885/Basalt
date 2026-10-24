@@ -11,7 +11,6 @@ internal class Studio(BattleController battle, GameAssets assets)
     public const double EaseInSeconds = 2;
 
     public ClipRecorder Recorder { get; private set; } = new();
-    public ArenaKind? ArenaOverride { get; private set; }
 
     public Chart? Chart { get; private set; }
     public ChartEntry? Entry { get; private set; }
@@ -35,9 +34,9 @@ internal class Studio(BattleController battle, GameAssets assets)
     public static string Undo(ChartEntry entry) =>
         ChartFiles.RestoreBackup(entry.File) ? $"undid the last save to {entry.Name}" : $"{entry.Name} has nothing to undo";
 
-    public void StartRecording(ChartEntry entry, ArenaKind? arenaOverride, bool mime = false)
+    public void StartRecording(ChartEntry entry, bool mime = false)
     {
-        if (!BeginEditing(entry, arenaOverride)) return;
+        if (!BeginEditing(entry)) return;
 
         Mime = mime;
         battle.Start(StudioBattle(Chart!) with { Mode = BattleMode.Record, Mime = mime });
@@ -136,12 +135,12 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (Entry == null) return;
         if (IsSectionOrWholeClip) RecordSection(Mime);
-        else StartRecording(Entry, ArenaOverride, Mime);
+        else StartRecording(Entry, Mime);
     }
 
-    public void ChooseRecordingSection(ChartEntry entry, ArenaKind? arenaOverride)
+    public void ChooseRecordingSection(ChartEntry entry)
     {
-        if (!entry.HasActorTrack || !BeginEditing(entry, arenaOverride)) return;
+        if (!entry.HasActorTrack || !BeginEditing(entry)) return;
 
         battle.Stop("choosing a section");
         SelectedSection = RecordingSection.MiddleThirdOf(Chart!);
@@ -188,7 +187,7 @@ internal class Studio(BattleController battle, GameAssets assets)
 
     public void OpenChartOptions(ChartEntry entry)
     {
-        if (!BeginEditing(entry, null)) return;
+        if (!BeginEditing(entry)) return;
 
         battle.Stop("lane setup");
         LaneSetup.BeginWith(Chart!);
@@ -255,7 +254,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         var startsAt = _sectionBeingRecorded?.From ?? 0;
         if (!Recorder.Recording && chartTime < startsAt)
         {
-            battle.Banner($"<b>{Math.Ceiling(startsAt - chartTime):0}</b>", 0.2f);
+            battle.Banner($"{Math.Ceiling(startsAt - chartTime):0}", 0.2f);
             return;
         }
 
@@ -265,7 +264,7 @@ internal class Studio(BattleController battle, GameAssets assets)
             _recordedLane = lane;
             Recorder.Start(playerController, lane);
             _recordingStartedAtChartTime = chartTime;
-            if (IsSectionOrWholeClip) battle.Banner("<b>GO</b>", 0.8f);
+            if (IsSectionOrWholeClip) battle.Banner("GO", 0.8f);
         }
 
         Recorder.Update(chartTime);
@@ -273,7 +272,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (sectionOver || battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
     }
 
-    private bool BeginEditing(ChartEntry entry, ArenaKind? arenaOverride)
+    private bool BeginEditing(ChartEntry entry)
     {
         if (!entry.CanEdit) return false;
 
@@ -281,7 +280,6 @@ internal class Studio(BattleController battle, GameAssets assets)
         StopEditing();
         Entry = entry;
         Chart = entry.Result.Chart!;
-        ArenaOverride = arenaOverride;
         _actorId = Chart.DefaultActor.Id;
         _recordedLane = null;
         return true;
@@ -294,8 +292,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         _sectionBeingRecorded = null;
     }
 
-    // The studio's battles keep no score.
-    private BattleRequest StudioBattle(Chart chart) => new(chart) { ArenaOverride = ArenaOverride, AssetFolder = Entry!.AssetFolder, RecordActor = _actorId };
+    private BattleRequest StudioBattle(Chart chart) => new(chart) { AssetFolder = Entry!.AssetFolder, RecordActor = _actorId };
 
     private System.Numerics.Vector2? GetActorSpot(double chartTime)
     {

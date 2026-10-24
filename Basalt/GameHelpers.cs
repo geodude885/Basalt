@@ -1,3 +1,4 @@
+using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using UnityEngine;
 
@@ -8,7 +9,8 @@ internal static class GameHelpers
     // Positions and colliders
 
     public static bool ProbablyGround(this Collider? collider) =>
-        collider != null && !collider.isTrigger && !collider.IsOurs() && collider.GetComponentInParent<PlayerController>() == null;
+        collider != null && !collider.isTrigger && !collider.IsOurs()
+        && collider.GetComponentInParent<PlayerController>() == null && collider.GetComponentInParent<Structure>() == null;
 
     public static bool IsOurs(this Collider collider) => collider.gameObject.name.StartsWith("Basalt_", StringComparison.Ordinal);
 

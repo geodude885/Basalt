@@ -8,20 +8,22 @@ using UnityEngine;
 
 namespace Basalt.UI;
 
-// The chart you have chosen, and everything done to it: starting, recording into, making, opening and exporting.
-internal class ChartSelection(ChartLibrary library, Settings settings, BattleController battle, Studio studio, string exportsFolder)
+// The chart you have chosen, and everything done to it: starting, recording into, making and opening.
+internal class ChartSelection(ChartLibrary library, Settings settings, BattleController battle, Studio studio)
 {
     private long _chartsFingerprint;
     private string? _chosenFile;
     private float _nextChartsCheck;
+
+    public ChartLibrary Library => library;
 
     // Even one that does not load (so the picker can say why), else the first playable one.
     public ChartEntry? Chosen
     {
         get
         {
-            // By file first: a chart that stops loading loses its name, and must stay chosen.
             var entry = (_chosenFile == null ? null : library.Entries.FirstOrDefault(e => string.Equals(e.File, _chosenFile, StringComparison.OrdinalIgnoreCase)))
+                        ?? library.Entries.FirstOrDefault(e => string.Equals(e.Stem, settings.Chart.Value, StringComparison.OrdinalIgnoreCase))
                         ?? library.Find(settings.Chart.Value)
                         ?? library.Playable.FirstOrDefault()
                         ?? (library.Entries.Count > 0 ? library.Entries[0] : null);
@@ -30,15 +32,23 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         }
     }
 
-    public void StepChart(int step)
+    public void StepSong(int step)
     {
-        var entries = library.Entries.ToList();
-        if (entries.Count == 0) return;
+        var songs = library.Songs;
+        if (songs.Count == 0 || Chosen is not { } chosen) return;
 
-        var current = entries.IndexOf(Chosen!);
-        var next = entries[(((current + step) % entries.Count) + entries.Count) % entries.Count];
+        var current = songs.ToList().FindIndex(song => string.Equals(song.Name, chosen.Name, StringComparison.OrdinalIgnoreCase));
+        var nextSong = songs[(((current + step) % songs.Count) + songs.Count) % songs.Count];
+        var difficulties = library.DifficultiesOf(nextSong);
+        var next = difficulties.FirstOrDefault(e => string.Equals(e.Difficulty, chosen.Difficulty, StringComparison.OrdinalIgnoreCase)) ?? difficulties[0];
         Choose(next);
-        Logger.Info($"chart: {next.Name}");
+        Logger.Info($"chart: {next.Name}{(next.Difficulty == null ? "" : $" ({next.Difficulty})")}");
+    }
+
+    public void ChooseDifficulty(ChartEntry entry)
+    {
+        Choose(entry);
+        Logger.Info($"chart: {entry.Name} ({entry.Difficulty ?? entry.Stem})");
     }
 
     public void StartBattle()
@@ -56,7 +66,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             return;
         }
 
-        battle.Start(new BattleRequest(entry.Result.Chart) { ArenaOverride = settings.ArenaOverride, AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey });
+        battle.Start(new BattleRequest(entry.Result.Chart) { AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey });
     }
 
     public void RecordChosen(bool mime = false)
@@ -70,7 +80,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             return;
         }
 
-        studio.StartRecording(entry, settings.ArenaOverride, mime);
+        studio.StartRecording(entry, mime);
     }
 
     public void ReloadCharts()
@@ -81,7 +91,6 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         foreach (var entry in library.Entries.Where(e => !e.Result.Ok))
             Logger.Info($"chart {Path.GetFileName(entry.File)} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
 
-        settings.UpdateChartChoices(library.Playable.Select(e => e.Name));
         foreach (var entry in library.Entries.Where(e => e.Source == ChartSource.Package && e.Result.Ok))
             Logger.Debug($"[Charts.Package] {Path.GetFileName(entry.File)}: {entry.Name}");
     }
@@ -162,30 +171,9 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         }
     }
 
-    public void ExportChosen()
-    {
-        var entry = Chosen;
-        if (entry == null)
-        {
-            Logger.Info("[Export] no chart to export");
-            return;
-        }
-
-        try
-        {
-            var packed = ChartPackage.Pack(entry, Path.Combine(exportsFolder, ChartFiles.FileStem(entry.Name) + ChartPackage.Extension));
-            Logger.Info($"[Export] {entry.Name} -> {packed.Path} ({string.Join(", ", packed.Included)})" +
-                        (packed.Missing.Count > 0 ? $" - missing: {string.Join(", ", packed.Missing)}" : ""));
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            Logger.Info($"[Export] {entry.Name} failed: {e.Message}");
-        }
-    }
-
     private void Choose(ChartEntry entry)
     {
         _chosenFile = entry.File;
-        settings.Chart.Value = entry.Name;
+        settings.Chart.Value = entry.Stem;
     }
 }

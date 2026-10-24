@@ -112,13 +112,13 @@ internal class ChartReader(ChartDto dto)
 
     private ArenaSpec ReadArena(ArenaDto? arena)
     {
-        if (arena == null) return ArenaSpec.Here;
+        if (arena == null) return ArenaSpec.Default;
 
-        var map = ArenaKind.Here;
+        var map = ArenaSpec.Default.Map;
         if (arena.Map != null && !Enum.TryParse(arena.Map, ignoreCase: true, out map))
         {
             Errors.Add($"arena.map \"{arena.Map}\" is not one of {string.Join(", ", Enum.GetNames<ArenaKind>().Select(n => n.ToLowerInvariant()))}");
-            return ArenaSpec.Here;
+            return ArenaSpec.Default;
         }
 
         if (arena.At != null && (arena.At.X == null || arena.At.Z == null))
@@ -127,10 +127,7 @@ internal class ChartReader(ChartDto dto)
             return new ArenaSpec(map);
         }
 
-        if (map == ArenaKind.Here && (arena.At != null || arena.Facing != null))
-            Errors.Add("arena.at and arena.facing need a map - \"here\" is wherever you stand");
-
-        return new ArenaSpec(map, arena.At?.X, arena.At?.Z, arena.Facing);
+        return new ArenaSpec(map, arena.At?.X ?? 0f, arena.At?.Z ?? 0f, arena.Facing ?? 0f);
     }
 
     private Zone ReadZone(ZoneDto? zone)

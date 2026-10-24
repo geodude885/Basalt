@@ -24,7 +24,6 @@ public class ChartHeaderTests
 
         Assert.Equal(new ChartInfo("someone", "A song.", "Hard"), chart.Info);
         Assert.Equal(new ArenaSpec(ArenaKind.Ring, 1.5f, -6f, 90f), chart.Arena);
-        Assert.True(chart.Arena.HasSpot);
         Assert.Equal(new MusicSpec("music/song.ogg", 2.5, 0.7f), chart.Music);
     }
 
@@ -47,29 +46,28 @@ public class ChartHeaderTests
     }
 
     [Fact]
-    public void WithoutAHeaderAChartIsPlayedHereInSilence()
+    public void WithoutAHeaderAChartIsPlayedInTheRingInSilence()
     {
         var chart = Load(/*lang=json,strict*/ """{ "name": "Plain" }""");
 
-        Assert.Equal(ArenaSpec.Here, chart.Arena);
+        Assert.Equal(new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f), chart.Arena);
         Assert.Null(chart.Music);
         Assert.Equal(ChartInfo.None, chart.Info);
     }
 
     [Fact]
-    public void AMapWithoutASpotIsLaidOutAutomatically()
+    public void AMapWithoutASpotStartsAtItsCentreFacingNorth()
     {
         var arena = Load(/*lang=json,strict*/ """{ "arena": { "map": "pit" } }""").Arena;
 
-        Assert.Equal(ArenaKind.Pit, arena.Map);
-        Assert.False(arena.HasSpot);
+        Assert.Equal(new ArenaSpec(ArenaKind.Pit, 0f, 0f, 0f), arena);
     }
 
     [Theory]
     [InlineData(/*lang=json,strict*/ """{ "format": 3 }""", "newer Basalt")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "moon" } }""", "arena.map \"moon\"")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "ring", "at": { "x": 1 } } }""", "arena.at needs x and z")]
-    [InlineData(/*lang=json,strict*/ """{ "arena": { "at": { "x": 1, "z": 1 } } }""", "need a map")]
+    [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "here" } }""", "arena.map \"here\" is not one of gym, ring, pit")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "start": 1 } }""", "music.file is required")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "../../secret.ogg" } }""", "inside the chart's folder")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "C:/music/song.ogg" } }""", "inside the chart's folder")]
@@ -158,17 +156,12 @@ public sealed class ChartPackageTests : IDisposable
     }
 
     [Fact]
-    public void PackingAndDroppingThePackageInGivesTheSameChart()
+    public void AZippedChartFolderDroppedInGivesTheSameChart()
     {
-        WriteFolderChart("my-song");
-        var library = new ChartLibrary(Charts, Cache);
-        library.Reload();
-
+        var folder = WriteFolderChart("my-song");
         var package = Path.Combine(_root, "Exports", "Folder-Song" + ChartPackage.Extension);
-        var packed = ChartPackage.Pack(library.Entries[0], package);
-
-        Assert.Empty(packed.Missing);
-        Assert.Equal(new[] { "chart.json", "song.wav", "cover.png", "clips/wave.json" }, packed.Included);
+        Directory.CreateDirectory(Path.GetDirectoryName(package)!);
+        ZipFile.CreateFromDirectory(folder, package);
 
         // Shared: someone else drops it into their own, empty-but-for-this chart folder.
         var otherPlayersFolder = Path.Combine(_root, "Theirs", "Charts");
@@ -190,11 +183,10 @@ public sealed class ChartPackageTests : IDisposable
     [Fact]
     public void AZipIsAPackageToo()
     {
-        WriteFolderChart("my-song");
-        var library = new ChartLibrary(Charts, Cache);
-        library.Reload();
+        var folder = WriteFolderChart("my-song");
         var zip = Path.Combine(_root, "Theirs", "Folder-Song.zip");
-        ChartPackage.Pack(library.Entries[0], zip);
+        Directory.CreateDirectory(Path.GetDirectoryName(zip)!);
+        ZipFile.CreateFromDirectory(folder, zip);
 
         var otherPlayersFolder = Path.GetDirectoryName(zip)!;
         var otherPlayersLibrary = new ChartLibrary(otherPlayersFolder, Path.Combine(_root, "TheirCache"));
@@ -261,11 +253,9 @@ public sealed class ChartPackageTests : IDisposable
     [Fact]
     public void AnUnchangedPackageIsUnpackedOnce()
     {
-        WriteFolderChart("my-song");
-        var library = new ChartLibrary(Charts, Cache);
-        library.Reload();
+        var folder = WriteFolderChart("my-song");
         var package = Path.Combine(Charts, "shared.bbchart");
-        ChartPackage.Pack(library.Entries[0], package);
+        ZipFile.CreateFromDirectory(folder, package);
 
         (var first, _) = ChartPackage.Unpack(package, Cache);
         File.WriteAllText(Path.Combine(first!, "marker"), "still here");
@@ -286,7 +276,7 @@ public sealed class ChartPackageTests : IDisposable
         Directory.CreateDirectory(Path.Combine(folder, ChartPackage.ClipsFolder));
         File.WriteAllText(Path.Combine(folder, "chart.json"), /*lang=json*/ """
             {
-              // kept: comments survive packing
+              // kept: comments survive zipping
               "name": "Folder Song",
               "music": { "file": "song.wav" },
               "cover": "cover.png",

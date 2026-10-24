@@ -29,10 +29,11 @@ public static class ChartTemplate
           "difficulty": "Easy",
           "description": "My first chart.",
 
-          // Where it is played. "here" is wherever you stand; "ring", "pit" or "gym" take you there.
+          // Where it is played: "gym", "ring" or "pit", standing "at" metres from the map's centre (the Gym:
+          // the world origin), the lane running along "facing" (compass degrees). Starting it takes you there.
           // Easiest: turn on Chart editing in the settings and press SETUP on the picker - walk the
           // lane, resize it, and SAVE writes this line (and "lane" and "actors") for you.
-          "arena": { "map": "here" },
+          "arena": { "map": "ring", "at": { "x": 0, "z": -6 }, "facing": 0 },
 
           // A song and a cover image, put beside this file - uncomment to use them. Songs: MP3, OGG or WAV.
           // "music": { "file": "song.mp3", "start": 0, "volume": 1 },

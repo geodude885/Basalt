@@ -14,16 +14,18 @@ namespace Basalt.UI;
 internal record PickerCard(string Text, string? CoverPath = null);
 
 /// <summary>A button on the picker; the id is for keys and tests.</summary>
-internal record PickerButton(string Id, string Label, Color Colour, Action Press);
+internal record PickerButton(string Id, string Label, Color Colour, Action Press)
+{
+    // In the column beside the card rather than the rows under it.
+    public bool BesideCard { get; init; }
+}
 
 /// <summary>Where the picker stands when it appears.</summary>
 internal enum PickerPlacement
 {
-    /// <summary>In front of you by the placement settings, or at its fixed spot in the Gym.</summary>
     InFront,
-
-    /// <summary>Off to your left, out of the way while recording.</summary>
     Beside,
+    Behind,
 }
 
 /// <summary>
@@ -32,7 +34,7 @@ internal enum PickerPlacement
 /// mod's boxes poked by hand position; they can also be clicked or pressed from the keys. Built
 /// without colliders, so nothing of it touches the game's physics.
 /// </summary>
-internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAssets assets)
+internal class ChartPicker(ChartPickerPanel panel, JsonBook<SavedSpot> spots, GameAssets assets)
 {
     private const float PokeMargin = 0.03f;
     private const float PressCooldown = 0.5f;
@@ -47,8 +49,21 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
     private const int ButtonsPerRow = 5;
     private const float RowSpacing = 0.21f;
 
+    // The column beside the card: right of its edge, the first just under its top.
+    private const float BesideCardX = 0.56f;
+    private const float BesideCardFirstRow = 0.32f;
+    private const float BesideCardSpacing = 0.26f;
+
     private const float RockDepth = 0.04f;
     private const float ColourBarHeight = 0.014f;
+
+    // Where the picker appears in front of you: metres ahead of your eyes, above them (negative is below) and to your right.
+    private const float DistanceAhead = 0.75f;
+    private const float HeightAboveEyes = -0.35f;
+    private const float SidewaysToRight = 0f;
+
+    // Behind you while miming, far enough back to be clear of your arms.
+    private const float DistanceBehind = 1.2f;
 
     private static readonly Color CardColour = new(0.08f, 0.08f, 0.1f);
     private static readonly Color PressedColour = new(1f, 0.9f, 0.4f);
@@ -70,21 +85,6 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
     private bool _leftWasIn;
     private bool _rightWasIn;
 
-    /// <summary>Whether the picker is wanted between battles.</summary>
-    public bool Open { get; set; } = true;
-
-    /// <summary>Metres in front of your eyes.</summary>
-    public float Distance { get; set; } = 0.75f;
-
-    /// <summary>Metres above your eyes; negative is below.</summary>
-    public float Height { get; set; } = -0.35f;
-
-    /// <summary>Metres to your right; negative is left.</summary>
-    public float Side { get; set; }
-
-    /// <summary>Keeps a fixed spot in the Gym once one is set, rather than coming to you.</summary>
-    public bool FixedInGym { get; set; } = true;
-
     /// <summary>A card shown instead of the host's.</summary>
     public PickerCard? Override { get; set; }
 
@@ -104,12 +104,12 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
 
     public void Update()
     {
-        var want = panel.Wanted(Open) && BattlePlayer.Controller != null;
+        var want = panel.Wanted() && BattlePlayer.Controller != null;
 
         if (want && !_shown)
         {
-            if (!Ensure()) return;
-            if (panel.Placement == PickerPlacement.Beside || !PlaceAtSavedSpot()) PlaceInFrontOfPlayer();
+            if (!EnsureExists()) return;
+            if (panel.Placement != PickerPlacement.InFront || !PlaceAtSavedSpot()) PlaceNearPlayer();
             _root!.SetActive(true);
             _nextRefresh = 0f;
         }
@@ -127,7 +127,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         {
             var away = _root!.transform.position - ActorRig.From(playerController).Head.position;
             away.y = 0f;
-            if (away.magnitude > 1.6f) PlaceInFrontOfPlayer();
+            if (away.magnitude > 1.6f) PlaceNearPlayer();
         }
 
         foreach (var button in _buttons) button.Settle();
@@ -137,11 +137,10 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
     /// <summary>Brings the picker to you, opening it; in the Gym this becomes its fixed spot.</summary>
     public void Summon()
     {
-        Open = true;
         if (_root == null || !_shown) return;
 
-        PlaceInFrontOfPlayer();
-        if (!FixedInGym || !ArenaKind.Gym.IsLoaded()) return;
+        PlaceNearPlayer();
+        if (!ArenaKind.Gym.IsLoaded()) return;
 
         var position = _root.transform.position;
         try
@@ -203,7 +202,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         ShowCover(card.CoverPath);
 
         var wanted = panel.Buttons();
-        var key = string.Join("|", wanted.Select(b => $"{b.Id}:{b.Label}"));
+        var key = string.Join("|", wanted.Select(b => $"{b.Id}:{b.Label}:{b.Colour}"));
         if (key != _buttonKey)
         {
             BuildButtons(wanted, key);
@@ -222,12 +221,15 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         _buttonKey = key;
 
         // Rows of up to five, each centred, the first under the card.
-        foreach ((var inRow, var row) in specs.Chunk(ButtonsPerRow).Select((r, i) => (r, i)))
+        foreach ((var inRow, var row) in specs.Where(s => !s.BesideCard).Chunk(ButtonsPerRow).Select((r, i) => (r, i)))
         {
             var total = (inRow.Length * ButtonWidth) + ((inRow.Length - 1) * ButtonGap);
             foreach ((var spec, var i) in inRow.Select((s, i) => (s, i)))
                 AddButton(spec, (-total / 2f) + (ButtonWidth / 2f) + (i * (ButtonWidth + ButtonGap)), -row * RowSpacing);
         }
+
+        foreach ((var spec, var i) in specs.Where(s => s.BesideCard).Select((s, i) => (s, i)))
+            AddButton(spec, BesideCardX, BesideCardFirstRow - (i * BesideCardSpacing));
 
         _leftWasIn = _rightWasIn = true;
     }
@@ -260,7 +262,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
     /// <summary>In the Gym, its fixed spot; false anywhere else, when it has none, or when it is not wanted.</summary>
     private bool PlaceAtSavedSpot()
     {
-        if (_root == null || !FixedInGym || !ArenaKind.Gym.IsLoaded() || spots.Get(Maps.GymScene) is not { } spot) return false;
+        if (_root == null || !ArenaKind.Gym.IsLoaded() || spots.Get(Maps.GymScene) is not { } spot) return false;
 
         _root.transform.SetPositionAndRotation(new Vector3(spot.X, spot.Y, spot.Z), Quaternion.Euler(0f, spot.Yaw, 0f));
         _leftWasIn = _rightWasIn = true;
@@ -294,7 +296,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
     private Button? ButtonAt(Vector3 point) =>
         _buttons.FirstOrDefault(b => !b.Native && b.Root.activeSelf && b.Contains(point, PokeMargin));
 
-    private void PlaceInFrontOfPlayer()
+    private void PlaceNearPlayer()
     {
         var playerController = BattlePlayer.Controller;
         if (playerController == null || _root == null) return;
@@ -303,9 +305,12 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         var facing = rig.Facing;
         var right = Vector3.Cross(Vector3.up, facing);
 
-        var position = panel.Placement == PickerPlacement.Beside
-            ? rig.Head.position + (facing * 0.35f) - (right * 0.8f) + (Vector3.down * 0.45f)
-            : rig.Head.position + (facing * Distance) + (Vector3.up * Height) + (right * Side);
+        var position = panel.Placement switch
+        {
+            PickerPlacement.Beside => rig.Head.position + (facing * 0.35f) - (right * 0.8f) + (Vector3.down * 0.45f),
+            PickerPlacement.Behind => rig.Head.position - (facing * DistanceBehind) + (Vector3.up * HeightAboveEyes),
+            _ => rig.Head.position + (facing * DistanceAhead) + (Vector3.up * HeightAboveEyes) + (right * SidewaysToRight),
+        };
 
         var away = position - rig.Head.position;
         _root.transform.SetPositionAndRotation(position, Quaternion.LookRotation(away.Flat()));
@@ -313,7 +318,7 @@ internal class ChartPicker(PickerPanel panel, JsonBook<SavedSpot> spots, GameAss
         _arrivedAt = Time.time;
     }
 
-    private bool Ensure()
+    private bool EnsureExists()
     {
         if (_root != null) return true;
 

@@ -48,13 +48,12 @@ public class ModEntry : MelonMod
         _actors = new ActorRegistry();
         _battle = new BattleController(_actors, scores, _assets, _settings);
         _studio = new Studio(_battle, _assets);
-        _charts = new ChartSelection(library, _settings, _battle, _studio, Path.Combine(folder, "Exports"));
-        _picker = new ChartPicker(new PickerPanel(_charts, library, scores, _settings, _battle, _studio), pickerSpots, _assets);
+        _charts = new ChartSelection(library, _settings, _battle, _studio);
+        _picker = new ChartPicker(new ChartPickerPanel(_charts, library, scores, _settings, _battle, _studio), pickerSpots, _assets);
         Mod.Share(_actors, _battle, _studio, _charts, _picker);
 
-        // The charts are read before the settings are made: the chart dropdown lists them.
+        _settings.Create();
         _charts.ReloadCharts();
-        _settings.Create(library.Playable.Select(e => e.Name));
         ApplySettings();
         _settings.Changed += ApplySettings;
 
@@ -63,15 +62,10 @@ public class ModEntry : MelonMod
 
         foreach ((var text, var name, var description, var handler) in new (string, string, string, Action)[]
         {
-            ("Start", "Start battle", "Play the chosen chart in the chosen arena.", _charts.StartBattle),
             ("Stop", "Stop battle", "End the battle and remove its actors.", () => _battle.Stop("stopped from the menu")),
-            ("Reload", "Reload charts", "Read UserData/Basalt/Charts again.", _charts.ReloadCharts),
             ("Picker", "Chart picker here", "Bring the chart picker in front of you - in the Gym, this sets its fixed spot.", _picker.Summon),
             ("New", "New chart", "Chart editing: make a new chart folder from a template, and pick it.", () => IfEditing(() => _charts.NewChart())),
             ("Folder", "Open chart folder", "Chart editing: open the chosen chart's folder, to edit it in the Basalt Editor.", () => IfEditing(_charts.OpenChartFolder)),
-            ("Record", "Record actor", "Chart editing: record the chosen chart's actor - you stand in its place and perform.", () => IfEditing(() => _charts.RecordChosen())),
-            ("Export", "Export chart", "Chart editing: pack the chosen chart, its song and clips into UserData/Basalt/Exports/<name>.bbchart.", () => IfEditing(_charts.ExportChosen)),
-            ("Gym", "Back to the Gym", "Leave the Ring or Pit.", _battle.ReturnToGym),
         })
         {
             UIFramework.UI.CreateButtonEntry(_settings.Category, text, name, description, handler);
@@ -124,11 +118,6 @@ public class ModEntry : MelonMod
     {
         Logger.Level = _settings.LogLevel.Value;
         _battle.Signals.Strength = _settings.ChartVisuals.Value;
-        _picker.Open = _settings.ShowPicker.Value;
-        _picker.Distance = Math.Clamp(_settings.PickerDistance.Value, 0.3f, 2f);
-        _picker.Height = Math.Clamp(_settings.PickerHeight.Value, -1f, 0.5f);
-        _picker.Side = Math.Clamp(_settings.PickerSide.Value, -1f, 1f);
-        _picker.FixedInGym = _settings.PickerFixedInGym.Value;
     }
 
     private void IfEditing(Action action)

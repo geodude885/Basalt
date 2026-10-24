@@ -27,25 +27,26 @@ internal class Arena(GameAssets assets)
         var across = lane.Width + (2f * (Boundary.SideGap + Boundary.Thickness));
         var ends = lane.Width + 2f + (2f * Boundary.Thickness);
         var behind = Boundary.EndGap + Boundary.Thickness;
+        var tall = Boundary.Height + Boundary.WallLengthThroughFloor;
 
         Vector3 At(float x, float z)
         {
-            return origin.ToWorld(new System.Numerics.Vector3(x, Boundary.Height / 2f, z)).ToUnity();
+            return origin.ToWorld(new System.Numerics.Vector3(x, (Boundary.Height - Boundary.WallLengthThroughFloor) / 2f, z)).ToUnity();
         }
 
-        Boundary.Wall("Basalt_Backstop", At(0f, -Boundary.EndGap - (Boundary.Thickness / 2f)), along, new Vector3(ends, Boundary.Height, Boundary.Thickness), layer);
-        Boundary.Wall("Basalt_WallFar", At(0f, lane.Length + Boundary.EndGap + (Boundary.Thickness / 2f)), along, new Vector3(ends, Boundary.Height, Boundary.Thickness), layer);
+        Boundary.Wall("Basalt_Backstop", At(0f, -Boundary.EndGap - (Boundary.Thickness / 2f)), along, new Vector3(ends, tall, Boundary.Thickness), layer);
+        Boundary.Wall("Basalt_WallFar", At(0f, lane.Length + Boundary.EndGap + (Boundary.Thickness / 2f)), along, new Vector3(ends, tall, Boundary.Thickness), layer);
 
         // From behind the backstop to beyond the far wall, leaving no gap at the corners.
         var run = lane.Length + (2f * behind);
         var sideX = (lane.Width / 2f) + Boundary.SideGap + (Boundary.Thickness / 2f);
-        Boundary.Wall("Basalt_WallLeft", At(-sideX, lane.Length / 2f), along, new Vector3(Boundary.Thickness, Boundary.Height, run), layer);
-        Boundary.Wall("Basalt_WallRight", At(sideX, lane.Length / 2f), along, new Vector3(Boundary.Thickness, Boundary.Height, run), layer);
+        Boundary.Wall("Basalt_WallLeft", At(-sideX, lane.Length / 2f), along, new Vector3(Boundary.Thickness, tall, run), layer);
+        Boundary.Wall("Basalt_WallRight", At(sideX, lane.Length / 2f), along, new Vector3(Boundary.Thickness, tall, run), layer);
 
         if (zone is not { } playerZone) return;
 
         if (playerZone.Length < lane.Length - 0.01f)
-            Boundary.Wall("Basalt_ZoneEnd", At(0f, playerZone.Length + Boundary.PlayerEndGap + (Boundary.Thickness / 2f)), along, new Vector3(across, Boundary.Height, Boundary.Thickness), layer, zone: true);
+            Boundary.Wall("Basalt_ZoneEnd", At(0f, playerZone.Length + Boundary.PlayerEndGap + (Boundary.Thickness / 2f)), along, new Vector3(across, tall, Boundary.Thickness), layer, zone: true);
 
         var depth = playerZone.Length + behind + Boundary.PlayerEndGap + Boundary.Thickness;
         var ceiling = origin.ToWorld(new System.Numerics.Vector3(0f, playerZone.Height + (Boundary.Thickness / 2f), (depth / 2f) - behind)).ToUnity();

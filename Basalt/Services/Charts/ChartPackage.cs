@@ -3,14 +3,9 @@ using System.Security.Cryptography;
 
 namespace Basalt.Services.Charts;
 
-/// <summary>What packing a chart made, and what it could not include.</summary>
-public record PackResult(string Path, IReadOnlyList<string> Included, IReadOnlyList<string> Missing);
-
-/// <summary>
-/// The sharing format: a <c>.bbchart</c> is a zip of a chart folder, unpacked into a cache keyed by
-/// its contents. Packages are other people's files, so entries outside the folder, too many entries
-/// or too many bytes are refused.
-/// </summary>
+// The sharing format: a .bbchart is a zip of a chart folder, made by Basalt Editor and unpacked here into a cache
+// keyed by its contents. Packages are other people's files, so entries outside the folder, too many entries or too
+// many bytes are refused.
 public static class ChartPackage
 {
     public const string Extension = ".bbchart";
@@ -62,66 +57,6 @@ public static class ChartPackage
         }
     }
 
-    /// <summary>
-    /// Packs a chart as written, with its song, cover and the clips in its <c>clips/</c>, overwriting
-    /// <paramref name="output"/>.
-    /// </summary>
-    public static PackResult Pack(ChartEntry entry, string output)
-    {
-        var chart = entry.Result.Chart ?? throw new ArgumentException($"{entry.Name} does not load, so it cannot be packed", nameof(entry));
-        var chartJson = File.ReadAllText(entry.Source == ChartSource.Package
-            ? Path.Combine(entry.AssetFolder, ChartLibrary.FolderChartFile)
-            : entry.File);
-
-        var included = new List<string> { ChartLibrary.FolderChartFile };
-        var missing = new List<string>();
-
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
-        var partial = output + ".partial";
-        if (File.Exists(partial)) File.Delete(partial);
-
-        using (var zip = ZipFile.Open(partial, ZipArchiveMode.Create))
-        {
-            WriteText(zip, ChartLibrary.FolderChartFile, chartJson);
-
-            if (chart.Music != null) AddFile(zip, entry, chart.Music.File, "song", included, missing);
-            if (chart.Cover != null) AddFile(zip, entry, chart.Cover, "cover", included, missing);
-
-            foreach (var name in chart.Tracks.SelectMany(t => t.Clips).Select(t => t.Clip).Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                var entryName = $"{ClipsFolder}/{ChartFiles.FileStem(name)}.json";
-                var own = ChartFiles.Inside(entry.AssetFolder, entryName);
-
-                if (own != null && File.Exists(own))
-                {
-                    zip.CreateEntryFromFile(own, entryName);
-                    included.Add(entryName);
-                }
-                else
-                {
-                    missing.Add($"clip {name}");
-                }
-            }
-        }
-
-        File.Move(partial, output, overwrite: true);
-        return new PackResult(output, included, missing);
-    }
-
-    /// <summary>A file the chart names, beside it - already compressed media, so stored as is.</summary>
-    private static void AddFile(ZipArchive zip, ChartEntry entry, string file, string what, List<string> included, List<string> missing)
-    {
-        var path = ChartFiles.Inside(entry.AssetFolder, file);
-        if (path == null || !File.Exists(path))
-        {
-            missing.Add($"{what} {file}");
-            return;
-        }
-
-        zip.CreateEntryFromFile(path, file.Replace('\\', '/'), CompressionLevel.NoCompression);
-        included.Add(file);
-    }
-
     /// <summary>chart.json at the top, or inside one top-level folder (a zipped folder) - which then becomes the prefix to strip.</summary>
     private static string? Check(ZipArchive zip, out string prefix)
     {
@@ -140,12 +75,6 @@ public static class ChartPackage
 
         prefix = folder;
         return null;
-    }
-
-    private static void WriteText(ZipArchive zip, string name, string text)
-    {
-        using var writer = new StreamWriter(zip.CreateEntry(name).Open());
-        writer.Write(text);
     }
 
     private static string Hash(string file)

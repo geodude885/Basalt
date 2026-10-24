@@ -17,8 +17,6 @@ internal class BattleVisualEvents
         set => _reshade?.Strength = Math.Clamp(value, 0f, 1f);
     }
 
-    // TODO: Currently still has causes minor playback starting issues
-    // During the countdown, so the first look does not hitch the battle.
     public void PreloadChartPacks(Chart chart) => _reshade?.PreloadPacks(chart.Visuals.Select(v => v.Pack));
 
     public void Begin(Chart chart)

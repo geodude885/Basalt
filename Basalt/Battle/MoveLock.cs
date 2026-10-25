@@ -97,20 +97,16 @@ internal class MoveLock
     {
         var handles = playerController.PlayerProcessor.activeStackHandles;
         var poses = playerController.PlayerPoseSystem;
-        var dropped = new List<string>();
 
         foreach (var handle in handles.ToArray())
         {
             if (handle?.Stack == null || !_withheld.Any(s => s.Pointer == handle.Stack.Pointer || string.Equals(s.CachedName, handle.Stack.CachedName, StringComparison.OrdinalIgnoreCase))) continue;
 
             handles.Remove(handle);
-            dropped.Add(handle.Stack.CachedName);
 
             var source = handle.InputSource;
             var shared = source != null && handles.ToArray().Any(h => h?.InputSource != null && h.InputSource.Pointer == source.Pointer);
             if (source != null && !shared) poses.RemoveInputSource(source);
         }
-
-        Logger.Write(dropped.Count > 0 ? LogLevel.Debug : LogLevel.Warning, $"[{(dropped.Count > 0 ? "Battle.GesturesDropped" : "Battle.NoGesturesFound")}] {(dropped.Count > 0 ? string.Join(", ", dropped) : "no gesture handles for the withheld moves")}; {handles.Count} gesture(s) left");
     }
 }

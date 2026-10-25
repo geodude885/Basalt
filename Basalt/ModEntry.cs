@@ -25,7 +25,7 @@ namespace Basalt;
 public class ModEntry : MelonMod
 {
     private readonly Settings _settings = new();
-    private ActorRegistry _actors = null!;
+    private ActorsRegistry _actors = null!;
     private BattleController _battle = null!;
     private Studio _studio = null!;
     private ChartSelection _charts = null!;
@@ -45,7 +45,7 @@ public class ModEntry : MelonMod
         pickerSpots.Load();
 
         _assets = new GameAssets();
-        _actors = new ActorRegistry();
+        _actors = new ActorsRegistry();
         _battle = new BattleController(_actors, scores, _assets, _settings);
         _studio = new Studio(_battle, _assets);
         _charts = new ChartSelection(library, _settings, _battle, _studio);

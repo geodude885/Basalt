@@ -180,7 +180,7 @@ internal class Actor(string id, string name, string customisationString, IReadOn
 
         try
         {
-            ActorSpawner.Reveal(this, body, Time.realtimeSinceStartup - start);
+            ActorSpawner.Reveal(this, body);
             Ready = true;
             OnReady?.Invoke(this);
         }
@@ -199,4 +199,4 @@ internal class Actor(string id, string name, string customisationString, IReadOn
     }
 }
 
-internal record ActorBody(Player Player, PlayerController Controller, PlayerRig Rig, ActorFooting Footing, ClipPlayer Clips, ActorCollisions Collisions, Transform[] HiddenUi);
+internal record ActorBody(Player Player, PlayerController Controller, PlayerRig Rig, ActorPlacement Footing, ClipPlayer Clips, ActorCollisions Collisions, Transform[] HiddenUi);

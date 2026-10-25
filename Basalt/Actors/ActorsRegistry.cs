@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Basalt.Actors;
 
 
-internal class ActorRegistry
+internal class ActorsRegistry
 {
 
     public IReadOnlyList<Actor> Actors => _actors;

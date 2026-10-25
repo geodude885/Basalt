@@ -5,6 +5,16 @@ using Basalt.Services.Clips;
 
 namespace Basalt.Editing;
 
+internal enum StudioState
+{
+    Off,
+    Setup,
+    Recording,
+    Reviewing,
+    Deciding,
+}
+
+
 internal class Studio(BattleController battle, GameAssets assets)
 {
     public const double MaxRecordingLength = 600;

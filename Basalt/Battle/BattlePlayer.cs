@@ -120,16 +120,6 @@ internal class BattlePlayer
 
         var feet = PlayerRig.From(playerController).Feet;
         var off = new Vector3(floor.x - feet.x, 0f, floor.z - feet.z);
-        if (off.magnitude > 0.15f)
-        {
-            playerController.PlayerMovement.Reposition(floor + off + (Vector3.up * eyeHeight), facing);
-            yield return null;
-            yield return null;
-            if (placement != _placement || playerController == null) yield break;
-            feet = PlayerRig.From(playerController).Feet;
-        }
-
-        var left = new Vector2(floor.x - feet.x, floor.z - feet.z).magnitude;
-        Logger.Write(left > 0.3f ? LogLevel.Warning : LogLevel.Debug, $"[{(left > 0.3f ? "Battle.YouPlacedOff" : "Battle.YouPlaced")}] {feet.Describe()}, {left:0.00} m from {floor.Describe()} (first try {off.magnitude:0.00} m off)");
+        if (off.magnitude > 0.15f) playerController.PlayerMovement.Reposition(floor + off + (Vector3.up * eyeHeight), facing);
     }
 }

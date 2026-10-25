@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Basalt.Services.Audio;
 using MelonLoader;
 using UnityEngine;
@@ -100,7 +99,6 @@ internal class MusicController
     private IEnumerator Decode(string path, DateTime written, int loadNumber)
     {
         var name = Path.GetFileName(path);
-        var timer = Stopwatch.StartNew();
 
         // Off the main thread: an MP3's length is found by reading through the whole file.
         var opening = Task.Run(() => AudioDecoder.Open(path, MonoAboveSamples));
@@ -198,7 +196,7 @@ internal class MusicController
         Loading = false;
         if (_lastDecoded is { } previous && previous.Clip != null && previous.Clip != clip) UnityEngine.Object.Destroy(previous.Clip);
         _lastDecoded = (path, written, clip);
-        Logger.Debug($"[Music.Loaded] {name}: {framesCopied / (double)song.SampleRate:0.0}s, {song.Channels} ch, {song.SampleRate} Hz, decoded in {timer.Elapsed.TotalSeconds:0.0}s");
+        Logger.Debug($"[Music.Loaded] {name}: {framesCopied / (double)song.SampleRate:0.0}s, {song.Channels} ch, {song.SampleRate} Hz");
     }
 
     private void DecodeFailed(string name, string why)

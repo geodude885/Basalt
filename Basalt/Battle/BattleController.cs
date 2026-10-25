@@ -29,7 +29,7 @@ public enum BattleMode
     Review,
 }
 
-internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores, GameAssets assets, Settings settings)
+internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> scores, GameAssets assets, Settings settings)
 {
     private const float ArenaSettleSeconds = 1.5f;
     private const float ActorSpawnTimeoutSeconds = 15f;

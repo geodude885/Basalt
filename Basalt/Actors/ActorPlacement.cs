@@ -5,8 +5,7 @@ using UnityEngine;
 
 namespace Basalt.Actors;
 
-// Where an actor stands: placed on the floor, and held there
-internal class ActorFooting(Actor actor, PlayerController controller, PlayerRig rig)
+internal class ActorPlacement(Actor actor, PlayerController controller, PlayerRig rig)
 {
     private const RigidbodyConstraints KeepInPlaceConstraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
 

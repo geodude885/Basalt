@@ -21,7 +21,7 @@ internal static partial class SelfTest
         var localPlayer = BattlePlayer.Player!;
         var playerLook = localPlayer.Data.VisualData.ToPlayfabDataString();
         var plain = PlayerVisualData.Default.ToPlayfabDataString();
-        var stones = Shiftstones.EquippedBy(localPlayer.Controller);
+        var stones = ShiftstoneHelpers.EquippedBy(localPlayer.Controller);
         Logger.Info($"[SelfTest] look: yours \"{playerLook}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
 
         // 1. A chart made in game.

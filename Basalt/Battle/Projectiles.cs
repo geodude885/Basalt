@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Basalt.Battle;
 
-internal class Projectiles(ActorRegistry actors)
+internal class Projectiles(ActorsRegistry actors)
 {
     // How long after launch an actor can stay out of a projectile's way, until it is clear of them
     private const float ActorGraceAfterLaunch = 2f;

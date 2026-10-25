@@ -67,7 +67,7 @@ internal class ClipRecorder
         return clip;
     }
 
-    /// <summary>Samples the subject; <paramref name="time"/> is any clock in seconds, and its first reading is clip time 0.</summary>
+    // Samples the subject, `time` is any clock in seconds
     public void Update(double time)
     {
         if (!Recording || _subject == null) return;

@@ -14,7 +14,7 @@ internal static class ActorSoundScope
     public static bool Active => _depth > 0;
 
     /// <returns>Whether the scope was entered, for the matching <see cref="Exit"/>.</returns>
-    public static bool Enter(ActorRegistry actors, PlayerController? controller)
+    public static bool Enter(ActorsRegistry actors, PlayerController? controller)
     {
         var entered = false;
 

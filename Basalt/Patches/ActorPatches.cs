@@ -21,10 +21,10 @@ namespace Basalt.Patches;
 public static class ActorPatches
 {
     // Harmony only calls static methods, so what the patches use is handed over here, once.
-    private static ActorRegistry _actors = null!;
+    private static ActorsRegistry _actors = null!;
     private static BattleController _battle = null!;
 
-    internal static int Apply(HarmonyLib.Harmony harmony, ActorRegistry actors, BattleController battle)
+    internal static int Apply(HarmonyLib.Harmony harmony, ActorsRegistry actors, BattleController battle)
     {
         _actors = actors;
         _battle = battle;

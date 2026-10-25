@@ -68,12 +68,12 @@ internal static class ActorSpawner
         player.Data.VisualData = ActorLook.Resolve(actor, BattlePlayer.Player!.Data.VisualData);
         PresentAsRemote(actor, controller);
 
-        Shiftstones.CopyOnto(actor, controller, BattlePlayer.Player?.Controller!);
+        ShiftstoneHelpers.CopyOnto(actor, controller, BattlePlayer.Player?.Controller!);
         var hiddenUi = PlayerUiPaths.Select(path => body.transform.Find(path)).Where(part => part != null).ToArray();
         foreach (var part in hiddenUi) part.localScale = Vector3.zero;
 
         var rig = PlayerRig.From(controller);
-        var footing = new ActorFooting(actor, controller, rig);
+        var footing = new ActorPlacement(actor, controller, rig);
         var clips = new ClipPlayer(actor, controller, rig, footing, ActorPose.DefaultPose(PlayerRig.From(BattlePlayer.Player?.Controller!)));
 
         Logger.Info($"[Actor.Spawned] {actor}: type {controller.ControllerType}, look \"{actor.PlayerCustomisation}\", at {floorPosition.Describe()}; " +
@@ -83,13 +83,12 @@ internal static class ActorSpawner
     }
 
     // Once its look is baked (or given up on): shown, and out of the player list again.
-    public static void Reveal(Actor actor, ActorBody body, float waitedSeconds)
+    public static void Reveal(Actor actor, ActorBody body)
     {
         var visuals = body.Controller.PlayerVisuals;
         if (visuals.Renderer != null && !visuals.Renderer.enabled) visuals.Renderer.enabled = true;
 
-        var baked = visuals.VisualsAreReadyAndApplied;
-        Logger.Write(baked ? LogLevel.Debug : LogLevel.Warning, $"[Actor.Visuals] {actor}: {(baked ? "baked" : "NOT baked")} after {waitedSeconds:F2}s");
+        if (!visuals.VisualsAreReadyAndApplied) Logger.Warning($"[Actor.NotBaked] {actor}: its look was not baked in time");
         SetInPlayerList(body.Player, false);
     }
 

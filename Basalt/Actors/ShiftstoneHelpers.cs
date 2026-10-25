@@ -4,7 +4,7 @@ using Il2CppRUMBLE.Players;
 
 namespace Basalt.Actors;
 
-internal static class Shiftstones
+internal static class ShiftstoneHelpers
 {
     private static List<(string Id, string Display)>? _catalog;
 
@@ -27,7 +27,6 @@ internal static class Shiftstones
     // stones move to a first-person layer.
     public static void CopyOnto(Actor actor, PlayerController to, PlayerController from)
     {
-        var report = new List<string>();
         var simulatedAs = to.controllerType;
         to.controllerType = ControllerType.Remote;
 
@@ -45,24 +44,21 @@ internal static class Shiftstones
                 var copy = PoolManager.instance.GetPooledObject(pool)?.GetComponent<ShiftStone>();
                 if (copy == null)
                 {
-                    report.Add($"{slot}: {pool} NOT in a pool");
+                    Logger.Warning($"[Actor.StoneNotPooled] {actor}: {pool} is not in a pool");
                     continue;
                 }
 
                 to.PlayerShiftstones.AttachShiftStone(copy, slot, false, false);
-                report.Add($"{slot}: {pool}");
             }
         }
         catch (Exception e)
         {
-            report.Add($"failed: {e.Message}");
+            Logger.Error($"[Actor.StonesFailed] {actor}: {e.Message}");
         }
         finally
         {
             to.controllerType = simulatedAs;
         }
-
-        Logger.Debug($"[Actor.Shiftstones] {actor}: {(report.Count == 0 ? "none equipped" : string.Join(", ", report))}");
     }
 
     // All loaded shiftstones

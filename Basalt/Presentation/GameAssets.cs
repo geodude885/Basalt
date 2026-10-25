@@ -32,9 +32,7 @@ internal class GameAssets
     private TMP_FontAsset? _font;
     private GameObject? _rockTemplate;
     private Bounds _rockBounds;
-    private bool _reportedNoRock;
     private GameObject? _buttonTemplate;
-    private bool _reportedNoButton;
 
     // Null when no usable shader is loaded.
     public Material? Colour(Color colour)
@@ -116,12 +114,7 @@ internal class GameAssets
         {
             var panel = Resources.FindObjectsOfTypeAll<MeshFilter>()
                 .FirstOrDefault(f => f != null && f.sharedMesh != null && f.gameObject.scene.IsValid() && PathOf(f.transform).EndsWith(MenuSlabPanelPath, StringComparison.Ordinal));
-            if (panel == null)
-            {
-                if (!_reportedNoRock) Logger.Debug("[Assets.NoRockPanel] no menu slab panel in this scene - flat panels until the Gym is visited");
-                _reportedNoRock = true;
-                return false;
-            }
+            if (panel == null) return false;
 
             _rockTemplate = KeepCopyOf(panel.gameObject, "Basalt_RockPanelTemplate");
             foreach (var collider in _rockTemplate.GetComponentsInChildren<Collider>(true)) UnityEngine.Object.Destroy(collider);
@@ -131,8 +124,7 @@ internal class GameAssets
         }
         catch (Exception e)
         {
-            if (!_reportedNoRock) Logger.Error($"[Assets.RockPanelFailed] {e}");
-            _reportedNoRock = true;
+            Logger.Error($"[Assets.RockPanelFailed] {e}");
             return false;
         }
     }
@@ -179,12 +171,7 @@ internal class GameAssets
             // The button object is the InteractionButton component's parent.
             var next = buttons.FirstOrDefault(b => PathOf(b.transform).Contains("Next", StringComparison.OrdinalIgnoreCase)
                                                    && PathOf(b.transform).Contains("tutorial", StringComparison.OrdinalIgnoreCase));
-            if (next == null)
-            {
-                if (!_reportedNoButton) Logger.Debug($"[Assets.NoButton] no tutorial button in this scene ({buttons.Count} other buttons) - using the mod's own");
-                _reportedNoButton = true;
-                return false;
-            }
+            if (next == null) return false;
 
             _buttonTemplate = KeepCopyOf(next.transform.parent.gameObject, "Basalt_ButtonTemplate");
             Logger.Debug($"[Assets.Button] copied {PathOf(next.transform.parent)} (scale {next.transform.parent.lossyScale.Describe()})");
@@ -192,8 +179,7 @@ internal class GameAssets
         }
         catch (Exception e)
         {
-            if (!_reportedNoButton) Logger.Error($"[Assets.ButtonFailed] {e}");
-            _reportedNoButton = true;
+            Logger.Error($"[Assets.ButtonFailed] {e}");
             return false;
         }
     }

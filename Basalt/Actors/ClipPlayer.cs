@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Basalt.Actors;
 
-// Drives an actor's head and hands from a recorded clip, firing its moves as they come; at rest without one.
-internal class ClipPlayer(Actor actor, PlayerController controller, PlayerRig rig, ActorFooting footing, ActorPose restingPose)
+// Plays actor motion from recorded clips
+internal class ClipPlayer(Actor actor, PlayerController controller, PlayerRig rig, ActorPlacement footing, ActorPose restingPose)
 {
     private Playback? _clip;
     private (ClipFingers Left, ClipFingers Right)? _fingers;

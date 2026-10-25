@@ -4,7 +4,6 @@ namespace Basalt.Actors;
 
 internal static class ActorLook
 {
-    // The chart's look for an actor: yours, one of the game's defaults, or a look string
     public static PlayerVisualData Resolve(Actor actor, PlayerVisualData playerLook)
     {
         var yours = PlayerVisualData.FromPlayfabDataString(playerLook.ToPlayfabDataString());

@@ -93,21 +93,18 @@ internal class MoveEffects
                 string? spawned = null;
                 var sounds = new List<AudioCall>();
                 var visuals = new List<string>();
-                var kinds = new List<string>();
                 var grounded = false;
                 foreach (var process in stack.Processes.ToArray())
                 {
                     if (process.StructureSpawnModifier is { } spawnStep)
                     {
                         var kind = spawnStep.GetIl2CppType().Name;
-                        kinds.Add($"spawn:{kind}");
                         grounded |= kind.Contains("Grounded", StringComparison.Ordinal) && !kind.Contains("NonGrounded", StringComparison.Ordinal);
                         spawned ??= PrefabName(spawnStep.TryCast<SpawnStructureModifier>());
                     }
 
                     foreach (var binding in process.Bindings.ToArray())
                     {
-                        kinds.Add(binding.GetIl2CppType().Name);
                         spawned ??= PrefabName(binding.TryCast<SpawnStructureModifier>());
 
                         if (binding.TryCast<PlayAudioModifer>() is { AudioCall: { } call }) sounds.Add(call);
@@ -116,8 +113,6 @@ internal class MoveEffects
                 }
 
                 if (spawned == null && KnownSpawns.TryGetValue(stack.CachedName, out var known)) spawned = known;
-                if (KnownSpawns.ContainsKey(stack.CachedName))
-                    Logger.Debug($"[Effects.Move] {stack.CachedName}: spawns {spawned ?? "?"}, steps {string.Join(", ", kinds)}");
 
                 var effects = new Effects(stack.CachedName, sounds, visuals);
                 if (spawned != null) spawns.TryAdd(spawned, effects);

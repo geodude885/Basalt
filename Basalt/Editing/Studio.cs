@@ -166,7 +166,7 @@ internal class Studio(BattleController battle, GameAssets assets)
 
         if (!Recorder.Recording)
         {
-            if (BattlePlayer.Controller is not { } playerController || battle.Lane is not { } lane) return;
+            if (BattlePlayer.Player?.Controller is not { } playerController || battle.Lane is not { } lane) return;
             _recordedLane = lane;
             Recorder.Start(playerController, lane);
             _recordingStartedAtChartTime = chartTime;

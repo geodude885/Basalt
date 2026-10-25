@@ -83,7 +83,7 @@ public static class FlatscreenControls
             {
                 if (__instance.ParentController is not { } controller) return true;
 
-                if (TestBench.Sticks is { } test && TestBench.Actor?.Player?.Controller is { } actor && actor.Pointer == controller.Pointer)
+                if (TestBench.Sticks is { } test && TestBench.Actor?.Body?.Controller is { } actor && actor.Pointer == controller.Pointer)
                 {
                     MovementInput.Apply(__instance, test.Walk, test.Turn);
                     return false;
@@ -91,7 +91,7 @@ public static class FlatscreenControls
 
                 if (!Enabled || !IsFlatscreen) return true;
 
-                var playerController = BattlePlayer.Controller;
+                var playerController = BattlePlayer.Player?.Controller;
                 if (playerController == null || controller.Pointer != playerController.Pointer) return true;
 
                 MovementInput.Apply(__instance, _walk, _turn);

@@ -21,7 +21,7 @@ internal static partial class SelfTest
     private static int LastCleared =>
         Lines.LastOrDefault(l => l.Line.StartsWith("[Battle.Cleared]", StringComparison.Ordinal)).Line is { } line && int.TryParse(line.Split(' ')[1], out var cleared) ? cleared : 0;
 
-    private static PlayerController? You => BattlePlayer.Controller;
+    private static PlayerController? You => BattlePlayer.Player?.Controller;
 
     private static Vector3? LanePoint(float x, float y, float z) =>
         Mod.Battle.Lane is { } frame ? frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity() : null;

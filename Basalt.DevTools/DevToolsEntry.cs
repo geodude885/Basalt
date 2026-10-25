@@ -23,7 +23,7 @@ public class DevToolsEntry : MelonMod
 
     /// <summary>Orbits the battle's first actor, the test actor, or you.</summary>
     private readonly DesktopCamera _camera = new(
-        () => Mod.Actors.Actors.FirstOrDefault(a => a.Controller != null)?.HeadPosition ?? Camera.main?.transform.position,
+        () => Mod.Actors.Actors.FirstOrDefault(a => a.Ready)?.Body?.Rig.Head.position ?? Camera.main?.transform.position,
         message => Logger.Info($"[DesktopCamera] {message}"));
 
     private MelonPreferences_Entry<bool> _invincibleInCharts = null!;

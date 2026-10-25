@@ -1,5 +1,4 @@
 using System.Collections;
-using Basalt.Actors;
 using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
 using Basalt.Editing;
@@ -57,7 +56,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
 
         // The Ring loaded: your player is a new one.
-        if (BattlePlayer.Controller is not { } playerController)
+        if (BattlePlayer.Player?.Controller is not { } playerController)
         {
             Finish(["no local player while recording"]);
             yield break;
@@ -65,7 +64,7 @@ internal static partial class SelfTest
 
         if (Mod.Battle.Lane is { } recordLane)
         {
-            var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
+            var at = Mod.Battle.ToLane(PlayerRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] recording from lane x {at.x:0.00}, z {at.z:0.00} (the actor's spot is z 8)");
             if (new Vector2(at.x, at.z - 8f).magnitude > 0.5f) problems.Add($"recording did not start in the actor's place: lane x {at.x:0.0}, z {at.z:0.0}");
             if (_shots) Shoot(ShotFolder(), "5-recording", recordLane, at);
@@ -160,9 +159,9 @@ internal static partial class SelfTest
         Mod.Picker.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
-        if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Controller is { } playerController)
+        if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Player?.Controller is { } playerController)
         {
-            var rig = ActorRig.From(playerController);
+            var rig = PlayerRig.From(playerController);
             var eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);
             _showCamera?.Invoke(eye, rig.Feet + (rig.Facing * 5f));
             yield return null;

@@ -1,32 +1,36 @@
 using Basalt.Actors;
 using Basalt.Services.Charts;
-using Il2CppRUMBLE.Environment;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
 namespace Basalt.Battle;
 
-/// <summary>
-/// A battle's projectiles: structures from the game's pools that rise out of the floor like a
-/// player's spawn, are held at their origin through the telegraph, then launched on a ballistic path
-/// that arrives in distance / speed seconds. Outside the move system, so a chart can throw faster
-/// than a player could spawn.
-/// </summary>
-internal partial class Projectiles(ActorRegistry actors)
+internal class Projectiles(ActorRegistry actors)
 {
-    /// <summary>How long after launch actors stay out of a projectile's way.</summary>
+    // How long after launch an actor can stay out of a projectile's way, until it is clear of them
     private const float ActorGraceAfterLaunch = 2f;
 
-    private const float FlightCheckSeconds = 0.3f;
     private const float RiseSeconds = 0.35f;
 
-    /// <summary>How far above the floor a grounded structure rests, so physics finds no overlap to push out of.</summary>
+    // How far above the floor a grounded structure rests, so physics finds no overlap to push out of
     private const float FloorClearance = 0.03f;
+
+    // How long past reaching its target a grounded projectile is still driven
+    private const float SlideOvershootSeconds = 0.4f;
+
+    private const RigidbodyConstraints SlideConstraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation;
 
     private readonly MoveEffects _effects = new();
     private readonly Dictionary<int, Projectile> _live = [];
-    private readonly List<FlightCheck> _checks = [];
+    private readonly List<Slide> _sliding = [];
+
+    private enum SlideCheck
+    {
+        Drive,
+        Paused,
+        LetGo,
+    }
 
     public void Spawn(int id, ProjectileEvent projectile, Anchor frame)
     {
@@ -51,7 +55,7 @@ internal partial class Projectiles(ActorRegistry actors)
             body.isKinematic = true;
         }
 
-        actors.IgnoreStructure(pooled.gameObject, projectile.Telegraph + ActorGraceAfterLaunch);
+        actors.IgnoreStructure(pooled.gameObject, projectile.Telegraph, projectile.Telegraph + ActorGraceAfterLaunch);
 
         var facing = Quaternion.LookRotation(towardPlayer);
         var shape = pooled.GetComponentInChildren<Collider>();
@@ -59,24 +63,13 @@ internal partial class Projectiles(ActorRegistry actors)
 
         // What the game spawns on the ground rests on the floor, whatever height the chart gave.
         if (_effects.IsGrounded(projectile.Structure) || projectile.IsGrounded)
-        {
             origin.y += floor + FloorClearance - LowestPoint(pooled.transform, origin, facing);
-
-            var laneFloor = frame.Position.ToUnity().y;
-            if (floor - laneFloor > 1f) Logger.Warning($"[Projectile.OffTheFloor] #{id} {projectile.Structure}: floor found {floor - laneFloor:0.00} m above the lane's");
-            else if (laneFloor - floor > 1f) Logger.Debug($"[Projectile.BelowTheLane] #{id} {projectile.Structure}: the ground there is {laneFloor - floor:0.00} m below your end of the lane - it may hit the slope");
-        }
 
         Vector3 below = new(origin.x, Math.Min(origin.y, floor) - height, origin.z);
         var rise = Math.Min(RiseSeconds, projectile.Telegraph * 0.8f);
         _effects.Spawn(projectile.Structure, new Vector3(origin.x, floor, origin.z), facing);
 
-        // The game removes structures outside the scene's structure boundary the moment they move.
-        var bounds = SceneBoundary.CurrentActiveStructuresSceneBoundary;
-        if (bounds != null && !bounds.Contains(origin))
-            Logger.Info($"[Projectile.OutOfBounds] #{id} {projectile.Structure} at {origin.Describe()} is outside the scene's structure boundary - the game will remove it");
-
-        _live[id] = new Projectile(structure, body, origin, facing) { From = below, RiseStart = Time.time, Rise = rise, Grounded = projectile.IsGrounded };
+        _live[id] = new Projectile(structure, body, origin, facing, below, Time.time, rise, projectile.IsGrounded);
         Logger.Debug($"[Projectile.Spawned] #{id} {projectile.Structure} at {origin.Describe()}, launching in {projectile.Telegraph:F2}s, state {structure?.currentPhysicsState}");
     }
 
@@ -84,13 +77,13 @@ internal partial class Projectiles(ActorRegistry actors)
     {
         if (!_live.Remove(id, out var live) || live.Body == null) return;
 
-        var from = live.Hold;
         if (live.Grounded)
         {
             LaunchGrounded(id, projectile, live, target);
             return;
         }
 
+        var from = live.Hold;
         var velocity = Ballistics.LaunchVelocity(
             from.ToNumerics(), target.ToNumerics(), projectile.Speed, -Physics.gravity.y).ToUnity();
 
@@ -102,14 +95,12 @@ internal partial class Projectiles(ActorRegistry actors)
         // Turned along its path, unless it rests on the floor: its edge would tip into it.
         if (velocity.sqrMagnitude > 0f && !_effects.IsGrounded(projectile.Structure)) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
 
-        _checks.Add(new FlightCheck(id, projectile.Structure, live.Body.transform, from, Time.time, projectile.Speed));
         Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} -> {target.Describe()} at {velocity.magnitude:F1} m/s, state {live.Structure?.currentPhysicsState}");
     }
 
-    /// <summary>Brings each waiting projectile up out of the floor, then holds it at its origin.</summary>
+    // Brings each waiting projectile up out of the floor, then holds it at its origin
     public void Update()
     {
-        CheckFlights();
         UpdateSlides();
 
         foreach (var live in _live.Values)
@@ -118,7 +109,7 @@ internal partial class Projectiles(ActorRegistry actors)
 
             var k = live.Rise <= 0f ? 1f : Mathf.Clamp01((Time.time - live.RiseStart) / live.Rise);
             var eased = 1f - ((1f - k) * (1f - k) * (1f - k));
-            live.Body.transform.SetPositionAndRotation(Vector3.LerpUnclamped(live.From ?? live.Hold, live.Hold, eased), live.HoldRotation);
+            live.Body.transform.SetPositionAndRotation(Vector3.LerpUnclamped(live.RiseFrom, live.Hold, eased), live.HoldRotation);
             if (!live.Body.isKinematic) live.Body.isKinematic = true;
 
             if (k >= 1f && live.Grounded && !live.Settled)
@@ -129,7 +120,6 @@ internal partial class Projectiles(ActorRegistry actors)
         }
     }
 
-    /// <summary>Lets go of anything still telegraphing or sliding.</summary>
     public void Clear()
     {
         foreach (var live in _live.Values)
@@ -146,16 +136,108 @@ internal partial class Projectiles(ActorRegistry actors)
         _sliding.Clear();
     }
 
-    /// <summary>For a scene change: the structures went with the scene.</summary>
     public void Forget()
     {
         _effects.Forget();
         _live.Clear();
-        _checks.Clear();
         _sliding.Clear();
     }
 
-    /// <summary>The lowest point of a structure's solid colliders posed at <paramref name="at"/>; the pivot is not always the centre.</summary>
+    private void LaunchGrounded(int id, ProjectileEvent projectile, Projectile live, Vector3 target)
+    {
+        var body = live.Body!;
+        var from = live.Hold;
+        var flat = new Vector3(target.x - from.x, 0f, target.z - from.z);
+        var direction = flat.sqrMagnitude > 1e-4f ? flat.normalized : live.HoldRotation * Vector3.forward;
+        var velocity = direction * projectile.Speed;
+
+        body.transform.position = from;
+        SetState(live.Structure, Structure.PhysicsState.FreeGrounded);
+        LetGoOfJoint(live.Structure);
+        body.isKinematic = false;
+
+        var before = body.constraints;
+        body.constraints = SlideConstraints;
+        body.linearVelocity = velocity;
+        _effects.Punch(from, Quaternion.LookRotation(direction));
+
+        _sliding.Add(new Slide(body, live.Structure, velocity, before)
+        {
+            Until = Time.time + (flat.magnitude / Math.Max(0.1f, projectile.Speed)) + SlideOvershootSeconds,
+            Last = from,
+            LastAt = Time.time,
+            DrivenSince = Time.time,
+        });
+        Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} grounded along the floor -> {target.Describe()} at {projectile.Speed:F1} m/s, state {live.Structure?.currentPhysicsState}");
+    }
+
+    private void UpdateSlides()
+    {
+        foreach (var slide in _sliding.ToList())
+        {
+            if (slide.Body == null || !slide.Body.gameObject.activeInHierarchy)
+            {
+                _sliding.Remove(slide);
+                continue;
+            }
+
+            var check = CheckSlide(slide);
+            if (check == SlideCheck.Paused) continue;
+
+            if (check == SlideCheck.LetGo || HasStopped(slide) || Time.time >= slide.Until)
+            {
+                slide.Body.constraints = slide.Before;
+                _sliding.Remove(slide);
+                continue;
+            }
+
+            slide.Body.linearVelocity = slide.Velocity;
+        }
+    }
+
+    private static SlideCheck CheckSlide(Slide slide)
+    {
+        var state = slide.Structure?.currentPhysicsState;
+        if (state == Structure.PhysicsState.Frozen)
+        {
+            slide.PausedAt ??= Time.time;
+            return SlideCheck.Paused;
+        }
+
+        if (slide.PausedAt is { } pausedAt) ResumeAfterHitstop(slide, pausedAt);
+
+        // A hold, or the game settling it.
+        if (state is not null and not Structure.PhysicsState.FreeGrounded) return SlideCheck.LetGo;
+
+        // Knocked off course - parried, punched, hit - once the physics has had a step to act on the throw.
+        var knocked = Time.time - slide.DrivenSince > 0.05f && Vector3.Dot(slide.Body.linearVelocity, slide.Velocity) < 0.5f * slide.Velocity.sqrMagnitude;
+        return knocked ? SlideCheck.LetGo : SlideCheck.Drive;
+    }
+
+    private static void ResumeAfterHitstop(Slide slide, float pausedAt)
+    {
+        slide.PausedAt = null;
+        LetGoOfJoint(slide.Structure);
+        slide.Until += Time.time - pausedAt;
+        slide.Last = slide.Body.position;
+        slide.LastAt = Time.time;
+        slide.DrivenSince = Time.time;
+        slide.Body.isKinematic = false;
+        slide.Body.constraints = SlideConstraints;
+        slide.Body.linearVelocity = slide.Velocity;
+    }
+
+    private static bool HasStopped(Slide slide)
+    {
+        var since = Time.time - slide.LastAt;
+        if (since < 0.15f) return false;
+
+        var moved = Vector3.Distance(slide.Body.position, slide.Last);
+        slide.Last = slide.Body.position;
+        slide.LastAt = Time.time;
+        return moved < slide.Velocity.magnitude * since * 0.25f;
+    }
+
     private static float LowestPoint(Transform structure, Vector3 at, Quaternion facing)
     {
         structure.SetPositionAndRotation(at, facing);
@@ -184,40 +266,33 @@ internal partial class Projectiles(ActorRegistry actors)
         }
     }
 
-    /// <summary>
-    /// Counts a stall when a projectile has not covered half the ground its speed promises: the game
-    /// could have reset a pooled structure, held it, or let it drop.
-    /// </summary>
-    private void CheckFlights()
+    // A pooled structure can come with a joint still holding it; detached, as the game's grounded spawn does.
+    private static void LetGoOfJoint(Structure? structure)
     {
-        if (_checks.Count == 0) return;
+        if (structure?.ActiveJointControl == null) return;
 
-        foreach (var check in _checks.Where(c => Time.time - c.LaunchedAt >= FlightCheckSeconds).ToList())
+        try
         {
-            _checks.Remove(check);
-            if (check.Transform == null) continue;
-
-            var age = Time.time - check.LaunchedAt;
-            var travelled = Vector3.Distance(check.Transform.position, check.From);
-            var flying = travelled >= check.Speed * age * 0.5f;
-            Logger.Write(flying ? LogLevel.Debug : LogLevel.Warning, $"[{(flying ? "Projectile.Flying" : "Projectile.Stalled")}] #{check.Id} {check.Structure}: {travelled:F2} m in {age:F2}s (speed {check.Speed:F1})");
+            structure.ActiveJointControl.DetachBody();
+            structure.ActiveJointControl = null;
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"[Projectile.StateFailed] joint: {e.Message}");
         }
     }
 
-    private record Projectile(Structure? Structure, Rigidbody? Body, Vector3 Hold, Quaternion HoldRotation)
+    private record Projectile(Structure? Structure, Rigidbody? Body, Vector3 Hold, Quaternion HoldRotation, Vector3 RiseFrom, float RiseStart, float Rise, bool Grounded)
     {
-        /// <summary>Where it rises from, below the floor; null to appear at its origin.</summary>
-        public Vector3? From { get; init; }
-
-        public float RiseStart { get; init; }
-
-        public float Rise { get; init; }
-
-        /// <summary>Sits in the grounded state and is thrown along the floor.</summary>
-        public bool Grounded { get; init; }
-
         public bool Settled { get; set; }
     }
 
-    private record FlightCheck(int Id, string Structure, Transform Transform, Vector3 From, float LaunchedAt, float Speed);
+    private record Slide(Rigidbody Body, Structure? Structure, Vector3 Velocity, RigidbodyConstraints Before)
+    {
+        public float Until { get; set; }
+        public Vector3 Last { get; set; }
+        public float LastAt { get; set; }
+        public float DrivenSince { get; set; }
+        public float? PausedAt { get; set; }
+    }
 }

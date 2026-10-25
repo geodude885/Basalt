@@ -5,15 +5,10 @@ using UnityEngine;
 
 namespace Basalt.Battle;
 
-/// <summary>
-/// The game's own sounds and effects for spawning and punching a structure, read off your moves'
-/// modifiers, so chart projectiles look and sound like a player's.
-/// </summary>
 internal class MoveEffects
 {
     private const string PunchMove = "Straight";
 
-    /// <summary>What the spawn moves spawn, for a move whose data does not name it.</summary>
     private static readonly Dictionary<string, string> KnownSpawns = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Disc"] = "Disc",
@@ -32,7 +27,7 @@ internal class MoveEffects
     /// <summary>The spawn sound and effect for a structure, by pool name.</summary>
     public void Spawn(string structure, Vector3 floor, Quaternion facing)
     {
-        if (!Ensure()) return;
+        if (!EnsureExists()) return;
         if (!_spawns!.TryGetValue(structure, out var effects))
         {
             // Scenery rocks have no spawn move: they sound like a ball.
@@ -47,14 +42,13 @@ internal class MoveEffects
     /// does, though its spawn step is not the grounded kind.
     /// </summary>
     public bool IsGrounded(string structure) =>
-        string.Equals(structure, "Disc", StringComparison.OrdinalIgnoreCase) || (Ensure() && _grounded.Contains(structure));
+        string.Equals(structure, "Disc", StringComparison.OrdinalIgnoreCase) || (EnsureExists() && _grounded.Contains(structure));
 
     public void Punch(Vector3 at, Quaternion facing)
     {
-        if (Ensure()) Play(_punch, at, facing);
+        if (EnsureExists()) Play(_punch, at, facing);
     }
 
-    /// <summary>For a new scene: what the moves pointed at may have gone.</summary>
     public void Forget()
     {
         _spawns = null;
@@ -82,11 +76,11 @@ internal class MoveEffects
         }
     }
 
-    private bool Ensure()
+    private bool EnsureExists()
     {
         if (_spawns != null) return true;
 
-        var playerController = BattlePlayer.Controller;
+        var playerController = BattlePlayer.Player?.Controller;
         if (playerController == null) return false;
 
         try

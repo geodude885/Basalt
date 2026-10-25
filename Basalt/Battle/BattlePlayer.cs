@@ -1,5 +1,4 @@
 using System.Collections;
-using Basalt.Actors;
 using Basalt.Services.Charts;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
@@ -16,37 +15,25 @@ internal class BattlePlayer
     private int _placement;
 
     public static Player? Player => PlayerManager.instance?.localPlayer;
-
-    public static PlayerController? Controller => Player?.Controller;
-
-    public static ActorRig? Rig => Controller is { } playerController ? ActorRig.From(playerController) : null;
-
+    public static PlayerRig? Rig => Player?.Controller is { } playerController ? PlayerRig.From(playerController) : null;
     public static Vector3 Head => Rig?.Head.position ?? Vector3.zero;
 
-    /// <summary>
-    /// Moves you with the game's <c>Reposition</c>, then corrects once from where your feet landed:
-    /// it places the head, and turning you swings the head's offset from the rig with it.
-    /// </summary>
-    public void Place(Vector3 floor, Quaternion facing)
+    public void Place(Vector3 floorPosition, Quaternion facing)
     {
-        if (Controller is not { } playerController) return;
+        if (Player?.Controller is not { } playerController) return;
 
-        var rig = ActorRig.From(playerController);
+        var rig = PlayerRig.From(playerController);
         var eyeHeight = rig.Head.position.y - rig.Vr.position.y;
-        playerController.PlayerMovement.Reposition(floor + (Vector3.up * eyeHeight), facing);
-        MelonCoroutines.Start(CorrectPlacement(playerController, floor, facing, eyeHeight, ++_placement));
+        playerController.PlayerMovement.Reposition(floorPosition + (Vector3.up * eyeHeight), facing);
+        MelonCoroutines.Start(CorrectPlacement(playerController, floorPosition, facing, eyeHeight, ++_placement));
     }
 
-    /// <summary>
-    /// The walls' safety net: past one anyway, you are pushed back inside the lane - both bodies
-    /// shifted, height kept, and the speed carrying you out stopped. Without <paramref name="zoned"/> the whole lane is yours.
-    /// </summary>
     public void KeepInLane(Anchor frame, Chart chart, bool zoned)
     {
-        if (Time.time < _nextLaneCheck || Controller is not { } playerController) return;
+        if (Time.time < _nextLaneCheck || Player?.Controller is not { } playerController) return;
         _nextLaneCheck = Time.time + 0.1f;
 
-        var rig = ActorRig.From(playerController);
+        var rig = PlayerRig.From(playerController);
         var at = frame.ToLocal(rig.Feet.ToNumerics()).ToUnity();
         float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
         var far = zoned ? chart.Zone.Length + 0.3f : chart.Lane.Length + 0.75f;
@@ -72,13 +59,9 @@ internal class BattlePlayer
         Logger.Debug($"[Battle.YouLeftTheLane] at lane x {at.x:0.0}, z {at.z:0.0}{(tooHigh ? $", {above:0.0} m up" : "")} - put back");
     }
 
-    /// <summary>
-    /// Outside a match the Ring and Pit make you invincible and the game regenerates your health:
-    /// both are held off while running, so the game's own hits count.
-    /// </summary>
     public void KeepVulnerable()
     {
-        if (Controller is not { } playerController) return;
+        if (Player?.Controller is not { } playerController) return;
 
         try
         {
@@ -103,7 +86,6 @@ internal class BattlePlayer
         }
     }
 
-    /// <summary>Your invincibility back, if the arena had made you so.</summary>
     public void RestoreInvincibility()
     {
         if (_invincibleBefore == null) return;
@@ -136,7 +118,7 @@ internal class BattlePlayer
         yield return null;
         if (placement != _placement || playerController == null) yield break;
 
-        var feet = ActorRig.From(playerController).Feet;
+        var feet = PlayerRig.From(playerController).Feet;
         var off = new Vector3(floor.x - feet.x, 0f, floor.z - feet.z);
         if (off.magnitude > 0.15f)
         {
@@ -144,7 +126,7 @@ internal class BattlePlayer
             yield return null;
             yield return null;
             if (placement != _placement || playerController == null) yield break;
-            feet = ActorRig.From(playerController).Feet;
+            feet = PlayerRig.From(playerController).Feet;
         }
 
         var left = new Vector2(floor.x - feet.x, floor.z - feet.z).magnitude;

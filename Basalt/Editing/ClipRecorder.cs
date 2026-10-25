@@ -1,5 +1,4 @@
 using System.Numerics;
-using Basalt.Actors;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;
 using Il2CppRUMBLE.Input;
@@ -78,7 +77,7 @@ internal class ClipRecorder
         if (_clipTime < _nextSample) return;
         _nextSample = _clipTime + (1.0 / SampleRate);
 
-        var rig = ActorRig.From(_subject);
+        var rig = PlayerRig.From(_subject);
         var hands = _subject.PlayerHandPresence;
         var spot = _anchor.ToLocal(rig.Feet.ToNumerics());
 

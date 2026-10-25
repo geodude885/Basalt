@@ -19,7 +19,7 @@ internal static partial class SelfTest
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
 
         var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready);
-        var mesh = actor?.Player?.Controller?.GetComponentInChildren<SkinnedMeshRenderer>();
+        var mesh = actor?.Body?.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
         if (actor == null || mesh == null || LaneOrigin is not { } origin)
         {
             _hitboxProblem = "hitbox check: no actor to throw at";
@@ -42,7 +42,7 @@ internal static partial class SelfTest
                 yield break;
             }
 
-            if (recentProjectile) Mod.Actors.IgnoreStructure(pooled.gameObject, 2.5f);
+            if (recentProjectile) Mod.Actors.IgnoreStructure(pooled.gameObject, 0f, 2.5f);
             body.isKinematic = false;
             body.position = from;
             body.linearVelocity = along * 10f;
@@ -65,11 +65,11 @@ internal static partial class SelfTest
         // Lethal hits through the game's own ReduceHealth: the actor must live on, on some health.
         foreach (var amount in new short[] { 19, 19, 30 })
         {
-            actor.Player!.Controller.PlayerHealth.ReduceHealth(amount, true);
+            actor.Body!.Controller.PlayerHealth.ReduceHealth(amount, true);
             yield return new WaitForSeconds(0.3f);
-            var hp = actor.Controller != null ? actor.Player!.Data.HealthPoints : (short)0;
-            Logger.Info($"[SelfTest] lethal hit of {amount}: the actor {(actor.Controller != null ? $"lives on {hp} HP" : "is gone")}");
-            if (actor.Controller == null || hp <= 0) _hitboxProblem = (_hitboxProblem == null ? "" : _hitboxProblem + "; ") + $"a hit of {amount} killed the actor";
+            var hp = actor.Ready ? actor.Body.Player.Data.HealthPoints : (short)0;
+            Logger.Info($"[SelfTest] lethal hit of {amount}: the actor {(actor.Ready ? $"lives on {hp} HP" : "is gone")}");
+            if (!actor.Ready || hp <= 0) _hitboxProblem = (_hitboxProblem == null ? "" : _hitboxProblem + "; ") + $"a hit of {amount} killed the actor";
         }
     }
 }

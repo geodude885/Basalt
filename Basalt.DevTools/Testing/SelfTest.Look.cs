@@ -119,20 +119,20 @@ internal static partial class SelfTest
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         // This battle's actor - the last one, despawned, can still be listed.
         var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && !before.Contains(a));
-        if (actor?.Player == null)
+        if (actor is not { Ready: true })
         {
             problems.Add($"{shot}: no actor came up");
             yield break;
         }
 
         yield return new WaitForSeconds(1f);
-        var worn = actor.Player.Data.VisualData.ToPlayfabDataString();
+        var worn = actor.Body.Player.Data.VisualData.ToPlayfabDataString();
         if (worn != expected) problems.Add($"{shot}: the boss wears \"{worn}\", not the chart's \"{expected}\"");
         else Logger.Info($"[SelfTest] look {shot}: the boss wears the chart's look");
 
         // Framed on the drawn body: an actor's head and controller transforms are not where it is drawn.
-        var mesh = actor.Player.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
-        var chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Player.Controller.transform.position + (Vector3.up * 1.1f);
+        var mesh = actor.Body.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
+        var chest = mesh != null ? mesh.bounds.center + (Vector3.up * 0.25f) : actor.Body.Controller.transform.position + (Vector3.up * 1.1f);
         Logger.Info($"[SelfTest] look {shot}: framing the body at {chest.Describe()}{(mesh == null ? " (no mesh found)" : "")}");
         var towardPlayer = LaneOrigin is { } origin ? (origin - chest).Flat() : Vector3.forward;
         _showCamera?.Invoke(chest + (towardPlayer * 1.8f) + (Vector3.up * 0.3f), chest);

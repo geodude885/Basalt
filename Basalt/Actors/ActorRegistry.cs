@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Basalt.Actors;
 
+
 internal class ActorRegistry
 {
 
@@ -48,8 +49,11 @@ internal class ActorRegistry
     }
 
     // For stopping a structure colliding with the actors until it is clear of them.
-    public void IgnoreStructure(GameObject structure, float seconds)
+    public void IgnoreStructure(GameObject structure, float minimumSeconds, float maximumSeconds)
     {
-        foreach (var actor in _actors) actor.IgnoreStructure(structure, seconds);
+        foreach (var actor in _actors)
+        {
+            if (actor.Ready) actor.Body.Collisions.IgnoreStructure(structure, minimumSeconds, maximumSeconds);
+        }
     }
 }

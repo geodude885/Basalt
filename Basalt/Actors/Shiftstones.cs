@@ -23,6 +23,48 @@ internal static class Shiftstones
             .Select(stone => stone.gameObject.name.Replace("(Clone)", "", StringComparison.Ordinal).Trim())
             .ToList();
 
+    // The chart's stones for an actor, else the ones `from` has equipped. Attached as Remote: a Local player's
+    // stones move to a first-person layer.
+    public static void CopyOnto(Actor actor, PlayerController to, PlayerController from)
+    {
+        var report = new List<string>();
+        var simulatedAs = to.controllerType;
+        to.controllerType = ControllerType.Remote;
+
+        try
+        {
+            var pools = actor.Stones?.Select(ToIdOrDefault).ToList() ?? EquippedBy(from).Select(p => (string?)p).ToList();
+            foreach ((var pool, var slot) in pools.Select((p, slot) => (p, slot)))
+            {
+                if (pool == null)
+                {
+                    Logger.Warning($"[Actor.UnknownStone] {actor}: no shiftstone called \"{actor.Stones![slot]}\"");
+                    continue;
+                }
+
+                var copy = PoolManager.instance.GetPooledObject(pool)?.GetComponent<ShiftStone>();
+                if (copy == null)
+                {
+                    report.Add($"{slot}: {pool} NOT in a pool");
+                    continue;
+                }
+
+                to.PlayerShiftstones.AttachShiftStone(copy, slot, false, false);
+                report.Add($"{slot}: {pool}");
+            }
+        }
+        catch (Exception e)
+        {
+            report.Add($"failed: {e.Message}");
+        }
+        finally
+        {
+            to.controllerType = simulatedAs;
+        }
+
+        Logger.Debug($"[Actor.Shiftstones] {actor}: {(report.Count == 0 ? "none equipped" : string.Join(", ", report))}");
+    }
+
     // All loaded shiftstones
     private static IReadOnlyList<(string Id, string Display)> Catalog()
     {

@@ -1,4 +1,3 @@
-using Basalt.Actors;
 using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Presentation;
@@ -104,7 +103,7 @@ internal class ChartPicker(ChartPickerPanel panel, JsonBook<SavedSpot> spots, Ga
 
     public void Update()
     {
-        var want = panel.Wanted() && BattlePlayer.Controller != null;
+        var want = panel.Wanted() && BattlePlayer.Player?.Controller != null;
 
         if (want && !_shown)
         {
@@ -123,9 +122,9 @@ internal class ChartPicker(ChartPickerPanel panel, JsonBook<SavedSpot> spots, Ga
 
         if (Time.time >= _nextRefresh) Refresh();
         // Following you: brought back when you walk away from it.
-        if (panel.FollowsPlayer && BattlePlayer.Controller is { } playerController)
+        if (panel.FollowsPlayer && BattlePlayer.Player?.Controller is { } playerController)
         {
-            var away = _root!.transform.position - ActorRig.From(playerController).Head.position;
+            var away = _root!.transform.position - PlayerRig.From(playerController).Head.position;
             away.y = 0f;
             if (away.magnitude > 1.6f) PlaceNearPlayer();
         }
@@ -271,10 +270,10 @@ internal class ChartPicker(ChartPickerPanel panel, JsonBook<SavedSpot> spots, Ga
 
     private void CheckPokes()
     {
-        var playerController = BattlePlayer.Controller;
+        var playerController = BattlePlayer.Player?.Controller;
         if (playerController == null) return;
 
-        var rig = ActorRig.From(playerController);
+        var rig = PlayerRig.From(playerController);
         var left = ButtonAt(rig.LeftHand.position);
         var right = ButtonAt(rig.RightHand.position);
 
@@ -298,10 +297,10 @@ internal class ChartPicker(ChartPickerPanel panel, JsonBook<SavedSpot> spots, Ga
 
     private void PlaceNearPlayer()
     {
-        var playerController = BattlePlayer.Controller;
+        var playerController = BattlePlayer.Player?.Controller;
         if (playerController == null || _root == null) return;
 
-        var rig = ActorRig.From(playerController);
+        var rig = PlayerRig.From(playerController);
         var facing = rig.Facing;
         var right = Vector3.Cross(Vector3.up, facing);
 

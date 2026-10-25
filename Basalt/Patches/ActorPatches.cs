@@ -47,7 +47,7 @@ public static class ActorPatches
             PatchGuard.Run(nameof(NoLethalHits), () =>
             {
                 var actor = _actors.Find(__instance.ParentController);
-                if (actor == null || amount < actor.Player!.Data.HealthPoints) return;
+                if (actor == null || !actor.Ready || amount < actor.Body.Player.Data.HealthPoints) return;
 
                 actor.FullHeal();
                 if (amount < Actor.MaxHealth) return;
@@ -207,7 +207,7 @@ public static class ActorPatches
         public static bool Prefix(PlayerHandPresence __instance, InputManager.Hand hand, ref PlayerHandPresence.HandPresenceInput __result)
         {
             ClipFingers? fingers = null;
-            PatchGuard.Run(nameof(ActorFingers), () => fingers = _actors.Find(__instance.ParentController)?.Fingers(hand));
+            PatchGuard.Run(nameof(ActorFingers), () => fingers = _actors.Find(__instance.ParentController)?.Body?.Clips.Fingers(hand));
             if (fingers is not { } held) return true;
 
             __result = new PlayerHandPresence.HandPresenceInput { indexInput = held.Index, gripInput = held.Grip, thumbInput = held.Thumb, swayInput = held.Sway };

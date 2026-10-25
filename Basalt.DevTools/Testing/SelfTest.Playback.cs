@@ -88,16 +88,19 @@ internal static partial class SelfTest
         var samples = new List<(double T, float Speed)>();
         var structureSpeeds = new Dictionary<IntPtr, float>();
         var lowestActor = (Height: float.MaxValue, Id: "", Time: 0.0);
+        var highestActor = (Height: float.MinValue, Id: "", Time: 0.0);
         deadline = Time.realtimeSinceStartup + (float)chart.End + 60f;
         while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
             var t = Mod.Battle.ChartTime;
-            var actor = Mod.Actors.Actors.FirstOrDefault(a => a.PlayingClip);
+            var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && a.Body.Clips.Playing);
             if (actor != null) samples.Add((t, FastestStructureOf(actor)));
-            foreach (var standing in Mod.Actors.Actors.Where(a => a.Player?.Controller != null))
+            foreach (var standing in Mod.Actors.Actors)
             {
-                var height = Mod.Battle.ToLane(ActorRig.From(standing.Player!.Controller).Feet).y;
+                if (!standing.Ready) continue;
+                var height = Mod.Battle.ToLane(standing.Body.Rig.Feet).y;
                 if (height < lowestActor.Height) lowestActor = (height, standing.Id, t);
+                if (t > 0 && height > highestActor.Height) highestActor = (height, standing.Id, t);
             }
 
             if (_shots && shotTimes.Count > 0 && t >= shotTimes.Peek())
@@ -113,13 +116,15 @@ internal static partial class SelfTest
         _keepPlayerAlive = false;
         Logger.Info($"[SelfTest] lowest actor: {lowestActor.Id} at lane y {lowestActor.Height:0.00}, {lowestActor.Time:0.0}s");
         if (lowestActor.Height < -0.3f) problems.Add($"actor {lowestActor.Id} sank {-lowestActor.Height:0.0} m through the floor at {lowestActor.Time:0.0}s");
+        Logger.Info($"[SelfTest] highest actor: {highestActor.Id} at lane y {highestActor.Height:0.00}, {highestActor.Time:0.0}s");
+        if (highestActor.Height > 0.3f) problems.Add($"actor {highestActor.Id} was lifted {highestActor.Height:0.0} m off the floor at {highestActor.Time:0.0}s - a structure pushing it?");
         Report(entry.Stem, chart, recorded, samples, problems);
     }
 
     /// <summary>The fastest structure an actor's move last touched.</summary>
     private static float FastestStructureOf(Actor actor)
     {
-        var processor = actor.Player?.Controller?.PlayerProcessor?.Pointer ?? IntPtr.Zero;
+        var processor = actor.Ready ? actor.Body.Controller.PlayerProcessor.Pointer : IntPtr.Zero;
         var combat = CombatManager.instance;
         if (processor == IntPtr.Zero || combat == null) return 0f;
 

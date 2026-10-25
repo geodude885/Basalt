@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Text.RegularExpressions;
-using Basalt.Actors;
 using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
@@ -89,9 +88,9 @@ internal static partial class SelfTest
         // The Gym scene loads well before your player exists (a fixed wait was too short in the
         // first run); wait for the player, then let the scene settle.
         var playerDeadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
-        while (BattlePlayer.Controller == null && Time.realtimeSinceStartup < playerDeadline) yield return null;
+        while (BattlePlayer.Player?.Controller == null && Time.realtimeSinceStartup < playerDeadline) yield return null;
 
-        if (BattlePlayer.Controller == null)
+        if (BattlePlayer.Player?.Controller == null)
         {
             Finish(new[] { $"no local player after {PlayerTimeoutSeconds}s in the Gym - was the game launched through Steam?" });
             yield break;
@@ -100,7 +99,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(GymSettleSeconds);
 
         // What a chart made in game stores as its boss's look.
-        var look = BattlePlayer.Player!.Data.VisualData.ToPlayfabDataString();
+        var look = BattlePlayer.Player.Data.VisualData.ToPlayfabDataString();
         Logger.Info($"[SelfTest] your look string: {look.Length} chars, \"{look[..Math.Min(look.Length, 120)]}\"");
 
         if (_measureTest)
@@ -167,7 +166,7 @@ internal static partial class SelfTest
         Anchor? gymLane = null;
         if (_arena == ArenaKind.Gym)
         {
-            var playerRig = ActorRig.From(BattlePlayer.Controller);
+            var playerRig = PlayerRig.From(BattlePlayer.Player.Controller);
             if (FlatLane(playerRig.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
                 gymLane = Anchor.Facing(lane.Start.ToNumerics(), lane.Direction.ToNumerics());
@@ -182,7 +181,7 @@ internal static partial class SelfTest
 
         Mod.Battle.Finished += OnFinished;
         // Something to clear: a battle starts on a clear floor.
-        Perform(BattlePlayer.Controller, "SpawnCube");
+        Perform(BattlePlayer.Player.Controller, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
         Mod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f), Lane = gymLane });
@@ -324,20 +323,21 @@ internal static partial class SelfTest
         while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
-        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Controller is not { } playerController) yield break;
+        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Player?.Controller is not { } playerController) yield break;
 
-        var feet = ActorRig.From(playerController).Feet;
+        var feet = PlayerRig.From(playerController).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
         Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
 
-        foreach (var actor in Mod.Actors.Actors.Where(a => a.Controller != null))
+        foreach (var actor in Mod.Actors.Actors)
         {
+            if (!actor.Ready) continue;
             var spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
             if (spec == null) continue;
 
             // Across and along the lane only: on uneven ground an actor settles on the real floor.
-            var floor = ActorRig.From(actor.Player!.Controller).Feet;
+            var floor = actor.Body.Rig.Feet;
             var lane = Mod.Battle.ToLane(floor);
             var away = new Vector2(lane.x - spec.At.X, lane.z - spec.At.Z).magnitude;
             var sunk = origin.y - floor.y;
@@ -366,7 +366,7 @@ internal static partial class SelfTest
         {
             FlatscreenControls.ScriptedWalk = stick;
             yield return new WaitForSeconds(1f);
-            if (BattlePlayer.Controller is { } dasher)
+            if (BattlePlayer.Player?.Controller is { } dasher)
             {
                 Perform(dasher, "RockSlide");
                 yield return new WaitForSeconds(0.7f);
@@ -377,8 +377,8 @@ internal static partial class SelfTest
             FlatscreenControls.ScriptedWalk = Vector2.zero;
             yield return new WaitForSeconds(0.3f);
 
-            if (BattlePlayer.Controller is not { } playerController) break;
-            var at = Mod.Battle.ToLane(ActorRig.From(playerController).Feet);
+            if (BattlePlayer.Player?.Controller is not { } playerController) break;
+            var at = Mod.Battle.ToLane(PlayerRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, y {at.y:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");
             if (at.y < -0.3f) problems.Add($"walking {name} sank {-at.y:0.0} m through the floor");

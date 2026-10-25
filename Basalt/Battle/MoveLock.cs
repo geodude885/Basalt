@@ -4,7 +4,6 @@ using Stack = Il2CppRUMBLE.MoveSystem.Stack;
 
 namespace Basalt.Battle;
 
-/// <summary>Your moves in a battle: off through the countdown, and the spawn moves a chart's rule clips away.</summary>
 internal class MoveLock
 {
     private static readonly string[] SpawnMoves = { "Disc", "SpawnBall", "SpawnCube", "SpawnPillar", "SpawnWall" };
@@ -13,10 +12,9 @@ internal class MoveLock
     private PlayerController? _withheldFrom;
     private PlayerController? _heldFor;
 
-    /// <summary>Your gesture recognition off, the same switch an actor's clip uses.</summary>
-    public void Hold()
+    public void DisableMoves()
     {
-        var playerController = BattlePlayer.Controller;
+        var playerController = BattlePlayer.Player?.Controller;
         if (playerController == null || _heldFor != null) return;
 
         try
@@ -31,8 +29,7 @@ internal class MoveLock
         }
     }
 
-    /// <summary>Your moves back, without the spawn moves <paramref name="rule"/> disallows.</summary>
-    public void Release(SpawnRule rule = SpawnRule.All)
+    public void AllowMoves(SpawnRule rule = SpawnRule.All)
     {
         var playerController = _heldFor;
         _heldFor = null;
@@ -51,7 +48,7 @@ internal class MoveLock
         }
     }
 
-    public void GiveSpawnsBack()
+    public void Reset()
     {
         var playerController = _withheldFrom;
         _withheldFrom = null;
@@ -76,7 +73,6 @@ internal class MoveLock
         _withheld.Clear();
     }
 
-    /// <summary>For a scene change: your player went with the scene, its moves with it.</summary>
     public void Forget()
     {
         _heldFor = null;
@@ -97,11 +93,6 @@ internal class MoveLock
         Logger.Debug($"[Battle.SpawnsWithheld] {rule}: {string.Join(", ", _withheld.Select(s => s.CachedName))}");
     }
 
-    /// <summary>
-    /// Takes the withheld moves' gestures away too: gesture inputs are built from every move you own
-    /// (<c>MoveManager.FetchOwnedMoves</c>), not <c>availableStacks</c>. Each handle goes, and its pose
-    /// input unless an allowed move shares it.
-    /// </summary>
     private void DropWithheldGestures(PlayerController playerController)
     {
         var handles = playerController.PlayerProcessor.activeStackHandles;

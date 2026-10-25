@@ -85,7 +85,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         }
 
         if (State != BattleState.Idle) Stop("a new battle was started");
-        if (BattlePlayer.Controller == null)
+        if (BattlePlayer.Player?.Controller == null)
         {
             Logger.Warning("[Battle.NotStarted] no local player yet");
             return;
@@ -130,8 +130,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         _arena.Destroy();
         _board.Hide();
         _music.Clear();
-        _moves.Release();
-        _moves.GiveSpawnsBack();
+        _moves.AllowMoves();
+        _moves.Reset();
         Run = null;
     }
 
@@ -290,7 +290,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
     private IEnumerator PlaceWhenSettled(Actor actor, Vector3 spot, float yaw, BattleRun run)
     {
         yield return new WaitForSecondsRealtime(ActorSettleSeconds);
-        if (run == Run && actor.Controller != null && run.State is BattleState.SpawningActors or BattleState.Countdown) actor.Place(spot, yaw);
+        if (run == Run && actor.Ready && run.State is BattleState.SpawningActors or BattleState.Countdown) actor.Body.Footing.Place(spot, yaw);
     }
 
     private void KeepLane()
@@ -309,8 +309,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
 
         Run.CountdownEnds = Time.time + CountdownSeconds;
         Run.MusicDeadline = Run.CountdownEnds + MusicWaitSeconds;
-        _arena.Boundary.LetActorsThrough(actors.Actors.SelectMany(a => a.Colliders));
-        _moves.Hold();
+        _arena.Boundary.LetActorsThrough(actors.Actors.Where(a => a.Ready).SelectMany(a => a.Body!.Collisions.All));
+        _moves.DisableMoves();
         Signals.PreloadChartPacks(Run.Chart);
         Run.State = BattleState.Countdown;
     }
@@ -345,7 +345,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         }
 
         // Miming keeps your moves off: you throw the chart's shots by hand.
-        if (!request.Miming) _moves.Release(request.Recording ? SpawnRule.All : chart.Rules.Spawn);
+        if (!request.Miming) _moves.AllowMoves(request.Recording ? SpawnRule.All : chart.Rules.Spawn);
         Run.State = BattleState.Running;
     }
 
@@ -368,9 +368,9 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
                     if (Run.Request.Recording) break;
 
                     // A clip holds its actor to the recorded path, so a move elsewhere would be dragged back.
-                    var placed = ActorById(place.ActorId);
-                    if (placed is { PlayingClip: true }) Logger.Info($"[Battle.PlaceDuringClip] {place.ActorId} is playing a clip at {place.Time:0.0}s - its \"at\" is skipped");
-                    else placed?.Place(World(place.At.X, 0f, place.At.Z), Run.Frame.ActorYaw(place.At.Facing));
+                    var placed = ActorById(place.ActorId)?.Body;
+                    if (placed is { Clips.Playing: true }) Logger.Info($"[Battle.PlaceDuringClip] {place.ActorId} is playing a clip at {place.Time:0.0}s - its \"at\" is skipped");
+                    else placed?.Footing.Place(World(place.At.X, 0f, place.At.Z), Run.Frame.ActorYaw(place.At.Facing));
                     break;
 
                 case SpawnProjectile spawn:
@@ -391,7 +391,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
                 case PlayClip play:
                     var clip = Run.FindClip(play.Clip);
                     if (clip == null) Logger.Warning($"[Battle.NoClip] no clip called \"{play.Clip}\" in the chart's clips");
-                    else ActorById(play.ActorId)?.PlayClip(clip, play.From, play.To, Run.Frame, () => ChartTime, play.Mime);
+                    else ActorById(play.ActorId)?.Body?.Clips.Play(clip, play.From, play.To, Run.Frame, () => ChartTime, play.Mime);
                     break;
 
                 case EndChart end:
@@ -410,8 +410,8 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         // Miming, you stand at the boss's end: "the player" is the lane's near end.
         return aim.AtPlayer && (Run?.Request.Miming ?? false)
             ? World(0f, 1.3f, 0f)
-            : aim.AtPlayer && BattlePlayer.Controller is { } playerController
-            ? ActorRig.From(playerController).Head.position + (Vector3.down * 0.25f)
+            : aim.AtPlayer && BattlePlayer.Player?.Controller is { } playerController
+            ? PlayerRig.From(playerController).Head.position + (Vector3.down * 0.25f)
             : World(aim.X, aim.Y, 0f);
     }
 
@@ -422,7 +422,7 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
         var result = run.Score.Finish(survived, seconds, run.Chart.End);
         run.State = BattleState.Finished;
         _music.FadeOut();
-        _moves.GiveSpawnsBack();
+        _moves.Reset();
         _player.RestoreInvincibility();
         if (!run.Request.Recording) BattlePlayer.FullHealth();
         Signals.Fire(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
@@ -446,15 +446,20 @@ internal class BattleController(ActorRegistry actors, JsonBook<BestScore> scores
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 
-        foreach (var actor in actors.Actors) actor.AllowFreePlacement();
+        foreach (var actor in actors.Actors)
+        {
+            if (actor.Ready) actor.Body.Footing.AllowFreePlacement();
+        }
         Finished?.Invoke(result);
     }
 
     private Actor? ActorById(string id)
     {
         var actor = actors.Actors.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
-        if (actor?.Controller == null) Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
-        return actor?.Controller != null ? actor : null;
+        if (actor is { Ready: true }) return actor;
+
+        Logger.Warning($"[Battle.NoActor] \"{id}\" is not in play");
+        return null;
     }
 
     private Vector3 World(float x, float y, float z) => Run!.Frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();

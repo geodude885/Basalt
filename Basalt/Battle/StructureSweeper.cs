@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace Basalt.Battle;
 
-/// <summary>Structures on the map: cleared before a battle, and broken when left standing still.</summary>
 internal class StructureSweeper
 {
     private static readonly string[] PlayerStructures = { "Disc", "Ball", "RockCube", "Pillar", "Wall" };
@@ -11,7 +10,6 @@ internal class StructureSweeper
     private readonly Dictionary<IntPtr, (Vector3 At, float Since)> _still = [];
     private float _nextSweep;
 
-    /// <summary>Breaks every structure a player spawned (scenery stays) with the game's own <c>Structure.Kill</c>.</summary>
     public static void ClearAll()
     {
         var combat = CombatManager.instance;
@@ -41,10 +39,7 @@ internal class StructureSweeper
 
     public void Reset() => _still.Clear();
 
-    /// <summary>
-    /// The chart's cleanup rule: a structure still for <paramref name="afterSeconds"/> breaks, so a wall grounded in
-    /// front of you cannot soak up a whole section. Held (kinematic) projectiles are left.
-    /// </summary>
+    // Breaks any structure still for <afterSeconds>s
     public void Update(double afterSeconds)
     {
         if (afterSeconds <= 0 || Time.time < _nextSweep) return;

@@ -36,7 +36,7 @@ internal static class TestBench
     private static bool _facingPlayer;
     private static float _nextFacingCheck;
 
-    public static Actor? Actor => _actor?.Controller != null ? _actor : null;
+    public static Actor? Actor => _actor is { Ready: true } ? _actor : null;
 
     /// <summary>The test actor's sticks while it is bot-controlled; null while it mirrors you.</summary>
     public static (Vector2 Walk, Vector2 Turn)? Sticks { get; private set; }
@@ -50,10 +50,10 @@ internal static class TestBench
             return;
         }
 
-        var playerController = BattlePlayer.Controller;
+        var playerController = BattlePlayer.Player?.Controller;
         if (playerController == null) return;
 
-        var playerRig = ActorRig.From(playerController);
+        var playerRig = PlayerRig.From(playerController);
         var at = playerRig.Feet + (playerRig.Facing * SpawnDistance);
 
         _actor = new Actor("test", "Test Actor", "you");
@@ -73,11 +73,11 @@ internal static class TestBench
 
     public static void TogglePlant()
     {
-        if (Actor is not { } actor) return;
+        if (Actor?.Body is not { } body) return;
 
-        if (actor.IsKeptInPlace) actor.AllowFreePlacement();
-        else actor.KeepInPlace();
-        Logger.Info(actor.IsKeptInPlace ? "[Test.Plant] planted" : "[Test.Plant] unplanted");
+        if (body.Footing.Planted) body.Footing.AllowFreePlacement();
+        else body.Footing.KeepInPlace();
+        Logger.Info(body.Footing.Planted ? "[Test.Plant] planted" : "[Test.Plant] unplanted");
     }
 
     public static void CycleKnockback()
@@ -92,12 +92,12 @@ internal static class TestBench
     /// <summary>Mirrors you, or reads the keys; plain keys drive the actor, Ctrl+ keys are the tools'.</summary>
     public static void Update()
     {
-        if (Actor is not { } actor || BattlePlayer.Controller is not { } playerController) return;
+        if (Actor is not { } actor || BattlePlayer.Player?.Controller is not { } playerController) return;
 
-        var playerRig = ActorRig.From(playerController);
+        var playerRig = PlayerRig.From(playerController);
         if (_mirroring)
         {
-            actor.SetPose(ActorPose.Snapshot(playerRig));
+            actor.Body?.Clips.RestingPose = ActorPose.Snapshot(playerRig);
             return;
         }
 
@@ -118,10 +118,10 @@ internal static class TestBench
             actor.RunMove(stack);
         }
 
-        if (!_facingPlayer || Time.time < _nextFacingCheck || actor.Player is not { } body) return;
+        if (!_facingPlayer || Time.time < _nextFacingCheck || actor.Body is not { } body) return;
         _nextFacingCheck = Time.time + FacingCheckInterval;
 
-        var rig = ActorRig.From(body.Controller);
+        var rig = body.Rig;
         var toPlayer = playerRig.Head.position - rig.Head.position;
         toPlayer.y = 0f;
         if (toPlayer.sqrMagnitude < 0.01f) return;

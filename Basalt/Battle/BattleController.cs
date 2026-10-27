@@ -2,11 +2,11 @@ using System.Collections;
 using Basalt.Actors;
 using Basalt.Arenas;
 using Basalt.Presentation;
+using Basalt.Presentation.Shaders;
 using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;
 using Basalt.Services.Scoring;
-using Basalt.UI;
 using MelonLoader;
 using UnityEngine;
 
@@ -54,7 +54,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
     public event Action<BattleResult>? Finished;
 
     public BattleRun? Run { get; private set; }
-    public BattleVisualEvents Signals { get; } = new();
+    public BattleVisualEvents Visuals { get; } = new(ReShade.CreateIfLoaded());
 
     public BattleState State => Run?.State ?? BattleState.Idle;
 
@@ -124,7 +124,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         Logger.Info($"[Battle.Stopped] {reason}");
         _player.RestoreInvincibility();
         if (Run.State == BattleState.Running && !Run.Request.Recording) BattlePlayer.FullHealth();
-        Signals.End();
+        Visuals.End();
         actors.DespawnAll();
         _projectiles.Clear();
         _arena.Destroy();
@@ -144,7 +144,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
     public void OnSceneLoaded(string scene)
     {
         // Everything built in the old scene went with it, your player too.
-        Signals.End();
+        Visuals.End();
         _moves.Forget();
         _projectiles.Forget();
         _arena.Forget();
@@ -184,7 +184,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                 KeepLane();
                 _projectiles.Update();
                 if (!run.Request.Recording) _player.KeepVulnerable();
-                Signals.Update(run.Chart, ChartTime);
+                Visuals.Update(run.Chart, ChartTime);
                 _sweeper.Update(run.Chart.Rules.CleanupSeconds);
                 foreach (var command in run.Runner!.Advance(Math.Max(0, ChartTime)))
                 {
@@ -208,7 +208,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
 
         run.Score.PlayerDamaged(amount);
         Logger.Debug($"[Battle.YouWereHit] -{amount}, {healthNow} left");
-        Signals.Fire("hit", BattlePlayer.Head, Mathf.Clamp01(amount / 5f), 0.6f);
+        Visuals.FireEvent("hit", BattlePlayer.Head, Mathf.Clamp01(amount / 5f), 0.6f);
         if (healthNow <= 0) Finish(survived: false, ChartTime);
     }
 
@@ -311,7 +311,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         Run.MusicDeadline = Run.CountdownEnds + MusicWaitSeconds;
         _arena.Boundary.LetActorsThrough(actors.Actors.Where(a => a.Ready).SelectMany(a => a.Body!.Collisions.All));
         _moves.DisableMoves();
-        Signals.PreloadChartPacks(Run.Chart);
+        Visuals.PreloadChartPacks(Run.Chart);
         Run.State = BattleState.Countdown;
     }
 
@@ -336,7 +336,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         _board.Show("GO", 1f);
         foreach (var actor in actors.Actors) actor.FullHeal();
         _sweeper.Reset();
-        Signals.Begin(chart);
+        Visuals.Reset();
 
         if (!request.Recording)
         {
@@ -360,7 +360,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                     Run.Phase = enter.Phase;
                     if (enter.Time > 0 && settings.ShowPhaseBanners.Value) _board.Show($"{enter.Phase.Name}{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
                     Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
-                    if (enter.Time > 0) Signals.Fire("phase", World(0f, 0f, 0f), 1f, 1.5f);
+                    if (enter.Time > 0) Visuals.FireEvent("phase", World(0f, 0f, 0f), 1f, 1.5f);
                     _arena.Visuals.Recolour(Run.Chart.ColoursIn(enter.Phase), enter.Time > 0 ? PhaseColourFadeSeconds : 0f);
                     break;
 
@@ -375,12 +375,12 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
 
                 case SpawnProjectile spawn:
                     _projectiles.Spawn(spawn.Id, spawn.Projectile, Run.Frame);
-                    Signals.Fire("spawn", World(spawn.Projectile.From.X, spawn.Projectile.From.Y, spawn.Projectile.From.Z), 1f, (float)Math.Max(0.2, spawn.Projectile.Telegraph));
+                    Visuals.FireEvent("spawn", World(spawn.Projectile.From.X, spawn.Projectile.From.Y, spawn.Projectile.From.Z), 1f, (float)Math.Max(0.2, spawn.Projectile.Telegraph));
                     break;
 
                 case LaunchProjectile launch:
                     _projectiles.Launch(launch.Id, launch.Projectile, AimPoint(launch.Projectile.To));
-                    Signals.Fire("launch", World(launch.Projectile.From.X, launch.Projectile.From.Y, launch.Projectile.From.Z), 1f, 0.5f);
+                    Visuals.FireEvent("launch", World(launch.Projectile.From.X, launch.Projectile.From.Y, launch.Projectile.From.Z), 1f, 0.5f);
                     Run.Score.ProjectileLaunched();
                     break;
 
@@ -425,8 +425,8 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         _moves.Reset();
         _player.RestoreInvincibility();
         if (!run.Request.Recording) BattlePlayer.FullHealth();
-        Signals.Fire(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
-        Signals.End();
+        Visuals.FireEvent(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
+        Visuals.End();
 
         var scoreKey = run.Request.ScoreKey;
         var previousBest = scoreKey == null ? null : scores.Get(scoreKey);

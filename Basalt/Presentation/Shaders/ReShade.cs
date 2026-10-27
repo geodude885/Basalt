@@ -1,31 +1,32 @@
 using Basalt.Services.Charts;
+using MelonLoader;
 using RumbleReShaded.Api;
+using Semver;
 using UnityEngine;
 
-namespace Basalt.Presentation;
+namespace Basalt.Presentation.Shaders;
 
-// Everything that touches RumbleReShaded: only ever created once it is loaded, so nothing here runs without it.
-internal class ReShade
+internal class ReShade : IShaderProvider
 {
     private const string ModId = "basalt";
+
+    public float ShaderIntensity { get; set; } = 1f;
+    private static readonly SemVersion MinVersion = SemVersion.Parse("1.2.0-dev.2");
+    public static bool IsLoaded =>
+        MelonBase.RegisteredMelons.FirstOrDefault(m => m.Info.Name == "RumbleReShaded")?.Info.SemanticVersion is { } version && version >= MinVersion;
 
     private readonly Dictionary<string, PackOverride?> _overridesByPack = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<PackInfo> _installedPacks = [];
 
-    // An older RumbleReShaded without pack overrides counts as absent: calling into it would throw every frame.
-    public static bool IsLoaded =>
-        AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "RumbleReShaded")?.GetType("RumbleReShaded.Api.PackOverride") != null;
-
-    // How strongly looks and events apply: 0 off, 1 full.
-    public float Strength { get; set; } = 1f;
+    public static IShaderProvider? CreateIfLoaded() => IsLoaded ? new ReShade() : null;
 
     public void FireEvent(string name, Vector3 at, float strength, float seconds)
     {
-        if (Strength > 0f) RRS.Fire($"{ModId}.{name}", at, strength * Strength, seconds);
+        if (ShaderIntensity > 0f) RRS.Fire($"{ModId}.{name}", at, strength * ShaderIntensity, seconds);
     }
 
     // Read in shaders as _RRS_basalt_<name>.
-    public static void SetShaderGlobal(string name, float value) => RRS.SetGlobal($"{ModId}.{name}", value);
+    public void SetGlobal(string name, float value) => RRS.SetGlobal($"{ModId}.{name}", value);
 
     public void PreloadPacks(IEnumerable<string> packNames)
     {
@@ -44,7 +45,7 @@ internal class ReShade
             if (packOverride == null) continue;
 
             // An "off" cue hands the pack back to the player; Strength blends the chart's look over theirs.
-            packOverride.Weight = look.On ? Strength : 0f;
+            packOverride.Weight = look.On ? ShaderIntensity : 0f;
             packOverride.Enabled = true;
             foreach ((var parameter, var value) in look.Values) packOverride.Set(parameter, value);
         }
@@ -55,9 +56,6 @@ internal class ReShade
         foreach (var packOverride in _overridesByPack.Values) packOverride?.Dispose();
         _overridesByPack.Clear();
     }
-
-    public static string DescribeInstalledPacks() =>
-        RRS.Packs.Count == 0 ? "RumbleReShaded has no packs" : string.Join("; ", RRS.Packs.Select(p => $"{p.Name} ({string.Join(", ", p.Parameters.Select(q => q.Label))})"));
 
     private float PlayerValue(string packName, string parameter)
     {

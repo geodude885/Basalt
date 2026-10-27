@@ -4,12 +4,10 @@ using UnityEngine;
 
 namespace Basalt.Presentation;
 
-// What the mod borrows from the game to draw with: a shader, a font, and copies of the Gym's rock panel and push button.
-// A primitive's default shader is not in the game build (it draws magenta), and a fresh renderer with the game's mesh and
-// material draws nothing - so materials use a shader the game has loaded, and the panel and button are copied whole.
 internal class GameAssets
 {
     private const string MenuSlabPanelPath = "SnapRotationDeadzoneSetting/Mesh";
+    private const string MenuSlabSliderPath = "StickMovementDeadzone/Slider";
 
     private static readonly string[] PreferredShaders =
     {
@@ -20,12 +18,11 @@ internal class GameAssets
         "Sprites/Default",
     };
 
-    // The game's own handwriting (Good Dog Plain) with its drop shadow, then the plain cut.
-    private static readonly string[] PreferredFonts =
-    {
-        "GOODDP__ SDF Global Text Material + DropShadow",
-        "GoodDogPlain",
-    };
+    private const string PreferredFont = "RUMBLE Text Material";
+
+    public static readonly Color TextOnRock = new(0.12f, 0.1f, 0.09f);
+
+    public bool HasMenuParts => _rockTemplate != null && _buttonTemplate != null && _sliderTemplate != null;
 
     private Shader? _shader;
     private bool _searchedForShader;
@@ -33,8 +30,12 @@ internal class GameAssets
     private GameObject? _rockTemplate;
     private Bounds _rockBounds;
     private GameObject? _buttonTemplate;
+    private GameObject? _sliderTemplate;
+    private Quaternion _sliderRotation;
+    private Vector3 _sliderScale;
 
-    // Null when no usable shader is loaded.
+    public bool CaptureMenuParts() => CaptureRockTemplate() & CaptureButtonTemplate() & CaptureSliderTemplate();
+
     public Material? Colour(Color colour)
     {
         var shader = FindShader();
@@ -64,14 +65,28 @@ internal class GameAssets
         return material;
     }
 
-    public void GiveFont(TextMeshPro text)
+    public TextMeshPro CreateText(Transform parent, Vector3 position, Vector2? size, float fontSize, Color colour)
+    {
+        var holder = new GameObject("Text");
+        holder.transform.SetParent(parent, false);
+        holder.transform.localPosition = position;
+
+        var text = holder.AddComponent<TextMeshPro>();
+        if (size is { } fixedSize) text.rectTransform.sizeDelta = fixedSize;
+        text.alignment = TextAlignmentOptions.Center;
+        text.fontSize = fontSize;
+        text.enableWordWrapping = false;
+        text.color = colour;
+        GiveFont(text);
+        return text;
+    }
+
+    private void GiveFont(TextMeshPro text)
     {
         if (_font == null)
         {
             var loadedFonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().Where(f => f != null).ToList();
-            _font = PreferredFonts
-                .Select(name => loadedFonts.FirstOrDefault(f => f.name == name))
-                .FirstOrDefault(f => f != null) ?? loadedFonts.FirstOrDefault();
+            _font = loadedFonts.FirstOrDefault(f => f.name == PreferredFont) ?? loadedFonts.FirstOrDefault();
             if (_font == null)
             {
                 Logger.Warning("[Assets.NoFont] no TextMeshPro font loaded - text will be blank");
@@ -106,7 +121,7 @@ internal class GameAssets
     }
 
     // Copied the first time the Gym's menu slab is seen, and kept across scene loads.
-    public bool CaptureRockTemplate()
+    private bool CaptureRockTemplate()
     {
         if (_rockTemplate != null) return true;
 
@@ -129,8 +144,7 @@ internal class GameAssets
         }
     }
 
-    // The game's push button, from the Gym tutorial's "next page" button, so the mod's buttons press with the game's
-    // feel and sound. Null until that button has been seen.
+    // Inspiration courtesy of @SpooderCode's RockUI
     public GameObject? CreateGameButton(Transform parent, Action onPressed)
     {
         if (!CaptureButtonTemplate()) return null;
@@ -157,7 +171,6 @@ internal class GameAssets
             return null;
         }
     }
-
     private bool CaptureButtonTemplate()
     {
         if (_buttonTemplate != null) return true;
@@ -180,6 +193,69 @@ internal class GameAssets
         catch (Exception e)
         {
             Logger.Error($"[Assets.ButtonFailed] {e}");
+            return false;
+        }
+    }
+
+    // Inspiration courtesy of @SpooderCode's RockUI
+    public GameObject? CreateGameSlider(Transform parent, int steps, int step, Action<int> onStep)
+    {
+        if (!CaptureSliderTemplate()) return null;
+
+        try
+        {
+            var slider = UnityEngine.Object.Instantiate(_sliderTemplate!, parent, false);
+            slider.name = "GameSlider";
+            slider.transform.localRotation = _sliderRotation;
+            slider.transform.localScale = _sliderScale;
+            slider.SetActive(true);
+
+            var handle = slider.GetComponentInChildren<InteractionSlider>(true);
+            if (handle == null)
+            {
+                UnityEngine.Object.Destroy(slider);
+                return null;
+            }
+
+            handle.useSteps = true;
+            handle.stepCount = steps;
+            handle.SetStep(step, true, true);
+            handle.onStepReached.AddListener(onStep);
+            return slider;
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"[Assets.SliderFailed] {e}");
+            return null;
+        }
+    }
+
+    private bool CaptureSliderTemplate()
+    {
+        if (_sliderTemplate != null) return true;
+
+        try
+        {
+            var original = Resources.FindObjectsOfTypeAll<InteractionSlider>()
+                .Select(handle => handle.transform.parent)
+                .FirstOrDefault(slider => slider != null && slider.gameObject.scene.IsValid() && PathOf(slider).EndsWith(MenuSlabSliderPath, StringComparison.Ordinal));
+            if (original == null) return false;
+
+            // Rock panels are the slab's mesh unrotated, so the slider keeps its turn relative to that mesh.
+            var mesh = original.parent.Find("Mesh");
+            _sliderRotation = Quaternion.Inverse(mesh != null ? mesh.localRotation : Quaternion.identity) * original.localRotation;
+            _sliderScale = original.lossyScale;
+            _sliderTemplate = KeepCopyOf(original.gameObject, "Basalt_SliderTemplate");
+
+            // Its own labels are the setting's.
+            foreach (var label in _sliderTemplate.GetComponentsInChildren<TMP_Text>(true)) label.gameObject.SetActive(false);
+
+            Logger.Debug($"[Assets.Slider] copied {PathOf(original)} (scale {_sliderScale.Describe()})");
+            return true;
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"[Assets.SliderFailed] {e}");
             return false;
         }
     }

@@ -1,7 +1,7 @@
 using Basalt.Actors;
 using Basalt.Battle;
 using Basalt.Editing;
-using Basalt.UI;
+using Basalt.Menu;
 
 namespace Basalt;
 
@@ -16,14 +16,14 @@ internal static class Mod
 
     public static ChartSelection Charts { get; private set; } = null!;
 
-    public static ChartPicker Picker { get; private set; } = null!;
+    public static BasaltMenu Menu { get; private set; } = null!;
 
-    public static void Share(ActorsRegistry actors, BattleController battle, Studio studio, ChartSelection charts, ChartPicker picker)
+    public static void Share(ActorsRegistry actors, BattleController battle, Studio studio, ChartSelection charts, BasaltMenu menu)
     {
         Actors = actors;
         Battle = battle;
         Studio = studio;
         Charts = charts;
-        Picker = picker;
+        Menu = menu;
     }
 }

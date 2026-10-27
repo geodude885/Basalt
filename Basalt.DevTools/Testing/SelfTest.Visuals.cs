@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
 using Basalt.Battle;
-using Basalt.Presentation;
+using Basalt.Presentation.Shaders;
 using Basalt.Services.Charts;
 using MelonLoader;
 using RumbleReShaded.Api;
@@ -56,7 +56,7 @@ internal static partial class SelfTest
         while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
 
         var midRun = InUse();
-        var expected = playerBefore.Value + ((LookStrength - playerBefore.Value) * Mod.Battle.Signals.Strength);
+        var expected = playerBefore.Value + ((LookStrength - playerBefore.Value) * Mod.Battle.Visuals.ShaderIntensity);
         if (!midRun.Enabled || Math.Abs(midRun.Value - expected) > 0.01f)
             _visualsProblem = $"chart look: {LookPack} was {(midRun.Enabled ? "on" : "off")} at {LookParameter} {midRun.Value:0.00} mid-run, not on at {expected:0.00}";
         else if (PlayerSetting() != playerBefore)

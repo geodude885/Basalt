@@ -30,7 +30,7 @@ public class DevToolsEntry : MelonMod
 
     public override void OnInitializeMelon()
     {
-        if (Mod.Picker is null)
+        if (Mod.Menu is null)
         {
             LoggerInstance.Error("Basalt is not loaded - the dev tools are off");
             return;
@@ -88,18 +88,18 @@ public class DevToolsEntry : MelonMod
     private void HandleClick()
     {
         if (!Input.GetMouseButtonDown(0) || EventSystem.current?.IsPointerOverGameObject() == true) return;
-        if (Mod.Picker is not { } picker || (_camera.Camera ?? Camera.main) is not { } camera) return;
+        if (Mod.Menu is not { Visible: true, ButtonRow: { } buttons } || (_camera.Camera ?? Camera.main) is not { } camera) return;
 
         var ray = camera.ScreenPointToRay(Input.mousePosition);
         var unitBox = new Bounds(Vector3.zero, Vector3.one);
-        var hit = picker.ShownButtons
-            .Select(b => (b.Id, Hit: unitBox.IntersectRay(new Ray(b.Face.InverseTransformPoint(ray.origin), b.Face.InverseTransformVector(ray.direction)), out var distance), Distance: distance))
+        var hit = buttons.Buttons
+            .Select(b => (b.Spec.Id, Hit: unitBox.IntersectRay(new Ray(b.Face.transform.InverseTransformPoint(ray.origin), b.Face.transform.InverseTransformVector(ray.direction)), out var distance), Distance: distance))
             .Where(b => b.Hit)
             .OrderBy(b => b.Distance)
             .Select(b => b.Id)
             .FirstOrDefault();
 
-        if (hit != null) picker.Press(hit);
+        if (hit != null) buttons.Press(hit);
     }
 
     private void HandleKeys()

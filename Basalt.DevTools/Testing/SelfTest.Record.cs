@@ -87,7 +87,7 @@ internal static partial class SelfTest
         FlatscreenControls.ScriptedTurn = null;
         yield return new WaitForSeconds(0.6f);
 
-        if (!Mod.Picker.InvokeGameButton("stop") && !Mod.Picker.Press("stop")) problems.Add("the panel had no STOP button while recording");
+        if (!PushGameButton("stop")) problems.Add("the panel had no STOP button while recording");
 
         var clip = Mod.Studio.NewClip;
         if (clip == null)
@@ -138,7 +138,7 @@ internal static partial class SelfTest
 
         // The panel has just appeared: its buttons wait a second before they press.
         yield return new WaitForSeconds(1.2f);
-        if (!Mod.Picker.InvokeGameButton("keep") && !Mod.Picker.Press("keep")) problems.Add("the panel had no KEEP button after the review");
+        if (!PushGameButton("keep")) problems.Add("the panel had no KEEP button after the review");
         yield return new WaitForSeconds(0.5f);
 
         CheckKept(file, clip, problems);
@@ -154,9 +154,9 @@ internal static partial class SelfTest
 
         Mod.Studio.OpenChartOptions(entry);
         yield return new WaitForSeconds(1f);
-        Mod.Picker.Press("longer");
-        Mod.Picker.Press("longer");
-        Mod.Picker.Press("wider");
+        Mod.Menu.ButtonRow?.Press("longer");
+        Mod.Menu.ButtonRow?.Press("longer");
+        Mod.Menu.ButtonRow?.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
         if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Player?.Controller is { } playerController)
@@ -168,7 +168,7 @@ internal static partial class SelfTest
             Shoot(ShotFolder(), "8-setup");
         }
 
-        if (!Mod.Picker.Press("save")) problems.Add("no SAVE button in lane setup");
+        if (Mod.Menu.ButtonRow?.Press("save") != true) problems.Add("no SAVE button in lane setup");
         yield return new WaitForSeconds(0.3f);
 
         var text = File.ReadAllText(file);

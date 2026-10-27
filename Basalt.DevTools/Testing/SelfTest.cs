@@ -3,9 +3,10 @@ using System.Text.RegularExpressions;
 using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
+using Basalt.Menu;
 using Basalt.Services.Charts;
 using Basalt.Services.Scoring;
-using Basalt.UI;
+using Il2CppRUMBLE.Interactions.InteractionBase;
 using MelonLoader;
 using MelonLoader.Utils;
 using UnityEngine;
@@ -203,12 +204,12 @@ internal static partial class SelfTest
     private static IEnumerator CheckPicker()
     {
         var deadline = Time.realtimeSinceStartup + 5f;
-        while (!Mod.Picker.Visible && Time.realtimeSinceStartup < deadline) yield return null;
+        while (!Mod.Menu.Visible && Time.realtimeSinceStartup < deadline) yield return null;
 
         // Its buttons wait a second after it appears - it can land where a hand is.
         yield return new WaitForSeconds(1.2f);
 
-        if (!Mod.Picker.Visible)
+        if (!Mod.Menu.Visible)
         {
             _pickerProblem = "the chart picker never appeared";
             yield break;
@@ -216,46 +217,45 @@ internal static partial class SelfTest
 
         yield return CheckCover();
 
-        var before = Mod.Picker.CardText;
-        var gameButton = Mod.Picker.InvokeGameButton("next");
-        if (!gameButton) Mod.Picker.Press("next");
+        var before = CardText;
+        var pushed = PushGameButton("next");
         yield return new WaitForSeconds(0.5f);
-        var after = Mod.Picker.CardText;
+        var after = CardText;
 
-        if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "0-picker");
+        if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-picker");
 
-        Mod.Picker.Press("prev");
+        Mod.Menu.ButtonRow?.Press("prev");
         if (string.IsNullOrWhiteSpace(before) || before == after) _pickerProblem = $"pressing next did not change the picker's card (\"{before}\")";
-        Logger.Info($"[SelfTest] picker ({(gameButton ? "the game's NEXT button" : "the mod's own buttons")}): {Regex.Replace(before, "<[^>]+>", "").Replace('\n', ' ')} -> {Regex.Replace(after, "<[^>]+>", "").Replace('\n', ' ')}");
+        if (!pushed) _pickerProblem = "the menu had no game NEXT button to push";
+        Logger.Info($"[SelfTest] menu: {Regex.Replace(before, "<[^>]+>", "").Replace('\n', ' ')} -> {Regex.Replace(after, "<[^>]+>", "").Replace('\n', ' ')}");
 
         yield return CheckDifficulties();
     }
 
-    /// <summary>For each song with more than one chart, its difficulty buttons choose each; the first is chosen again after.</summary>
+    /// <summary>For each song with more than one chart, each step of its difficulty slider chooses that chart; the first is chosen again after.</summary>
     private static IEnumerator CheckDifficulties()
     {
         var songsTried = 0;
         foreach (var _ in Mod.Charts.Library.Songs)
         {
-            var difficultyButtons = Mod.Picker.ButtonIds.Where(id => id.StartsWith("difficulty:", StringComparison.Ordinal)).ToList();
-            if (difficultyButtons.Count > 1)
+            yield return new WaitForSeconds(0.4f);
+            if (Mod.Menu.StepSlider?.Spec?.Labels.Count > 1 && Mod.Charts.Chosen is { } startedOn)
             {
                 songsTried++;
-                var startedOn = Mod.Charts.Chosen;
-                foreach (var button in difficultyButtons)
+                var difficulties = Mod.Charts.Library.DifficultiesOf(startedOn);
+                foreach (var step in Enumerable.Range(0, difficulties.Count))
                 {
-                    Mod.Picker.Press(button);
-                    yield return new WaitForSeconds(0.2f);
-                    if (Mod.Charts.Chosen?.Stem != button["difficulty:".Length..]) _pickerProblem = $"pressing {button} chose {Mod.Charts.Chosen?.Stem}";
+                    Mod.Menu.StepSlider.Root?.GetComponentInChildren<InteractionSlider>(true)?.SetStep(step, false, false);
+                    yield return new WaitForSeconds(0.4f);
+                    if (Mod.Charts.Chosen != difficulties[step]) _pickerProblem = $"step {step} of {startedOn.Name}'s slider chose {Mod.Charts.Chosen?.Stem}, not {difficulties[step].Stem}";
                 }
 
-                if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "0-difficulties");
-                if (startedOn != null) Mod.Charts.ChooseDifficulty(startedOn);
-                Logger.Info($"[SelfTest] difficulties of {startedOn?.Name}: {string.Join(", ", difficultyButtons)}");
+                if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-difficulties");
+                Mod.Charts.ChooseDifficulty(startedOn);
+                Logger.Info($"[SelfTest] difficulties of {startedOn.Name}: {string.Join(", ", difficulties.Select(d => d.Stem))}");
             }
 
             Mod.Charts.StepSong(1);
-            yield return new WaitForSeconds(0.2f);
         }
 
         Logger.Info($"[SelfTest] songs with difficulties: {songsTried}");
@@ -278,13 +278,13 @@ internal static partial class SelfTest
         File.WriteAllBytes(path, ImageConversion.EncodeToPNG(image));
         UnityEngine.Object.Destroy(image);
 
-        Mod.Picker.Override = new PickerCard("Cover test<\n<size=50%>a chart with a cover</size>", path);
+        Mod.Menu.Override = new MenuCard("Cover test<\n<size=50%>a chart with a cover</size>", path);
         yield return new WaitForSeconds(0.5f);
-        if (!Mod.Picker.ShowingCover) _pickerProblem = "a chart's cover image did not show on the picker";
+        if (Mod.Menu.Card?.Cover.activeSelf != true) _pickerProblem = "a chart's cover image did not show on the picker";
 
-        if (_shots && Mod.Picker.Root is { } card) ShootPanel(card, "0-cover");
+        if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-cover");
 
-        Mod.Picker.Override = null;
+        Mod.Menu.Override = null;
         yield return new WaitForSeconds(0.4f);
     }
 
@@ -487,6 +487,18 @@ internal static partial class SelfTest
     }
 
     /// <summary>How many lines carried this tag.</summary>
+    private static string CardText => Mod.Menu.Card?.Text.text ?? "";
+
+    // As a hand pushing it would: through the game button's own onPressed, so its wiring is checked too.
+    private static bool PushGameButton(string id)
+    {
+        var button = Mod.Menu.ButtonRow?.Buttons.FirstOrDefault(b => b.Spec.Id == id);
+        if (button?.Root.GetComponentInChildren<InteractionButton>(true) is not { } interaction) return false;
+
+        interaction.onPressed.Invoke();
+        return true;
+    }
+
     private static int Logged(string tag) => Lines.Count(l => l.Line.StartsWith($"[{tag}]", StringComparison.Ordinal));
 
     private static void Finish(IReadOnlyList<string> problems)

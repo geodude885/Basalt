@@ -2,12 +2,13 @@ using Basalt.Actors;
 using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Editing;
+using Basalt.Menu;
+using Basalt.Menu.Screens;
 using Basalt.Patches;
 using Basalt.Presentation;
 using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Scoring;
-using Basalt.UI;
 using MelonLoader;
 using MelonLoader.Utils;
 
@@ -29,7 +30,7 @@ public class ModEntry : MelonMod
     private BattleController _battle = null!;
     private Studio _studio = null!;
     private ChartSelection _charts = null!;
-    private ChartPicker _picker = null!;
+    private BasaltMenu _menu = null!;
     private GameAssets _assets = null!;
 
     public override void OnInitializeMelon()
@@ -41,16 +42,16 @@ public class ModEntry : MelonMod
         var scores = new JsonBook<BestScore>(Path.Combine(folder, "scores.json"));
         scores.Load();
         if (scores.LoadError != null) Logger.Info($"scores.json could not be read ({scores.LoadError}) - starting a fresh book");
-        var pickerSpots = new JsonBook<SavedSpot>(Path.Combine(folder, "places.json"));
-        pickerSpots.Load();
+        var menuSpots = new JsonBook<SavedSpot>(Path.Combine(folder, "places.json"));
+        menuSpots.Load();
 
         _assets = new GameAssets();
         _actors = new ActorsRegistry();
         _battle = new BattleController(_actors, scores, _assets, _settings);
         _studio = new Studio(_battle, _assets);
         _charts = new ChartSelection(library, _settings, _battle, _studio);
-        _picker = new ChartPicker(new ChartPickerPanel(_charts, library, scores, _settings, _battle, _studio), pickerSpots, _assets);
-        Mod.Share(_actors, _battle, _studio, _charts, _picker);
+        _menu = new BasaltMenu(new MenuScreens(_charts, library, scores, _settings, _battle, _studio), menuSpots, _assets);
+        Mod.Share(_actors, _battle, _studio, _charts, _menu);
 
         _settings.Create();
         _charts.ReloadCharts();
@@ -63,7 +64,7 @@ public class ModEntry : MelonMod
         foreach ((var text, var name, var description, var handler) in new (string, string, string, Action)[]
         {
             ("Stop", "Stop battle", "End the battle and remove its actors.", () => _battle.Stop("stopped from the menu")),
-            ("Picker", "Chart picker here", "Bring the chart picker in front of you - in the Gym, this sets its fixed spot.", _picker.Summon),
+            ("Menu", "Menu here", "Bring the Basalt menu in front of you - in the Gym, this sets its fixed spot.", _menu.Summon),
             ("New", "New chart", "Chart editing: make a new chart folder from a template, and pick it.", () => IfEditing(() => _charts.NewChart())),
             ("Folder", "Open chart folder", "Chart editing: open the chosen chart's folder, to edit it in the Basalt Editor.", () => IfEditing(_charts.OpenChartFolder)),
         })
@@ -84,7 +85,7 @@ public class ModEntry : MelonMod
             _actors.Update();
             _battle.Update();
             _studio.Update();
-            _picker.Update();
+            _menu.Update();
         }
         catch (Exception e)
         {
@@ -110,14 +111,15 @@ public class ModEntry : MelonMod
         _actors.ForgetSceneObjects();
         _battle.OnSceneLoaded(sceneName);
         _studio.OnSceneLoaded();
-        _picker.Forget();
-        if (sceneName == Maps.GymScene) _assets.CaptureRockTemplate();
+        _menu.Forget();
+        if (sceneName == Maps.GymScene && !_assets.CaptureMenuParts())
+            Logger.Error("[Assets.MenuPartsMissing] the Gym's menu slab rock, tutorial button or menu slider was not found - the menu cannot be built");
     }
 
     private void ApplySettings()
     {
         Logger.Level = _settings.LogLevel.Value;
-        _battle.Signals.Strength = _settings.ChartVisuals.Value;
+        _battle.Visuals.ShaderIntensity = _settings.ChartVisuals.Value;
     }
 
     private void IfEditing(Action action)

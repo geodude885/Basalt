@@ -11,7 +11,6 @@ internal class BattleInfoBoard(GameAssets assets)
 
     public GameObject? GameObject { get; private set; }
     public float FontSize { get; set; } = 1.6f;
-    private static readonly Color TextOnRock = new(0.12f, 0.1f, 0.09f);
 
     private TextMeshPro? _text;
     private GameObject? _slab;
@@ -70,7 +69,7 @@ internal class BattleInfoBoard(GameAssets assets)
     private void FitSlabToText()
     {
         _slab ??= assets.CreateRockPanel("Slab", GameObject!.transform, Vector3.zero, Vector3.one);
-        _text!.color = _slab == null ? Color.white : TextOnRock;
+        _text!.color = _slab == null ? Color.white : GameAssets.TextOnRock;
         if (_slab == null) return;
 
         var textSize = _text.GetPreferredValues(_text.text);
@@ -85,16 +84,7 @@ internal class BattleInfoBoard(GameAssets assets)
         try
         {
             GameObject = new GameObject("Basalt_Board");
-            var textHolder = new GameObject("Text");
-            textHolder.transform.SetParent(GameObject.transform, false);
-            textHolder.transform.localPosition = new Vector3(0f, 0f, -0.01f);
-
-            _text = textHolder.AddComponent<TextMeshPro>();
-            _text.alignment = TextAlignmentOptions.Center;
-            _text.fontSize = FontSize;
-            _text.enableWordWrapping = false;
-            _text.color = Color.white;
-            assets.GiveFont(_text);
+            _text = assets.CreateText(GameObject.transform, new Vector3(0f, 0f, -0.01f), null, FontSize, Color.white);
             return true;
         }
         catch (Exception e)

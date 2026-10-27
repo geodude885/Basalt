@@ -6,7 +6,7 @@ using Basalt.Editing;
 using Basalt.Services.Charts;
 using UnityEngine;
 
-namespace Basalt.UI;
+namespace Basalt.Menu;
 
 // The chart you have chosen, and everything done to it: starting, recording into, making and opening.
 internal class ChartSelection(ChartLibrary library, Settings settings, BattleController battle, Studio studio)

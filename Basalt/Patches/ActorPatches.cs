@@ -14,10 +14,6 @@ using UnityEngine;
 
 namespace Basalt.Patches;
 
-/// <summary>
-/// What makes an actor behave as a player that is not you. Each patch acts on actors only; your own
-/// player runs the game's code untouched (<see cref="HealthWatch"/> only reads). Skipping prefixes fail open.
-/// </summary>
 public static class ActorPatches
 {
     // Harmony only calls static methods, so what the patches use is handed over here, once.
@@ -31,11 +27,6 @@ public static class ActorPatches
         return PatchGroup.Apply(harmony, typeof(ActorPatches));
     }
 
-    /// <summary>
-    /// An actor never reaches 0 HP, where the game's death handling would run - for an extra player
-    /// it crashed the process. Before a lethal hit it is put back on full health, so the hit lands as
-    /// any other: its effects play and the score counts all of it.
-    /// </summary>
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.ReduceHealth))]
     public static class NoLethalHits
     {
@@ -78,10 +69,7 @@ public static class ActorPatches
         }
     }
 
-    /// <summary>
-    /// SetHealth on a Local player plays the 2D "you were hit" sound and can raise the change over
-    /// Photon, so an actor is Remote for the length of the call.
-    /// </summary>
+    // SetHealth as a remote player to avoid hit sound or listener calls
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.SetHealth))]
     public static class ActorHealthAsRemote
     {
@@ -115,7 +103,6 @@ public static class ActorPatches
         }
     }
 
-    /// <summary>Reads every health change, yours and the actors', for the battle's score.</summary>
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.SetHealth))]
     public static class HealthWatch
     {
@@ -139,7 +126,6 @@ public static class ActorPatches
         });
     }
 
-    /// <summary>An actor clips <see cref="Actor.SelfKnockbackMultiplier"/> of the game's knockback; 0 skips it.</summary>
     [HarmonyPatch(typeof(CombatManager), nameof(CombatManager.ApplyPlayerKnockbackForce))]
     public static class Knockback
     {
@@ -168,10 +154,6 @@ public static class ActorPatches
         }
     }
 
-    /// <summary>
-    /// A Local player's ProcessInput reads your joystick; an actor gets still sticks instead, as its clip
-    /// moves and turns it. Gestures need nothing: pose recognition is pure head and hand geometry.
-    /// </summary>
     [HarmonyPatch(typeof(PlayerMovement), nameof(PlayerMovement.ProcessInput))]
     public static class ActorSticks
     {
@@ -194,10 +176,7 @@ public static class ActorPatches
         }
     }
 
-    // Sounds only your own player plays are authored 2D; played inside these scopes for an actor,
-    // they are made positional (ActorSoundsPositional).
 
-    /// <summary>A Local player's fingers follow your controllers; an actor's follow its clip instead.</summary>
     [HarmonyPatch(typeof(PlayerHandPresence), nameof(PlayerHandPresence.GetHandPresenceInputForHand))]
     public static class ActorFingers
     {
@@ -214,10 +193,7 @@ public static class ActorPatches
             return false;
         }
 
-        /// <summary>
-        /// Without a headset the game's own read throws every frame, and once patched the interop
-        /// trampoline reports each one: suppressed (relaxed fingers), the first logged.
-        /// </summary>
+        // Suppressed without headset otherwise throws every frame
         public static Exception? Finalizer(Exception? __exception)
         {
             if (__exception == null || _throwLogged) return null;

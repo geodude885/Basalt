@@ -1,7 +1,7 @@
 using Basalt.Presentation;
 using UnityEngine;
 
-namespace Basalt.UI;
+namespace Basalt.Menu.Components;
 
 // Chart cover images (PNG or JPG), cut to a rough rock shape and cached until the file changes.
 internal class Covers(GameAssets assets)

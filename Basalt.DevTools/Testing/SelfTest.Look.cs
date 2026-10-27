@@ -14,8 +14,6 @@ namespace Basalt.DevTools.Testing;
 /// </summary>
 internal static partial class SelfTest
 {
-    private static bool _lookTest;
-
     private static IEnumerator RunLookTest(List<string> problems)
     {
         var localPlayer = BattlePlayer.Player!;

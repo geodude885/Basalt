@@ -14,13 +14,23 @@ using UnityEngine;
 namespace Basalt.DevTools.Testing;
 
 /// <summary>
-/// <c>--basalt-selftest[=ring|=pit]</c>: once the Gym is up, plays the self-test chart, judges
-/// the run, writes the verdict to <c>UserData/Basalt/selftest.txt</c> and quits the game.
+/// The self-tests: named tests run in the game, each judged on its own, with the verdict written to
+/// <c>UserData/Basalt/selftest.txt</c>.
+/// <list type="bullet">
+/// <item><c>--basalt-selftest</c> runs the full set (menu, battle, walls) once the Gym is up, then quits.</item>
+/// <item><c>--basalt-selftest=menu,battle,ring</c> runs just those, in order; <c>ring</c> or <c>pit</c> moves the battle there.</item>
+/// <item><c>--basalt-selftest-listen</c> keeps the game open: a test list written to <c>SelfTest/request.txt</c> is run
+/// and answered in <c>selftest.txt</c>; <c>quit</c> closes the game.</item>
+/// <item><c>--basalt-shots</c> adds screenshots, in <c>SelfTestShots/&lt;arena&gt;</c>.</item>
+/// </list>
 /// </summary>
 internal static partial class SelfTest
 {
     private const string Flag = "--basalt-selftest";
+    private const string ListenFlag = "--basalt-selftest-listen";
     private const string ShotsFlag = "--basalt-shots";
+    private const string RequestFile = "request.txt";
+    private const string ChartTest = "chart:";
     private const int ShotWidth = 960;
     private const int ShotHeight = 540;
     private const float GymSettleSeconds = 3f;
@@ -32,9 +42,37 @@ internal static partial class SelfTest
     /// <summary>Dropped into the self-test folder by hand, one of these is played instead of the tone - to check a format.</summary>
     private static readonly string[] SongFiles = { "selftest-song.mp3", "selftest-song.ogg", "selftest-song.wav" };
 
-    /// <summary>Every line the mod logged; a run fails on any warning or error.</summary>
+    private static readonly Dictionary<string, Func<List<string>, IEnumerator>> Tests = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // The menu appears, NEXT works through the game's own button, a cover shows, and each difficulty step chooses its chart.
+        ["menu"] = RunMenuTest,
+        // The self-test chart played and judged: rules, slides, placement, lane colours, music, projectiles, and no warnings.
+        ["battle"] = RunBattleTest,
+        // After a battle: walking and dashing into each wall and corner leaves you in the lane, on its floor.
+        ["walls"] = RunWallsTest,
+        // A clip recorded, reviewed and kept, then the lane set up and saved.
+        ["record"] = RunRecordTest,
+        // A new chart's boss wears your look and stones, then the chart's own.
+        ["look"] = RunLookTest,
+        // Each throwable structure's size, for the editor.
+        ["measure"] = RunMeasure,
+    };
+
+    private static readonly Dictionary<string, string[]> Presets = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["full"] = ["menu", "battle", "walls"],
+    };
+
+    /// <summary>Every line the mod logged during the current test.</summary>
     private static readonly List<(LogLevel Level, string Line)> Lines = [];
-    private static bool _started;
+    private static List<string>? _firstRequest;
+    private static bool _listening;
+    private static bool _running;
+    private static bool _settled;
+
+    // The catalog is read once a session, so a later battle in a listening session never logs it again.
+    private static bool _stoneCatalogRead;
+    private static int _runNumber;
     private static ArenaKind _arena = ArenaKind.Gym;
     private static bool _sawSimulatedActor;
     private static bool _shots;
@@ -46,95 +84,167 @@ internal static partial class SelfTest
 
     public static bool Enabled { get; private set; }
 
+    private static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "SelfTest");
+
     public static void Configure(Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture)
     {
         _showCamera = showCamera;
         _capture = capture;
-        _shots = Environment.GetCommandLineArgs().Any(a => string.Equals(a, ShotsFlag, StringComparison.OrdinalIgnoreCase));
+        var arguments = Environment.GetCommandLineArgs();
+        _shots = arguments.Any(a => string.Equals(a, ShotsFlag, StringComparison.OrdinalIgnoreCase));
+        _listening = arguments.Any(a => string.Equals(a, ListenFlag, StringComparison.OrdinalIgnoreCase));
 
-        var argument = Environment.GetCommandLineArgs()
-            .FirstOrDefault(a => a.StartsWith(Flag, StringComparison.OrdinalIgnoreCase));
-        if (argument == null) return;
+        var argument = arguments.FirstOrDefault(a => a.StartsWith(Flag, StringComparison.OrdinalIgnoreCase) && !string.Equals(a, ListenFlag, StringComparison.OrdinalIgnoreCase));
+        if (argument == null && !_listening) return;
 
         Enabled = true;
-        Logger.Written += (level, line) => Lines.Add((level, line));
-        if (argument.EndsWith("=ring", StringComparison.OrdinalIgnoreCase)) _arena = ArenaKind.Ring;
-        if (argument.EndsWith("=pit", StringComparison.OrdinalIgnoreCase)) _arena = ArenaKind.Pit;
-        _recordTest = argument.EndsWith("=record", StringComparison.OrdinalIgnoreCase);
-        _lookTest = argument.EndsWith("=look", StringComparison.OrdinalIgnoreCase);
-        _measureTest = argument.EndsWith("=measure", StringComparison.OrdinalIgnoreCase);
-        var chartAt = argument.IndexOf(ChartPrefix, StringComparison.OrdinalIgnoreCase);
-        if (chartAt >= 0) _playbackChart = argument[(chartAt + ChartPrefix.Length)..].Trim('"');
-
-        Logger.Info($"[SelfTest] armed: will play \"{SelfTestChart.Name}\" in {_arena} once the Gym loads{(_shots ? ", with screenshots" : "")}");
+        Logger.Written += (level, line) =>
+        {
+            Lines.Add((level, line));
+            _stoneCatalogRead |= line.StartsWith("[Actor.StoneCatalog]", StringComparison.Ordinal);
+        };
+        if (argument != null) _firstRequest = [argument.Contains('=') ? argument[(argument.IndexOf('=') + 1)..] : ""];
+        Directory.CreateDirectory(Folder);
+        File.Delete(Path.Combine(Folder, RequestFile));
+        Logger.Info($"[SelfTest] armed{(_firstRequest != null ? $": \"{_firstRequest[0]}\" once the Gym loads" : "")}{(_listening ? $", then listening for {RequestFile}" : "")}{(_shots ? ", with screenshots" : "")}");
     }
 
     public static void OnSceneLoaded(string scene)
     {
-        if (!Enabled || _started || !string.Equals(scene, Maps.GymScene, StringComparison.Ordinal)) return;
+        if (!Enabled || _runNumber > 0 || _running || !string.Equals(scene, Maps.GymScene, StringComparison.Ordinal)) return;
 
-        _started = true;
-        MelonCoroutines.Start(Run());
+        if (_firstRequest is [var request]) MelonCoroutines.Start(Run(request));
     }
 
-    /// <summary>Called each frame: notes whether an actor was ever seen as a simulated player.</summary>
+    /// <summary>Called each frame: notes whether an actor was ever seen as a simulated player, and picks up requests.</summary>
     public static void Update()
     {
-        if (Enabled && !_sawSimulatedActor && Mod.Actors.Actors.Any(a => a.Ready)) _sawSimulatedActor = true;
+        if (!Enabled) return;
+        if (!_sawSimulatedActor && Mod.Actors.Actors.Any(a => a.Ready)) _sawSimulatedActor = true;
         KeepPlayerAlive();
+
+        if (!_listening || _running || Time.frameCount % 30 != 0) return;
+        var path = Path.Combine(Folder, RequestFile);
+        if (!File.Exists(path)) return;
+
+        var request = File.ReadAllText(path).Trim();
+        File.Delete(path);
+        if (string.Equals(request, "quit", StringComparison.OrdinalIgnoreCase)) Application.Quit();
+        else MelonCoroutines.Start(Run(request));
     }
 
-    private static IEnumerator Run()
+    // A comma-separated list of tests and presets, ring or pit, and chart:<name>; empty is the full set.
+    private static List<string> Parse(string request, out ArenaKind arena)
     {
-        // The Gym scene loads well before your player exists (a fixed wait was too short in the
-        // first run); wait for the player, then let the scene settle.
-        var playerDeadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
-        while (BattlePlayer.Player?.Controller == null && Time.realtimeSinceStartup < playerDeadline) yield return null;
+        var parts = request.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(p => p.Trim('"')).ToList();
+        arena = parts.Any(p => p.Equals("ring", StringComparison.OrdinalIgnoreCase)) ? ArenaKind.Ring
+            : parts.Any(p => p.Equals("pit", StringComparison.OrdinalIgnoreCase)) ? ArenaKind.Pit
+            : ArenaKind.Gym;
 
+        var tests = parts.Where(p => !p.Equals("ring", StringComparison.OrdinalIgnoreCase) && !p.Equals("pit", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (tests.Count == 0) tests = ["full"];
+        return tests.SelectMany(p => Presets.TryGetValue(p, out var preset) ? preset : [p]).ToList();
+    }
+
+    private static IEnumerator Run(string request)
+    {
+        _running = true;
+        _runNumber++;
+        var tests = Parse(request, out _arena);
+        Logger.Info($"[SelfTest] run {_runNumber}: {string.Join(", ", tests)} in {_arena}");
+
+        var report = new List<string>();
+        var failed = false;
+        foreach (var test in tests)
+        {
+            var problems = new List<string>();
+            var started = Time.realtimeSinceStartup;
+            yield return Prepare(test, problems);
+
+            if (problems.Count > 0) { }
+            else if (test.StartsWith(ChartTest, StringComparison.OrdinalIgnoreCase))
+            {
+                _playbackChart = test[ChartTest.Length..];
+                yield return RunPlayback(problems);
+            }
+            else if (Tests.TryGetValue(test, out var run))
+            {
+                yield return run(problems);
+            }
+            else
+            {
+                problems.Add($"no test called \"{test}\" - there are {string.Join(", ", Tests.Keys.Concat(Presets.Keys))} and chart:<name>");
+            }
+
+            failed |= problems.Count > 0;
+            report.Add($"{(problems.Count == 0 ? "PASS" : "FAIL")} {test} ({Time.realtimeSinceStartup - started:0.0}s)");
+            report.AddRange(problems.Select(p => $"  - {p}"));
+            Logger.Info($"[SelfTest] {report[^(problems.Count + 1)]}");
+        }
+
+        Finish(tests, report, failed);
+        _running = false;
+    }
+
+    // Each test starts in the Gym with your player up, except walls, which carries on from the battle before it.
+    private static IEnumerator Prepare(string test, List<string> problems)
+    {
+        Lines.Clear();
+        _pickerProblem = _laneProblem = _rulesProblem = _visualsProblem = _hitboxProblem = _slideProblem = null;
+        _sawSimulatedActor = false;
+        if (test.Equals("walls", StringComparison.OrdinalIgnoreCase)) yield break;
+
+        if (!ArenaKind.Gym.IsLoaded() || Mod.Battle.State != BattleState.Idle)
+        {
+            Mod.Battle.Stop("self-test: next test");
+            if (!ArenaKind.Gym.IsLoaded()) Mod.Battle.ReturnToGym();
+        }
+
+        var deadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
+        while ((!ArenaKind.Gym.IsLoaded() || BattlePlayer.Player?.Controller == null) && Time.realtimeSinceStartup < deadline) yield return null;
         if (BattlePlayer.Player?.Controller == null)
         {
-            Finish(new[] { $"no local player after {PlayerTimeoutSeconds}s in the Gym - was the game launched through Steam?" });
+            problems.Add($"no local player after {PlayerTimeoutSeconds}s in the Gym - was the game launched through Steam?");
             yield break;
         }
 
-        yield return new WaitForSeconds(GymSettleSeconds);
-
-        // What a chart made in game stores as its boss's look.
-        var look = BattlePlayer.Player.Data.VisualData.ToPlayfabDataString();
-        Logger.Info($"[SelfTest] your look string: {look.Length} chars, \"{look[..Math.Min(look.Length, 120)]}\"");
-
-        if (_measureTest)
+        // The Gym scene loads well before it settles, the first time.
+        if (!_settled)
         {
-            var measureProblems = new List<string>();
-            yield return RunMeasure(measureProblems);
-            Finish(measureProblems);
-            yield break;
+            _settled = true;
+            yield return new WaitForSeconds(GymSettleSeconds);
+            var look = BattlePlayer.Player.Data.VisualData.ToPlayfabDataString();
+            Logger.Info($"[SelfTest] your look string: {look.Length} chars, \"{look[..Math.Min(look.Length, 120)]}\"");
         }
 
-        if (_lookTest)
-        {
-            var lookProblems = new List<string>();
-            yield return RunLookTest(lookProblems);
-            Finish(lookProblems);
-            yield break;
-        }
+        Lines.Clear();
+    }
 
-        if (_playbackChart != null)
-        {
-            var playbackProblems = new List<string>();
-            yield return RunPlayback(playbackProblems);
-            Finish(playbackProblems);
-            yield break;
-        }
-
-        if (_recordTest)
-        {
-            yield return RunRecordTest();
-            Finish(_recordProblems ?? ["the record test did not finish"]);
-            yield break;
-        }
-
+    private static IEnumerator RunMenuTest(List<string> problems)
+    {
         yield return CheckPicker();
+        if (_pickerProblem != null) problems.Add(_pickerProblem);
+    }
+
+    private static IEnumerator RunWallsTest(List<string> problems)
+    {
+        if (Mod.Battle.Lane == null || Mod.Battle.Chart == null)
+        {
+            problems.Add("walls needs a battle just before it, still laid out - run battle,walls");
+            yield break;
+        }
+
+        yield return CheckWalls();
+        if (_laneProblem != null) problems.Add(_laneProblem);
+    }
+
+    private static IEnumerator RunBattleTest(List<string> problems)
+    {
+        if (BattlePlayer.Player?.Controller is not { } playerController)
+        {
+            problems.Add("no local player to battle with");
+            yield break;
+        }
 
         // The chart built into this build, not the copy in the chart folder (written once, so it
         // can be older than the code under test); its clip is supplied in memory.
@@ -142,14 +252,14 @@ internal static partial class SelfTest
         var chart = loaded.Chart;
         if (chart == null)
         {
-            Finish(loaded.Errors.Select(e => $"the self-test chart does not load: {e}").ToList());
+            problems.AddRange(loaded.Errors.Select(e => $"the self-test chart does not load: {e}"));
             yield break;
         }
 
 
         // A song beside the chart, as a chart folder would have one: a metronome written here, or
         // a song dropped in by hand to check a format Unity has to decode.
-        var assets = Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "SelfTest");
+        var assets = Folder;
         Directory.CreateDirectory(assets);
         File.WriteAllBytes(Path.Combine(assets, ToneFile), TestAudio.Write(TestAudio.Metronome(120, chart.End + 2)));
         _song = SongFiles.FirstOrDefault(f => File.Exists(Path.Combine(assets, f))) ?? ToneFile;
@@ -167,7 +277,7 @@ internal static partial class SelfTest
         Anchor? gymLane = null;
         if (_arena == ArenaKind.Gym)
         {
-            var playerRig = PlayerRig.From(BattlePlayer.Player.Controller);
+            var playerRig = PlayerRig.From(playerController);
             if (FlatLane(playerRig.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
                 gymLane = Anchor.Facing(lane.Start.ToNumerics(), lane.Direction.ToNumerics());
@@ -182,7 +292,7 @@ internal static partial class SelfTest
 
         Mod.Battle.Finished += OnFinished;
         // Something to clear: a battle starts on a clear floor.
-        Perform(BattlePlayer.Player.Controller, "SpawnCube");
+        Perform(playerController, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
         Mod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f), Lane = gymLane });
@@ -196,8 +306,7 @@ internal static partial class SelfTest
         while (result == null && Time.realtimeSinceStartup < deadline) yield return null;
 
         Mod.Battle.Finished -= OnFinished;
-        if (result != null) yield return CheckWalls();
-        Finish(Judge(chart, result));
+        problems.AddRange(Judge(chart, result));
     }
 
     /// <summary>The picker appears in the Gym and a press changes its card; the press is undone after.</summary>
@@ -456,7 +565,6 @@ internal static partial class SelfTest
 
         if (Logged("Actor.Clip") == 0) problems.Add("no actor played the chart's clip");
         if (LaneMetres < 2f) problems.Add($"the lane was {LaneMetres:0.0} m long");
-        if (_pickerProblem != null) problems.Add(_pickerProblem);
         if (Logged("Battle.MovesHeld") == 0) problems.Add("your moves were not held through the countdown");
         if (_laneProblem != null) problems.Add(_laneProblem);
         if (_rulesProblem != null) problems.Add(_rulesProblem);
@@ -465,7 +573,7 @@ internal static partial class SelfTest
         if (_slideProblem != null) problems.Add(_slideProblem);
         if (GroundedLaunches == 0) problems.Add("no grounded projectile was thrown along the floor (the chart's cube is grounded by default)");
         if (Logged("Battle.CleanedUp") == 0) problems.Add("nothing was cleaned up - the cube that slid past you should have broken after sitting still for 2 s");
-        if (Logged("Actor.StoneCatalog") == 0) problems.Add("the shiftstone catalog was never read - a chart's named stones were not looked up");
+        if (!_stoneCatalogRead) problems.Add("the shiftstone catalog was never read - a chart's named stones were not looked up");
         // The second phase turns the edges orange (#ffaa00) - still so on the results.
         if (!LaneShows(new Color(1f, 170f / 255f, 0f))) problems.Add("the second phase's lane colour was not applied");
         if (Logged("Music.Loaded") == 0) problems.Add($"the song {_song} never loaded");
@@ -501,25 +609,24 @@ internal static partial class SelfTest
 
     private static int Logged(string tag) => Lines.Count(l => l.Line.StartsWith($"[{tag}]", StringComparison.Ordinal));
 
-    private static void Finish(IReadOnlyList<string> problems)
+    private static void Finish(IReadOnlyList<string> tests, List<string> report, bool failed)
     {
-        var verdict = problems.Count == 0
-            ? "SELFTEST PASS"
-            : $"SELFTEST FAIL{Environment.NewLine}{string.Join(Environment.NewLine, problems.Select(p => $"  - {p}"))}";
-
+        var verdict = failed ? "SELFTEST FAIL" : "SELFTEST PASS";
         Logger.Info($"[SelfTest] {verdict}");
 
         try
         {
-            var path = Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "selftest.txt");
-            File.WriteAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {_arena}, song {_song}{Environment.NewLine}{verdict}{Environment.NewLine}");
+            File.WriteAllText(
+                Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "selftest.txt"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} run {_runNumber}: {string.Join(", ", tests)} in {_arena}, song {_song}{Environment.NewLine}" +
+                string.Join(Environment.NewLine, report) + Environment.NewLine + verdict + Environment.NewLine);
         }
         catch (IOException e)
         {
             Logger.Info($"[SelfTest] could not write selftest.txt: {e.Message}");
         }
 
-        MelonCoroutines.Start(QuitSoon());
+        if (!_listening) MelonCoroutines.Start(QuitSoon());
     }
 
     private static IEnumerator QuitSoon()

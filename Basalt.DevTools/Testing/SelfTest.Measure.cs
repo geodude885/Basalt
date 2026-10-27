@@ -15,8 +15,6 @@ internal static partial class SelfTest
 {
     private static readonly string[] Measured = { "Disc", "Ball", "Pillar", "Wall", "RockCube", "BoulderBall", "SmallRock", "LargeRock" };
 
-    private static bool _measureTest;
-
     private static IEnumerator RunMeasure(List<string> problems)
     {
         Vector3 spot = new(0f, 50f, 0f);

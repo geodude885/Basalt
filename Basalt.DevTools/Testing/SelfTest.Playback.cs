@@ -12,14 +12,12 @@ using UnityEngine;
 namespace Basalt.DevTools.Testing;
 
 /// <summary>
-/// <c>--basalt-selftest=chart:&lt;name&gt;</c>: plays one of your charts, invincible, and measures
+/// <c>chart:&lt;name&gt;</c>: plays one of your charts, invincible, and measures
 /// its clips on the actor: moves fired, and structure speeds after slingshots.
 /// Per-frame numbers go to <c>SelfTest/playback-&lt;name&gt;.csv</c>.
 /// </summary>
 internal static partial class SelfTest
 {
-    private const string ChartPrefix = "=chart:";
-
     /// <summary>A Straight or Uppercut this soon after a Hold counts as slung.</summary>
     private const double SlingWindow = 0.6;
 

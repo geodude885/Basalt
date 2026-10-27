@@ -29,11 +29,8 @@ internal static partial class SelfTest
         }
         """;
 
-    private static bool _recordTest;
-
-    private static IEnumerator RunRecordTest()
+    private static IEnumerator RunRecordTest(List<string> problems)
     {
-        var problems = new List<string>();
         foreach (var old in Directory.GetFiles(ShotFolder(), "*.png").Where(f => Path.GetFileName(f)[0] is >= '5' and <= '9')) File.Delete(old);
 
         var folder = Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "SelfTest", "record-test");
@@ -45,7 +42,7 @@ internal static partial class SelfTest
         var entry = new ChartEntry(file, ChartLoader.Load(RecordChart), ChartSource.Folder);
         if (entry.Result.Chart == null)
         {
-            Finish(entry.Result.Errors.Select(e => $"the record-test chart does not load: {e}").ToList());
+            problems.AddRange(entry.Result.Errors.Select(e => $"the record-test chart does not load: {e}"));
             yield break;
         }
 
@@ -58,7 +55,7 @@ internal static partial class SelfTest
         // The Ring loaded: your player is a new one.
         if (BattlePlayer.Player?.Controller is not { } playerController)
         {
-            Finish(["no local player while recording"]);
+            problems.Add("no local player while recording");
             yield break;
         }
 
@@ -93,7 +90,6 @@ internal static partial class SelfTest
         if (clip == null)
         {
             problems.Add("stopping did not make a clip");
-            Finish(problems);
             yield break;
         }
 
@@ -143,7 +139,6 @@ internal static partial class SelfTest
 
         CheckKept(file, clip, problems);
         yield return RunSetupTest(file, problems);
-        _recordProblems = problems;
     }
 
     /// <summary>Lane setup: two metres longer, half a metre wider, saved - and the rest of the chart left alone.</summary>
@@ -195,7 +190,6 @@ internal static partial class SelfTest
         Shoot(ShotFolder(), name);
     }
 
-    private static List<string>? _recordProblems;
 
     private static void CheckKept(string file, Clip clip, List<string> problems)
     {

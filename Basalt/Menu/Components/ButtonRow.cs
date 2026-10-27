@@ -9,7 +9,6 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
     private const float ButtonGap = 0.04f;
     private const int ButtonsPerRow = 5;
     private const float RowSpacing = 0.21f;
-    private const float ColourBarHeight = 0.014f;
     private const float PressedSeconds = 0.15f;
     private const float PressCooldown = 0.5f;
 
@@ -83,48 +82,46 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
         });
         game!.transform.localPosition = new Vector3(0f, -0.02f, -0.02f);
         game.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        var cap = game.GetComponentsInChildren<Renderer>(true).First(r => r.name == "Button");
 
-        var faceSize = new Vector3(ButtonWidth, 0.16f, 0.02f);
-        var face = assets.CreateRockPanel("Face", holder.transform, new Vector3(0f, 0.01f, 0.01f), faceSize)!;
-        var colourBar = Box(face.transform, new Vector3(0f, 0.5f - (ColourBarHeight / faceSize.y / 2f), -0.5f), new Vector3(1f, ColourBarHeight / faceSize.y, 0.2f), spec.Colour);
-
+        var face = assets.CreateRockPanel("Face", holder.transform, new Vector3(0f, 0.01f, 0.01f), new Vector3(ButtonWidth, 0.16f, 0.02f))!;
         var label = assets.CreateText(holder.transform, new Vector3(0f, 0.058f, -0.005f), new Vector2(ButtonWidth, 0.05f), 0.5f, GameAssets.TextOnRock);
         label.enableAutoSizing = true;
         label.fontSizeMin = 0.2f;
         label.fontSizeMax = 0.6f;
         label.text = spec.Label;
 
-        made = new Button(spec, holder, face, colourBar, assets.Colour(spec.Colour), assets.Colour(PressedColour));
+        made = new Button(spec, holder, face, cap);
         Buttons.Add(made);
     }
 
-    private GameObject Box(Transform parent, Vector3 position, Vector3 size, Color colour)
+    // The cap takes the button's colour through the game shader's overlay, which tints without a material of its own.
+    public class Button
     {
-        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        box.name = "ColourBar";
-        UnityEngine.Object.Destroy(box.GetComponent<Collider>());
-        box.transform.SetParent(parent, false);
-        box.transform.localPosition = position;
-        box.transform.localScale = size;
-        if (assets.Colour(colour) is { } material) box.GetComponent<Renderer>().material = material;
-        return box;
-    }
-
-    public class Button(MenuButton spec, GameObject root, GameObject face, GameObject colourBar, Material? normal, Material? pressed)
-    {
-        private readonly Vector3 _rest = face.transform.localPosition;
+        private readonly Renderer _cap;
+        private readonly Vector3 _rest;
         private float _releaseAt;
 
-        public MenuButton Spec { get; set; } = spec;
+        public Button(MenuButton spec, GameObject root, GameObject face, Renderer cap)
+        {
+            Spec = spec;
+            Root = root;
+            Face = face;
+            _cap = cap;
+            _rest = face.transform.localPosition;
+            Tint(spec.Colour);
+        }
 
-        public GameObject Root { get; } = root;
+        public MenuButton Spec { get; set; }
 
-        public GameObject Face { get; } = face;
+        public GameObject Root { get; }
+
+        public GameObject Face { get; }
 
         public void Flash()
         {
             _releaseAt = Time.time + PressedSeconds;
-            Recolour(pressed);
+            Tint(PressedColour);
             Face.transform.localPosition = _rest + new Vector3(0f, 0f, 0.02f);
         }
 
@@ -132,13 +129,15 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
         {
             if (_releaseAt == 0f || Time.time < _releaseAt) return;
             _releaseAt = 0f;
-            Recolour(normal);
+            Tint(Spec.Colour);
             Face.transform.localPosition = _rest;
         }
 
-        private void Recolour(Material? material)
+        private void Tint(Color colour)
         {
-            if (material != null) colourBar.GetComponent<Renderer>().sharedMaterial = material;
+            var overlay = new MaterialPropertyBlock();
+            overlay.SetColor("_Overlay", colour with { a = 1f });
+            _cap.SetPropertyBlock(overlay);
         }
     }
 }

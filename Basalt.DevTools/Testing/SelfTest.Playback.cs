@@ -66,10 +66,10 @@ internal static partial class SelfTest
         Mod.Battle.Start(new BattleRequest(chart) { AssetFolder = entry.AssetFolder });
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
-        if (Mod.Battle.State != BattleState.Running)
+        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        if (Mod.Battle.Run?.State != BattleState.Running)
         {
-            problems.Add($"the chart never started (state {Mod.Battle.State})");
+            problems.Add($"the chart never started (state {Mod.Battle.Run?.State.ToString() ?? "no battle"})");
             yield break;
         }
 
@@ -88,7 +88,7 @@ internal static partial class SelfTest
         var lowestActor = (Height: float.MaxValue, Id: "", Time: 0.0);
         var highestActor = (Height: float.MinValue, Id: "", Time: 0.0);
         deadline = Time.realtimeSinceStartup + (float)chart.End + 60f;
-        while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
+        while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
             var t = Mod.Battle.ChartTime;
             var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && a.Body.Clips.Playing);

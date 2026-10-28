@@ -109,7 +109,8 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     // Checked each second between battles.
     public void ReloadChartsWhenChanged()
     {
-        if (Time.unscaledTime < _nextChartsCheck || !battle.BetweenBattles) return;
+        if (Time.unscaledTime < _nextChartsCheck || battle.Run?.State is not BattleState.Finished) return;
+
         _nextChartsCheck = Time.unscaledTime + 1f;
 
         var fingerprint = ChartFiles.Fingerprint(library.Folder);

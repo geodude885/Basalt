@@ -16,7 +16,7 @@ internal static partial class SelfTest
     private static IEnumerator CheckActorHitbox()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
+        while ((Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
 
         var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready);
         var mesh = actor?.Body?.Controller.GetComponentInChildren<SkinnedMeshRenderer>();

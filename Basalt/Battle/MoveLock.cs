@@ -39,8 +39,8 @@ internal class MoveLock
         {
             // Re-initialising rebuilds the move list from every move you own, so the rule clips it after.
             playerController.PlayerProcessor.InitializeStackInputSources(true);
-            if (rule != SpawnRule.All) Withhold(playerController, rule);
-            if (_withheld.Count > 0) DropWithheldGestures(playerController);
+            if (rule != SpawnRule.All) LimitMoves(playerController, rule);
+            if (_withheld.Count > 0) RemoveLimits(playerController);
         }
         catch (Exception e)
         {
@@ -80,7 +80,7 @@ internal class MoveLock
         _withheld.Clear();
     }
 
-    private void Withhold(PlayerController playerController, SpawnRule rule)
+    private void LimitMoves(PlayerController playerController, SpawnRule rule)
     {
         var stacks = playerController.PlayerProcessor.availableStacks;
         _withheld.AddRange(stacks.ToArray().Where(stack =>
@@ -93,7 +93,7 @@ internal class MoveLock
         Logger.Debug($"[Battle.SpawnsWithheld] {rule}: {string.Join(", ", _withheld.Select(s => s.CachedName))}");
     }
 
-    private void DropWithheldGestures(PlayerController playerController)
+    private void RemoveLimits(PlayerController playerController)
     {
         var handles = playerController.PlayerProcessor.activeStackHandles;
         var poses = playerController.PlayerPoseSystem;

@@ -15,7 +15,7 @@ internal static partial class SelfTest
 
     private static Vector3? LaneOrigin => LanePoint(0f, 0f, 0f);
 
-    private static float LaneMetres => Mod.Battle.Lane != null && Mod.Battle.Chart is { } chart ? chart.Lane.Length : 0f;
+    private static float LaneMetres => Mod.Battle.Run is { Lane: not null } run ? run.Request.Chart.Lane.Length : 0f;
 
     /// <summary>The count from the last <c>[Battle.Cleared] n structure(s)</c> line.</summary>
     private static int LastCleared =>
@@ -24,12 +24,12 @@ internal static partial class SelfTest
     private static PlayerController? You => BattlePlayer.Player?.Controller;
 
     private static Vector3? LanePoint(float x, float y, float z) =>
-        Mod.Battle.Lane is { } frame ? frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity() : null;
+        Mod.Battle.Run?.Lane is { } frame ? frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity() : null;
 
     /// <summary>Up behind you over the backstop, looking down the lane.</summary>
     private static void ShowOverview()
     {
-        if (Mod.Battle.Chart is not { } chart || LanePoint(1.5f, 3.6f, -0.4f) is not { } position || LanePoint(0f, 0.8f, chart.Lane.Length * 0.6f) is not { } lookAt) return;
+        if (Mod.Battle.Run?.Request.Chart is not { } chart || LanePoint(1.5f, 3.6f, -0.4f) is not { } position || LanePoint(0f, 0.8f, chart.Lane.Length * 0.6f) is not { } lookAt) return;
         _showCamera?.Invoke(position, lookAt);
     }
 

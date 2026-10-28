@@ -7,7 +7,7 @@ namespace Basalt.Battle;
 
 internal class MoveEffects
 {
-    private const string PunchMove = "Straight";
+    private const string HitMove = "Straight";
 
     private static readonly Dictionary<string, string> KnownSpawns = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,45 +18,33 @@ internal class MoveEffects
         ["SpawnWall"] = "Wall",
     };
 
-    private Dictionary<string, Effects>? _spawns;
-    private HashSet<string> _grounded = new(StringComparer.OrdinalIgnoreCase);
-    private Effects? _punch;
+    private Dictionary<string, Effects>? _spawnEffects;
+    private Effects? _hitEffect;
 
     private record Effects(string Move, List<AudioCall> Sounds, List<string> Visuals);
 
-    /// <summary>The spawn sound and effect for a structure, by pool name.</summary>
-    public void Spawn(string structure, Vector3 floor, Quaternion facing)
+    public void PlaySpawnEffect(string structure, Vector3 floor, Quaternion facing)
     {
         if (!EnsureExists()) return;
-        if (!_spawns!.TryGetValue(structure, out var effects))
-        {
-            // Scenery rocks have no spawn move: they sound like a ball.
-            _spawns.TryGetValue("Ball", out effects);
-        }
 
-        Play(effects, floor, facing);
+        // Default to ball effect
+        if (!_spawnEffects!.TryGetValue(structure, out var effects))
+            _spawnEffects.TryGetValue("Ball", out effects);
+
+        PlayEffect(effects, floor, facing);
     }
-
-    /// <summary>
-    /// Whether the game spawns this structure out of the ground rather than in mid-air. The disc
-    /// does, though its spawn step is not the grounded kind.
-    /// </summary>
-    public bool IsGrounded(string structure) =>
-        string.Equals(structure, "Disc", StringComparison.OrdinalIgnoreCase) || (EnsureExists() && _grounded.Contains(structure));
-
-    public void Punch(Vector3 at, Quaternion facing)
+    public void PlayStraightEffect(Vector3 at, Quaternion facing)
     {
-        if (EnsureExists()) Play(_punch, at, facing);
+        if (EnsureExists()) PlayEffect(_hitEffect, at, facing);
     }
 
     public void Forget()
     {
-        _spawns = null;
-        _grounded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        _punch = null;
+        _spawnEffects = null;
+        _hitEffect = null;
     }
 
-    private static void Play(Effects? effects, Vector3 at, Quaternion facing)
+    private static void PlayEffect(Effects? effects, Vector3 at, Quaternion facing)
     {
         if (effects == null) return;
 
@@ -78,8 +66,13 @@ internal class MoveEffects
 
     private bool EnsureExists()
     {
-        if (_spawns != null) return true;
+        if (_spawnEffects != null) return true;
 
+        return InitialiseEffects();
+    }
+
+    private bool InitialiseEffects()
+    {
         var playerController = BattlePlayer.Player?.Controller;
         if (playerController == null) return false;
 
@@ -93,13 +86,10 @@ internal class MoveEffects
                 string? spawned = null;
                 var sounds = new List<AudioCall>();
                 var visuals = new List<string>();
-                var grounded = false;
                 foreach (var process in stack.Processes.ToArray())
                 {
                     if (process.StructureSpawnModifier is { } spawnStep)
                     {
-                        var kind = spawnStep.GetIl2CppType().Name;
-                        grounded |= kind.Contains("Grounded", StringComparison.Ordinal) && !kind.Contains("NonGrounded", StringComparison.Ordinal);
                         spawned ??= PrefabName(spawnStep.TryCast<SpawnStructureModifier>());
                     }
 
@@ -116,18 +106,17 @@ internal class MoveEffects
 
                 var effects = new Effects(stack.CachedName, sounds, visuals);
                 if (spawned != null) spawns.TryAdd(spawned, effects);
-                if (spawned != null && grounded) _grounded.Add(spawned);
-                if (string.Equals(stack.CachedName, PunchMove, StringComparison.OrdinalIgnoreCase)) _punch = effects;
+                if (string.Equals(stack.CachedName, HitMove, StringComparison.OrdinalIgnoreCase)) _hitEffect = effects;
             }
 
-            _spawns = spawns;
-            Logger.Debug($"[Effects.Found] spawns: {string.Join(", ", spawns.Select(s => $"{s.Key} ({s.Value.Move}: {s.Value.Sounds.Count} sound, {string.Join("/", s.Value.Visuals)}{(_grounded.Contains(s.Key) ? ", grounded" : "")})"))}; " +
-                $"punch: {(_punch == null ? "none" : $"{_punch.Sounds.Count} sound, {string.Join("/", _punch.Visuals)}")}");
+            _spawnEffects = spawns;
+            Logger.Debug($"[Effects.Found] spawns: {string.Join(", ", spawns.Select(s => $"{s.Key} ({s.Value.Move}: {s.Value.Sounds.Count} sound, {string.Join("/", s.Value.Visuals)})"))}; " +
+                $"punch: {(_hitEffect == null ? "none" : $"{_hitEffect.Sounds.Count} sound, {string.Join("/", _hitEffect.Visuals)}")}");
             return true;
         }
         catch (Exception e)
         {
-            _spawns = [];
+            _spawnEffects = [];
             Logger.Error($"[Effects.Failed] could not read the moves' effects: {e.Message}");
             return false;
         }

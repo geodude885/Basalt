@@ -7,10 +7,11 @@ namespace Basalt.Battle;
 internal class BattleRun(BattleRequest request, ClipLibrary? chartClips)
 {
     public BattleRequest Request => request;
-    public Chart Chart => request.Chart;
     public BattleState State { get; set; } = BattleState.LoadingArena;
     public Anchor Frame { get; set; }
-    public bool LaidOut => State != BattleState.LoadingArena;
+
+    // The lane's frame once it is laid out; null while the arena loads.
+    public Anchor? Lane => State == BattleState.LoadingArena ? null : Frame;
     public ChartRunner? Runner { get; set; }
     public ScoreKeeper Score { get; } = new(request.Chart.Name);
     public Phase Phase { get; set; } = request.Chart.Phases[0];
@@ -19,7 +20,6 @@ internal class BattleRun(BattleRequest request, ClipLibrary? chartClips)
     public float MusicDeadline { get; set; }
     public float StartedAt { get; set; }
 
-    // The pending clip, then the chart's own clips.
     public Clip? FindClip(string name) =>
         request.PendingClip != null && string.Equals(request.PendingClip.Name, name, StringComparison.OrdinalIgnoreCase)
             ? request.PendingClip

@@ -114,7 +114,7 @@ internal static partial class SelfTest
         Mod.Battle.Start(new BattleRequest(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }) { AssetFolder = folder });
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         // This battle's actor - the last one, despawned, can still be listed.
         var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && !before.Contains(a));
         if (actor is not { Ready: true })

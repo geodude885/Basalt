@@ -45,7 +45,7 @@ internal class Studio(BattleController battle, GameAssets assets)
 
         Mime = mime;
         battle.Start(StudioBattle(Chart!) with { Mode = BattleMode.Record, Mime = mime });
-        State = battle.State == BattleState.Idle ? StudioState.Off : StudioState.Recording;
+        State = battle.Run == null ? StudioState.Off : StudioState.Recording;
         Logger.Info($"[Studio] {(mime ? "miming" : "recording")} {ActorName} for {Chart!.Name} - STOP when done");
     }
 
@@ -54,7 +54,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (State != StudioState.Recording) return;
 
         NewClip = Recorder.Stop(ChartClips().NextName(_actorId));
-        _recordedLane = battle.Lane ?? _recordedLane;
+        _recordedLane = battle.Run?.Lane ?? _recordedLane;
         battle.Stop("recording stopped");
 
         if (NewClip == null)
@@ -151,7 +151,8 @@ internal class Studio(BattleController battle, GameAssets assets)
                 break;
 
             case StudioState.Reviewing:
-                if (battle.Mode != BattleMode.Review || battle.BetweenBattles) State = StudioState.Deciding;
+                if ((battle.Run?.Request.Mode ?? BattleMode.Play) != BattleMode.Review
+                    || battle.Run?.State is null or BattleState.Finished) State = StudioState.Deciding;
                 break;
 
             case StudioState.Setup:
@@ -164,26 +165,26 @@ internal class Studio(BattleController battle, GameAssets assets)
 
     private void UpdateRecording()
     {
-        if (battle.Mode != BattleMode.Record || battle.State == BattleState.Idle)
+        if ((battle.Run?.Request.Mode ?? BattleMode.Play) != BattleMode.Record || battle.Run == null)
         {
             Recorder.Cancel();
             StopEditing();
             return;
         }
 
-        if (battle.State != BattleState.Running) return;
+        if (battle.Run?.State != BattleState.Running) return;
         var chartTime = battle.ChartTime;
 
         if (!Recorder.Recording)
         {
-            if (BattlePlayer.Player?.Controller is not { } playerController || battle.Lane is not { } lane) return;
+            if (BattlePlayer.Player?.Controller is not { } playerController || battle.Run?.Lane is not { } lane) return;
             _recordedLane = lane;
             Recorder.Start(playerController, lane);
             _recordingStartedAtChartTime = chartTime;
         }
 
         Recorder.Update(chartTime);
-        if (battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
+        if (battle.Music.Ended || Recorder.Length > MaxRecordingLength) StopRecording();
     }
 
     private bool BeginEditing(ChartEntry entry, string? actorId = null)

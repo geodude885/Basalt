@@ -196,7 +196,7 @@ internal static partial class SelfTest
         _sawSimulatedActor = false;
         if (test.Equals("walls", StringComparison.OrdinalIgnoreCase)) yield break;
 
-        if (!ArenaKind.Gym.IsLoaded() || Mod.Battle.State != BattleState.Idle)
+        if (!ArenaKind.Gym.IsLoaded() || Mod.Battle.Run != null)
         {
             Mod.Battle.Stop("self-test: next test");
             if (!ArenaKind.Gym.IsLoaded()) Mod.Battle.ReturnToGym();
@@ -230,7 +230,7 @@ internal static partial class SelfTest
 
     private static IEnumerator RunWallsTest(List<string> problems)
     {
-        if (Mod.Battle.Lane == null || Mod.Battle.Chart == null)
+        if (Mod.Battle.Run?.Lane == null)
         {
             problems.Add("walls needs a battle just before it, still laid out - run battle,walls");
             yield break;
@@ -403,7 +403,7 @@ internal static partial class SelfTest
     private static IEnumerator CheckRules()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.3f);
 
         // Only in place: loading the Ring or Pit takes the Gym's structures with it anyway.
@@ -417,7 +417,7 @@ internal static partial class SelfTest
         else if (HasGesture("SpawnCube"))
             _rulesProblem = "a discs-only chart left the cube's spawn gesture working";
 
-        while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.3f);
         if (!Available("SpawnCube")) _rulesProblem = "the spawn moves were not given back after the battle";
         if (hadGestures && !HasGesture("SpawnCube")) _rulesProblem = "the cube's spawn gesture was not given back after the battle";
@@ -431,10 +431,10 @@ internal static partial class SelfTest
     private static IEnumerator CheckPlacement()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
-        if (LaneOrigin is not { } origin || Mod.Battle.Chart is not { } chart || BattlePlayer.Player?.Controller is not { } playerController) yield break;
+        if (LaneOrigin is not { } origin || Mod.Battle.Run?.Request.Chart is not { } chart || BattlePlayer.Player?.Controller is not { } playerController) yield break;
 
         var feet = PlayerRig.From(playerController).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
@@ -460,7 +460,7 @@ internal static partial class SelfTest
     /// <summary>After the battle, walking and dashing into each wall and the zone's front corners must leave you inside the lane, on its floor.</summary>
     private static IEnumerator CheckWalls()
     {
-        if (!FlatscreenControls.IsFlatscreen || Mod.Battle.Chart?.Lane is not { } lane) yield break;
+        if (!FlatscreenControls.IsFlatscreen || Mod.Battle.Run?.Request.Chart?.Lane is not { } lane) yield break;
 
         var problems = new List<string>();
         (string Name, Vector2 Stick, float Seconds, Func<Vector3, bool> Inside)[] walks =
@@ -468,7 +468,7 @@ internal static partial class SelfTest
             ("right", new Vector2(1f, 0f), 3f, p => p.x <= (lane.Width / 2f) + 0.9f),
             ("left", new Vector2(-1f, 0f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("back", new Vector2(0f, -1f), 3f, p => p.z >= -1.6f),
-            ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Chart?.Zone.Length ?? lane.Length) + 0.9f),
+            ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Run?.Request.Chart?.Zone.Length ?? lane.Length) + 0.9f),
             ("forward left", new Vector2(-0.7f, 0.7f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("forward right", new Vector2(0.7f, 0.7f), 5f, p => p.x <= (lane.Width / 2f) + 0.9f),
         };
@@ -515,7 +515,7 @@ internal static partial class SelfTest
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
 
-        while (Mod.Battle.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         ShowOverview();
         yield return new WaitForSeconds(0.4f);
         Shoot(folder, "1-lane");
@@ -530,7 +530,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.4f);
         Shoot(folder, "3-flight");
 
-        while (Mod.Battle.State != BattleState.Finished && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Finished && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.6f);
         Shoot(folder, "4-results");
     }
@@ -560,7 +560,7 @@ internal static partial class SelfTest
     {
         var problems = new List<string>();
 
-        if (result == null) problems.Add($"the battle did not finish within {TimeoutSeconds}s (state {Mod.Battle.State})");
+        if (result == null) problems.Add($"the battle did not finish within {TimeoutSeconds}s (state {Mod.Battle.Run?.State.ToString() ?? "no battle"})");
         var ready = Mod.Actors.Actors.Count(a => a.Ready);
         if (ready < chart.Actors.Count) problems.Add($"{ready} of {chart.Actors.Count} actor(s) came up ready");
         if (!_sawSimulatedActor) problems.Add("no actor was ever seen as a ready, simulated player");

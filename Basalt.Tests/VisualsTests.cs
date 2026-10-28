@@ -324,6 +324,23 @@ public class GroundedAndCleanupTests
     }
 
     [Fact]
+    public void DiscsPillarsCubesAndWallsComeFromTheFloorAndAnythingGroundedRestsOnIt()
+    {
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
+            { "events": [
+              { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 5 }, "speed": 8 } },
+              { "t": 2, "projectile": { "structure": "RockCube", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 8, "grounded": false } },
+              { "t": 3, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 8 } },
+              { "t": 4, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 8, "grounded": true } }
+            ] }
+            """).Chart!;
+        var projectiles = chart.Events.OfType<ProjectileEvent>().ToList();
+
+        Assert.Equal(new[] { true, true, false, false }, projectiles.Select(p => p.SpawnsFromFloor));
+        Assert.Equal(new[] { true, true, false, true }, projectiles.Select(p => p.RestsOnFloor));
+    }
+
+    [Fact]
     public void CleanupDefaultsToThreeSecondsAndCanBeOff()
     {
         Assert.Equal(3, ChartLoader.Load("{}").Chart!.Rules.CleanupSeconds);

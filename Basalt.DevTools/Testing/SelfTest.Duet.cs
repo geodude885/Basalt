@@ -47,7 +47,7 @@ internal static partial class SelfTest
         // Played back, both perform at once.
         Mod.Battle.Start(new BattleRequest(duet) { AssetFolder = folder });
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.8f);
 
         var performing = Mod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
@@ -62,7 +62,7 @@ internal static partial class SelfTest
         Mod.Studio.StartRecording(Reloaded(file), actorId);
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.8f);
 
         if (Mod.Battle.Run?.Request.Performer.Id != actorId) problems.Add($"recording {actorId} put you in {Mod.Battle.Run?.Request.Performer.Id}'s place");

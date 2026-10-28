@@ -6,24 +6,21 @@ using UnityEngine;
 
 namespace Basalt.Battle;
 
-internal class Projectiles(ActorsRegistry actors)
+internal class ProjectileManager(ActorsRegistry actors)
 {
-    // How long after launch an actor can stay out of a projectile's way, until it is clear of them
-    private const float ActorGraceAfterLaunch = 2f;
-
-    private const float RiseSeconds = 0.35f;
-
-    // How far above the floor a grounded structure rests, so physics finds no overlap to push out of
-    private const float FloorClearance = 0.03f;
-
-    // How long past reaching its target a grounded projectile is still driven
-    private const float SlideOvershootSeconds = 0.4f;
+    private readonly MoveEffects _effects = new();
+    private readonly Dictionary<int, Projectile> _liveProjectiles = [];
+    private readonly List<Slide> _slidingStructures = [];
 
     private const RigidbodyConstraints SlideConstraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation;
 
-    private readonly MoveEffects _effects = new();
-    private readonly Dictionary<int, Projectile> _live = [];
-    private readonly List<Slide> _sliding = [];
+
+    // How long after launch an actor can stay out of a projectile's way, until it is clear of them
+    private const float ActorGraceAfterLaunch = 2f;
+    private const float MinSpawnTimeSeconds = 0.35f;
+    private const float GroundedHeightOffFloor = 0.03f;
+    private const float SlideOvershootSeconds = 0.4f;
+
 
     private enum SlideCheck
     {
@@ -32,7 +29,7 @@ internal class Projectiles(ActorsRegistry actors)
         LetGo,
     }
 
-    public void Spawn(int id, ProjectileEvent projectile, Anchor frame)
+    public void SpawnStructure(int id, ProjectileEvent projectile, Anchor frame)
     {
         var origin = frame.ToWorld(projectile.From).ToUnity();
         var towardPlayer = -frame.Forward.ToUnity();
@@ -62,20 +59,20 @@ internal class Projectiles(ActorsRegistry actors)
         var height = shape != null ? Math.Max(0.2f, shape.bounds.size.y) : 0.5f;
 
         // What the game spawns on the ground rests on the floor, whatever height the chart gave.
-        if (_effects.IsGrounded(projectile.Structure) || projectile.IsGrounded)
-            origin.y += floor + FloorClearance - LowestPoint(pooled.transform, origin, facing);
+        if (projectile.RestsOnFloor)
+            origin.y += floor + GroundedHeightOffFloor - LowestPoint(pooled.transform, origin, facing);
 
         Vector3 below = new(origin.x, Math.Min(origin.y, floor) - height, origin.z);
-        var rise = Math.Min(RiseSeconds, projectile.Telegraph * 0.8f);
-        _effects.Spawn(projectile.Structure, new Vector3(origin.x, floor, origin.z), facing);
+        var rise = Math.Min(MinSpawnTimeSeconds, projectile.Telegraph * 0.8f);
+        _effects.PlaySpawnEffect(projectile.Structure, new Vector3(origin.x, floor, origin.z), facing);
 
-        _live[id] = new Projectile(structure, body, origin, facing, below, Time.time, rise, projectile.IsGrounded);
+        _liveProjectiles[id] = new Projectile(structure, body, origin, facing, below, Time.time, rise, projectile.IsGrounded);
         Logger.Debug($"[Projectile.Spawned] #{id} {projectile.Structure} at {origin.Describe()}, launching in {projectile.Telegraph:F2}s, state {structure?.currentPhysicsState}");
     }
 
-    public void Launch(int id, ProjectileEvent projectile, Vector3 target)
+    public void LaunchStructure(int id, ProjectileEvent projectile, Vector3 target)
     {
-        if (!_live.Remove(id, out var live) || live.Body == null) return;
+        if (!_liveProjectiles.Remove(id, out var live) || live.Body == null) return;
 
         if (live.Grounded)
         {
@@ -90,10 +87,10 @@ internal class Projectiles(ActorsRegistry actors)
         live.Body.transform.position = from;
         live.Body.isKinematic = false;
         live.Body.linearVelocity = velocity;
-        _effects.Punch(from, Quaternion.LookRotation(velocity.sqrMagnitude > 0f ? velocity : Vector3.forward));
+        _effects.PlayStraightEffect(from, Quaternion.LookRotation(velocity.sqrMagnitude > 0f ? velocity : Vector3.forward));
 
         // Turned along its path, unless it rests on the floor: its edge would tip into it.
-        if (velocity.sqrMagnitude > 0f && !_effects.IsGrounded(projectile.Structure)) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
+        if (velocity.sqrMagnitude > 0f && !projectile.SpawnsFromFloor) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
 
         Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} -> {target.Describe()} at {velocity.magnitude:F1} m/s, state {live.Structure?.currentPhysicsState}");
     }
@@ -103,7 +100,7 @@ internal class Projectiles(ActorsRegistry actors)
     {
         UpdateSlides();
 
-        foreach (var live in _live.Values)
+        foreach (var live in _liveProjectiles.Values)
         {
             if (live.Body == null) continue;
 
@@ -122,25 +119,25 @@ internal class Projectiles(ActorsRegistry actors)
 
     public void Clear()
     {
-        foreach (var live in _live.Values)
+        foreach (var live in _liveProjectiles.Values)
         {
             live.Body?.isKinematic = false;
         }
 
-        _live.Clear();
-        foreach (var slide in _sliding)
+        _liveProjectiles.Clear();
+        foreach (var slide in _slidingStructures)
         {
             slide.Body?.constraints = slide.Before;
         }
 
-        _sliding.Clear();
+        _slidingStructures.Clear();
     }
 
     public void Forget()
     {
         _effects.Forget();
-        _live.Clear();
-        _sliding.Clear();
+        _liveProjectiles.Clear();
+        _slidingStructures.Clear();
     }
 
     private void LaunchGrounded(int id, ProjectileEvent projectile, Projectile live, Vector3 target)
@@ -159,9 +156,9 @@ internal class Projectiles(ActorsRegistry actors)
         var before = body.constraints;
         body.constraints = SlideConstraints;
         body.linearVelocity = velocity;
-        _effects.Punch(from, Quaternion.LookRotation(direction));
+        _effects.PlayStraightEffect(from, Quaternion.LookRotation(direction));
 
-        _sliding.Add(new Slide(body, live.Structure, velocity, before)
+        _slidingStructures.Add(new Slide(body, live.Structure, velocity, before)
         {
             Until = Time.time + (flat.magnitude / Math.Max(0.1f, projectile.Speed)) + SlideOvershootSeconds,
             Last = from,
@@ -173,11 +170,11 @@ internal class Projectiles(ActorsRegistry actors)
 
     private void UpdateSlides()
     {
-        foreach (var slide in _sliding.ToList())
+        foreach (var slide in _slidingStructures.ToList())
         {
             if (slide.Body == null || !slide.Body.gameObject.activeInHierarchy)
             {
-                _sliding.Remove(slide);
+                _slidingStructures.Remove(slide);
                 continue;
             }
 
@@ -187,7 +184,7 @@ internal class Projectiles(ActorsRegistry actors)
             if (check == SlideCheck.LetGo || HasStopped(slide) || Time.time >= slide.Until)
             {
                 slide.Body.constraints = slide.Before;
-                _sliding.Remove(slide);
+                _slidingStructures.Remove(slide);
                 continue;
             }
 

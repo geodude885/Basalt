@@ -49,7 +49,7 @@ internal static partial class SelfTest
         Mod.Studio.StartRecording(entry);
 
         var deadline = Time.realtimeSinceStartup + 90f;
-        while (Mod.Battle.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
         // The Ring loaded: your player is a new one.
@@ -59,7 +59,7 @@ internal static partial class SelfTest
             yield break;
         }
 
-        if (Mod.Battle.Lane is { } recordLane)
+        if (Mod.Battle.Run?.Lane is { } recordLane)
         {
             var at = Mod.Battle.ToLane(PlayerRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] recording from lane x {at.x:0.00}, z {at.z:0.00} (the actor's spot is z 8)");

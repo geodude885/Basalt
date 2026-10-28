@@ -69,7 +69,7 @@ public class DevToolsEntry : MelonMod
 
     private void KeepInvincibleInCharts()
     {
-        if (!_invincibleInCharts.Value || Mod.Battle.State != BattleState.Running || Mod.Battle.Mode == BattleMode.Record) return;
+        if (!_invincibleInCharts.Value || Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.Run?.Request.Mode == BattleMode.Record) return;
         if (BattlePlayer.Player is not { Controller: not null } localPlayer) return;
 
         var health = localPlayer.Data.HealthPoints;

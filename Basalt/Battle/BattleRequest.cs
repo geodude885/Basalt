@@ -12,8 +12,5 @@ internal record BattleRequest(Chart Chart)
     public Anchor? Lane { get; init; }
     public Clip? PendingClip { get; init; }
     public bool Mime { get; init; }
-    public ArenaKind Arena => Chart.Arena.Map;
-    public bool Recording => Mode == BattleMode.Record;
-    public bool Miming => Recording && Mime;
     public ActorSpec Performer => Chart.Actors.FirstOrDefault(a => a.Id == RecordActor) ?? Chart.DefaultActor;
 }

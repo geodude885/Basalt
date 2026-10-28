@@ -1,4 +1,5 @@
 using Basalt.Battle;
+using Basalt.Services.Charts;
 using HarmonyLib;
 using Il2CppRUMBLE.Networking.MatchFlow;
 
@@ -27,7 +28,7 @@ public static class ArenaPatches
 
             PatchGuard.Run(nameof(NoForceQuitDuringBattle), () =>
             {
-                if (!_battle.StayInMap) return;
+                if (_battle.Run?.Request.Chart.Arena.Map is not (ArenaKind.Pit or ArenaKind.Ring)) return;
 
                 runOriginal = false;
                 Logger.Debug("[Arena.ForceQuitBlocked] the match handler tried to send you back to the Gym mid-battle");

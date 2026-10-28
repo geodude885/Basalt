@@ -181,6 +181,15 @@ public record ProjectileEvent(
         || structure.Equals("Wall", StringComparison.OrdinalIgnoreCase);
 
     public bool IsGrounded => Grounded ?? GroundedByDefault(Structure);
+
+    // The game brings these up out of the floor rather than into the air: they rise from it, and keep their facing
+    // in flight - turned along their path, a disc or wall would tip its edge into the floor.
+    public bool SpawnsFromFloor => FloorSpawned.Contains(Structure, StringComparer.OrdinalIgnoreCase);
+
+    // On the floor whatever height the chart gave: spawned from it, or thrown along it.
+    public bool RestsOnFloor => SpawnsFromFloor || IsGrounded;
+
+    private static readonly string[] FloorSpawned = ["Disc", "Pillar", "RockCube", "Wall"];
 }
 
 /// <summary>An actor performs one of its moves by stack name, e.g. "Straight".</summary>

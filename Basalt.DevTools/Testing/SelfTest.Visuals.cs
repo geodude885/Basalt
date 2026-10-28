@@ -53,7 +53,7 @@ internal static partial class SelfTest
         var playerBefore = PlayerSetting();
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while ((Mod.Battle.State != BattleState.Running || Mod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
+        while ((Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
 
         var midRun = InUse();
         var expected = playerBefore.Value + ((LookStrength - playerBefore.Value) * Mod.Battle.Visuals.ShaderIntensity);
@@ -64,7 +64,7 @@ internal static partial class SelfTest
         else
             Logger.Info($"[SelfTest] chart look on: {LookPack} at {midRun.Value:0.00} (yours {playerBefore.Value:0.00}, {(playerBefore.Enabled ? "on" : "off")}, untouched)");
 
-        while (Mod.Battle.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return null;
 
         var afterRun = InUse();

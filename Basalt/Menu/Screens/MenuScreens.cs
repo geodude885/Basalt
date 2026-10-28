@@ -17,10 +17,10 @@ internal class MenuScreens(ChartSelection charts, ChartLibrary library, JsonBook
     // The screen for the moment; none while a battle plays or a clip is replayed.
     public IMenuScreen? Current => studio.State switch
     {
-        StudioState.Recording => battle.State == BattleState.Running ? _recording : null,
+        StudioState.Recording => battle.Run?.State == BattleState.Running ? _recording : null,
         StudioState.Setup => _laneSetup,
         StudioState.Reviewing => null,
-        StudioState.Deciding => battle.BetweenBattles ? _review : null,
-        _ => !Maps.IsCurrentlyOnline && battle.BetweenBattles ? _charts : null,
+        StudioState.Deciding => battle.Run?.State is null or BattleState.Finished ? _review : null,
+        _ => !Maps.IsCurrentlyOnline && battle.Run?.State is null or BattleState.Finished ? _charts : null,
     };
 }

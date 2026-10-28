@@ -123,7 +123,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
 
         Logger.Info($"[Battle.Stopped] {reason}");
         _player.RestoreInvincibility();
-        if (Run.State == BattleState.Running && !Run.Request.Recording) BattlePlayer.FullHealth();
+        if (Run.State == BattleState.Running && !Run.Request.Recording) BattlePlayer.ResetHealth();
         Visuals.End();
         actors.DespawnAll();
         _projectiles.Clear();
@@ -265,7 +265,8 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                 _board.Show($"{chart.Name}\n{(request.Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
-            foreach (var spec in request.Recording ? Enumerable.Empty<ActorSpec>() : chart.Actors)
+            // Recording, the others are there as guides: everyone but the actor you take the place of.
+            foreach (var spec in chart.Actors.Where(a => !request.Recording || a.Id != performer.Id))
             {
                 var actor = new Actor(spec.Id, spec.Name, spec.Look, spec.Shiftstones) { SelfKnockbackMultiplier = 0f, Measurement = spec.Measurement };
                 var spot = World(spec.At.X, 0f, spec.At.Z);
@@ -321,12 +322,16 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         var request = Run.Request;
         var chart = Run.Chart;
 
-        // Recording runs only the song and phases, with no end; miming keeps the projectiles too.
+        // Recording runs the song and phases, with no end, and the other actors' tracks mimed - they guide, and throw
+        // nothing at you; miming keeps the projectiles too.
         Run.Runner = new ChartRunner(request.Recording
             ? chart with
             {
                 Events = request.Miming ? chart.Events.OfType<ProjectileEvent>().ToArray() : [],
-                Tracks = [],
+                Tracks = chart.Tracks
+                    .Where(t => t.ActorId != request.Performer.Id)
+                    .Select(t => t with { Clips = t.Clips.Select(c => c with { Mime = true }).ToList() })
+                    .ToList(),
                 End = double.MaxValue,
             }
             : chart);
@@ -340,7 +345,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
 
         if (!request.Recording)
         {
-            BattlePlayer.FullHealth();
+            BattlePlayer.ResetHealth();
             _player.KeepVulnerable();
         }
 
@@ -365,7 +370,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                     break;
 
                 case PlaceActor place:
-                    if (Run.Request.Recording) break;
+                    if (Run.Request.Recording && place.ActorId == Run.Request.Performer.Id) break;
 
                     // A clip holds its actor to the recorded path, so a move elsewhere would be dragged back.
                     var placed = ActorById(place.ActorId)?.Body;
@@ -424,7 +429,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         _music.FadeOut();
         _moves.Reset();
         _player.RestoreInvincibility();
-        if (!run.Request.Recording) BattlePlayer.FullHealth();
+        if (!run.Request.Recording) BattlePlayer.ResetHealth();
         Visuals.FireEvent(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
         Visuals.End();
 

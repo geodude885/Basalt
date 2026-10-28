@@ -11,20 +11,21 @@ Survive scripted boss battles down a single lane against game-simulated actors: 
 Basalt/                 the mod
   ModEntry.cs           builds the services, hands each what it needs, and passes MelonLoader's calls on
   Mod.cs, Logger.cs     the services for DevTools, and the logger with its log level
+  Settings.cs           the MelonPreferences, shown by UIFramework
   Actors/               Actor (simulated player): lifecycle, playback, body; rig; the actor registry
   Battle/               BattleController, its request and run, and what it drives: projectiles, moves, the player
   Arenas/               the maps, and the lane's layout, walls and visuals
   Presentation/         music, the board, the game's assets, RumbleReShaded looks and signals
   Editing/              the studio (recording, lane setup) and the clip recorder
   Patches/              ActorPatches (health, knockback, input, sounds), ArenaPatches
-  UI/                   settings, the chart picker and its panel, chart selection, covers
+  Menu/                 the Basalt menu: its screens, components (card, buttons, slider) and chart selection
   Services/             game-free and unit tested: charts, clips, audio, scoring, JSON books
 Basalt.DevTools/        a second mod for development: self-tests, test actor, flatscreen play
 Basalt.Tests/           xUnit: services, patch targets against the interop
 tools/                  song analysis, cpp2il-isil.py
 ```
 
-UIFramework is required. RumbleReShaded is optional: only `Presentation/ReShade.cs` touches its API, and
+UIFramework is required. RumbleReShaded is optional: only `Presentation/Shaders/ReShade.cs` touches its API, and
 only once it is loaded with pack overrides (`RRS.Override`).
 
 ## How the actors work

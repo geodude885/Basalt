@@ -17,7 +17,7 @@ Point an editor at [chart.schema.json](chart.schema.json) for completion and che
 In game, *New chart* in the settings window makes `Charts/my-chart/chart.json`
 from a template that plays as it is, with a comment on every part, and picks it. Edit it and save:
 charts reload by themselves between battles, and one that does not load shows its problems on the
-picker. Put a `song.wav` and `cover.png` beside it and uncomment their lines. *SETUP* on the picker
+menu. Put a `song.wav` and `cover.png` beside it and uncomment their lines. *SETUP* on the menu
 walks the lane in place and writes the `"arena"` line. Basalt Editor packs a finished chart to share.
 
 ## Where a chart lives
@@ -50,13 +50,13 @@ Recorded clips are kept in the chart's own `clips/`.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `format` | int | 1 | The format the chart was written for. A newer one than the mod reads is refused with a message to update. |
-| `name` | string | "Untitled" | Shown in the picker and on the board; with `author`, the key for best scores. |
-| `author` | string | - | Shown in the picker. |
+| `name` | string | "Untitled" | Shown on the menu and on the board; with `author`, the key for best scores. |
+| `author` | string | - | Shown on the menu. |
 | `difficulty` | string | - | Free text, e.g. Easy / Normal / Hard / Expert. |
-| `description` | string | - | One or two lines for the picker. |
+| `description` | string | - | One or two lines for the menu. |
 | `arena` | object | the Ring, at `{ x: 0, z: -6 }` facing north | Where it is played - below. |
 | `music` | object | - | A song - below. |
-| `cover` | path | - | A PNG or JPG beside the chart, shown on the picker (square looks best; up to 16 MB, though 512 px is plenty). |
+| `cover` | path | - | A PNG or JPG beside the chart, shown on the menu (square looks best; up to 16 MB, though 512 px is plenty). |
 | `bpm` | number or list | - | Beats per minute, for `beat` / `startBeat` times - or tempo changes: `[ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]` (the first at beat 0; each holds until the next). |
 | `lane` | object | 12 x 3 | `length` (over 2) and `width` in metres. |
 | `zone` | object | 2 m short of the far end, 3.5 m high | Where you may go: `length` along the lane from your end, `height` above the floor. Invisible walls stop you - not structures, not actors. |
@@ -147,7 +147,7 @@ Written by RECORD / KEEP; one per actor. Each clip plays until the next clip sta
 | `clips[].clip` | name | required | The recording, in the chart's `clips/`. |
 | `clips[].from` | seconds | 0 | Where in the recording to start - clips keep chart time, so a whole clip is `from` = `t`. |
 | `clips[].to` | seconds | its end | Where in the recording to stop. |
-| `clips[].mime` | bool | false | Mimed: the actor moves as recorded but runs none of its moves, so nothing spawns - a performance over the chart's own projectiles. Recorded with MIME on the picker: the chart's projectiles fly while you perform at the boss's end, and your own moves stay off. |
+| `clips[].mime` | bool | false | Mimed: the actor moves as recorded but runs none of its moves, so nothing spawns - a performance over the chart's own projectiles. Recorded with MIME on the menu: the chart's projectiles fly while you perform at the boss's end, and your own moves stay off. |
 
 A clip holds the performer's head, hands and fingers, path (`"p": [x, z]` per frame, lane
 coordinates), facing and the moves made (`"moves": [ { "t", "move" } ]`). While a clip plays the

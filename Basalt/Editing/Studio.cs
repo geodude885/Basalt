@@ -39,9 +39,9 @@ internal class Studio(BattleController battle, GameAssets assets)
     public static string Undo(ChartEntry entry) =>
         ChartFiles.RestoreBackup(entry.File) ? $"undid the last save to {entry.Name}" : $"{entry.Name} has nothing to undo";
 
-    public void StartRecording(ChartEntry entry, bool mime = false)
+    public void StartRecording(ChartEntry entry, string? actorId = null, bool mime = false)
     {
-        if (!BeginEditing(entry)) return;
+        if (!BeginEditing(entry, actorId)) return;
 
         Mime = mime;
         battle.Start(StudioBattle(Chart!) with { Mode = BattleMode.Record, Mime = mime });
@@ -114,7 +114,7 @@ internal class Studio(BattleController battle, GameAssets assets)
 
     public void RestartRecording()
     {
-        if (Entry != null) StartRecording(Entry, Mime);
+        if (Entry != null) StartRecording(Entry, _actorId, Mime);
     }
 
     public void OpenChartOptions(ChartEntry entry)
@@ -186,7 +186,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (battle.SongOver || Recorder.Length > MaxRecordingLength) StopRecording();
     }
 
-    private bool BeginEditing(ChartEntry entry)
+    private bool BeginEditing(ChartEntry entry, string? actorId = null)
     {
         if (!entry.CanEdit) return false;
 
@@ -194,7 +194,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         StopEditing();
         Entry = entry;
         Chart = entry.Result.Chart!;
-        _actorId = Chart.DefaultActor.Id;
+        _actorId = Chart.Actors.FirstOrDefault(a => a.Id == actorId)?.Id ?? Chart.DefaultActor.Id;
         _recordedLane = null;
         return true;
     }

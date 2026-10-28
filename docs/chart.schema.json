@@ -89,7 +89,7 @@
     },
     "cover": {
       "type": "string",
-      "description": "A PNG or JPG beside the chart, shown on the picker.",
+      "description": "A PNG or JPG beside the chart, shown on the menu.",
       "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(png|jpg|jpeg)$"
     },
     "bpm": {

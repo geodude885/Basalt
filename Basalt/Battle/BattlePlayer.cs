@@ -102,7 +102,7 @@ internal class BattlePlayer
         _invincibleBefore = null;
     }
 
-    public static void FullHealth()
+    public static void ResetHealth()
     {
         var localPlayer = Player;
         if (localPlayer?.Controller == null) return;

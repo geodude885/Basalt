@@ -52,6 +52,8 @@ internal static partial class SelfTest
         ["walls"] = RunWallsTest,
         // A clip recorded, reviewed and kept, then the lane set up and saved.
         ["record"] = RunRecordTest,
+        // One actor recorded, the other recorded with the first as a guide, then both played back together.
+        ["duet"] = RunDuetTest,
         // A new chart's boss wears your look and stones, then the chart's own.
         ["look"] = RunLookTest,
         // Each throwable structure's size, for the editor.

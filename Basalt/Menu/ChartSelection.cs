@@ -12,6 +12,7 @@ namespace Basalt.Menu;
 internal class ChartSelection(ChartLibrary library, Settings settings, BattleController battle, Studio studio)
 {
     private long _chartsFingerprint;
+    private string? _actorToRecordId;
     private string? _chosenFile;
     private float _nextChartsCheck;
 
@@ -69,6 +70,16 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         battle.Start(new BattleRequest(entry.Result.Chart) { AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey });
     }
 
+    public ActorSpec? ActorToRecord => Chosen?.Result.Chart is { } chart ? chart.Actors.FirstOrDefault(a => a.Id == _actorToRecordId) ?? chart.DefaultActor : null;
+
+    public void StepActorToRecord()
+    {
+        if (Chosen?.Result.Chart is not { } chart || ActorToRecord is not { } current) return;
+
+        var actors = chart.Actors.ToList();
+        _actorToRecordId = actors[(actors.IndexOf(current) + 1) % actors.Count].Id;
+    }
+
     public void RecordChosen(bool mime = false)
     {
         var entry = Chosen;
@@ -80,7 +91,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             return;
         }
 
-        studio.StartRecording(entry, mime);
+        studio.StartRecording(entry, ActorToRecord?.Id, mime);
     }
 
     public void ReloadCharts()

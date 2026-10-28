@@ -12,11 +12,12 @@ looks - older versions just skip them.
 
 ## Playing
 
-**The chart picker** stands in front of you between battles: the chosen chart - author,
-difficulty, arena, length, song and your best - over PREV / START / NEXT. Push its buttons with
-either hand. It comes back after each battle with the results.
+**The Basalt menu** stands in front of you between battles: the chosen song - author, difficulty,
+arena, length, song and your best - over PREV / START / NEXT, with a slider beside it to pick the
+difficulty when a song has more than one. Push its buttons with either hand. It comes back after each
+battle with the results.
 
-The settings window (UIFramework) has *Stop battle*, *Chart picker here* - in the Gym it then stays
+The settings window (UIFramework) has *Stop battle*, *Menu here* - in the Gym it then stays
 where you put it - the chart-making tools, section names on the board, and how strongly a chart's
 shader looks apply.
 
@@ -36,19 +37,21 @@ shader looks apply.
 
 Charts live in `UserData/Basalt/Charts`: a `.json` file, a folder holding `chart.json` with its
 song, cover and `clips/`, or a `.bbchart` package. An empty folder gets two starter charts. Charts
-reload by themselves when saved, and a chart that does not load says why on the picker.
+reload by themselves when saved, and a chart that does not load says why on the menu.
 
 The format, field by field, is in
 [docs/chart-format.md](https://github.com/geodude885/Basalt/blob/main/docs/chart-format.md).
 
 ## Making charts
 
-Turn on **Chart editing** in the settings. The picker then gains:
+Turn on **Chart editing** in the settings. The menu then gains:
 
 - **SETUP:** walk a preview of the lane; resize it, move it and the boss, and save it into the chart.
 - **RECORD:** perform as the boss, from its end of the lane and to the song. Watch it performed at
   you, then KEEP, AGAIN, REPLAY or DISCARD. **MIME** records movement only, with the chart's
-  projectiles flying, for a boss that pretends to throw them.
+  projectiles flying, for a boss that pretends to throw them. In a chart with more than one actor, a
+  button picks whose performance you record; the others perform their kept takes beside you as you go,
+  so duets and group dances are recorded one actor at a time.
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your

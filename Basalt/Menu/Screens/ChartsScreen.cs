@@ -29,6 +29,8 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
                 buttons.Add(new MenuButton("setup", "SETUP", Blue, () => studio.OpenChartOptions(chosen)));
                 buttons.Add(new MenuButton("record", "RECORD", Red, () => charts.RecordChosen()));
                 buttons.Add(new MenuButton("mime", "MIME", Orange, () => charts.RecordChosen(mime: true)));
+                if (chosen.Result.Chart!.Actors.Count > 1 && charts.ActorToRecord is { } actor)
+                    buttons.Add(new MenuButton("actor", actor.Name.ToUpperInvariant(), Blue, charts.StepActorToRecord));
 
                 if (Studio.CanUndo(chosen)) buttons.Add(new MenuButton("undo", "UNDO", Orange, () => charts.Saved(() => Studio.Undo(chosen))));
             }
@@ -89,7 +91,8 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
                 (by.Length > 0 ? $"<size=55%>{by}</size>\n" : "") +
                 $"<size=50%>{facts}</size>\n" +
                 (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "") +
-                $"<size=55%>{(best == null ? "no best yet" : $"best: {best.Rank} {best.Score}")}</size>",
+                $"<size=55%>{(best == null ? "no best yet" : $"best: {best.Rank} {best.Score}")}</size>" +
+                (settings.Editing.Value && chart.Actors.Count > 1 ? $"\n<size=45%>Selected recording actor: {charts.ActorToRecord?.Name}</size>" : ""),
                 chart.Cover == null ? null : ChartFiles.Inside(entry.AssetFolder, chart.Cover));
         }
     }

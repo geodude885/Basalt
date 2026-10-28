@@ -178,7 +178,6 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                 break;
 
             case BattleState.Finished:
-                // The last launches still get their flight check.
                 KeepLane();
                 _projectiles.Update();
                 break;

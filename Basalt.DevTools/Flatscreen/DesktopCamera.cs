@@ -62,6 +62,12 @@ public class DesktopCamera
         _log("desktop camera on - right drag orbit, scroll zoom, middle drag pan");
     }
 
+    public void Hide()
+    {
+        _camera?.enabled = false;
+        _fixed = false;
+    }
+
     /// <summary>Turns the camera on at a fixed viewpoint, mouse control off until <see cref="Toggle"/>.</summary>
     public void ShowFixed(Vector3 position, Vector3 lookAt)
     {

@@ -1,4 +1,5 @@
 using Basalt.Battle;
+using Basalt.DevTools.Flatscreen;
 using Il2CppRUMBLE.MoveSystem;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
@@ -26,11 +27,9 @@ internal static partial class SelfTest
     private static Vector3? LanePoint(float x, float y, float z) =>
         Mod.Battle.Run?.Lane is { } frame ? frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity() : null;
 
-    /// <summary>Up behind you over the backstop, looking down the lane.</summary>
     private static void ShowOverview()
     {
-        if (Mod.Battle.Run?.Request.Chart is not { } chart || LanePoint(1.5f, 3.6f, -0.4f) is not { } position || LanePoint(0f, 0.8f, chart.Lane.Length * 0.6f) is not { } lookAt) return;
-        _showCamera?.Invoke(position, lookAt);
+        if (ChartWatcher.Overview() is { } view) _showCamera?.Invoke(view.Position, view.LookAt);
     }
 
     private static int GroundedLaunches =>

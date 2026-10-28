@@ -54,6 +54,8 @@ internal static partial class SelfTest
         ["record"] = RunRecordTest,
         // One actor recorded, the other recorded with the first as a guide, then both played back together.
         ["duet"] = RunDuetTest,
+        // Watch mode plays the chosen chart from the overview camera, with you kept on full health.
+        ["watch"] = RunWatchTest,
         // A new chart's boss wears your look and stones, then the chart's own.
         ["look"] = RunLookTest,
         // Each throwable structure's size, for the editor.
@@ -80,6 +82,8 @@ internal static partial class SelfTest
     private static bool _shots;
     private static Action<Vector3, Vector3>? _showCamera;
     private static Func<int, int, byte[]?>? _capture;
+    private static DesktopCamera? _desktopCamera;
+    private static ChartWatcher? _watcher;
     private static string? _pickerProblem;
     private static string? _laneProblem;
     private static string _song = "";
@@ -88,10 +92,12 @@ internal static partial class SelfTest
 
     private static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "SelfTest");
 
-    public static void Configure(Action<Vector3, Vector3> showCamera, Func<int, int, byte[]?> capture)
+    public static void Configure(DesktopCamera camera, ChartWatcher watcher)
     {
-        _showCamera = showCamera;
-        _capture = capture;
+        _desktopCamera = camera;
+        _watcher = watcher;
+        _showCamera = camera.ShowFixed;
+        _capture = camera.CapturePng;
         var arguments = Environment.GetCommandLineArgs();
         _shots = arguments.Any(a => string.Equals(a, ShotsFlag, StringComparison.OrdinalIgnoreCase));
         _listening = arguments.Any(a => string.Equals(a, ListenFlag, StringComparison.OrdinalIgnoreCase));

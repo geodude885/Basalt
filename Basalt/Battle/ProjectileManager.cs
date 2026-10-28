@@ -89,13 +89,11 @@ internal class ProjectileManager(ActorsRegistry actors)
         live.Body.linearVelocity = velocity;
         _effects.PlayStraightEffect(from, Quaternion.LookRotation(velocity.sqrMagnitude > 0f ? velocity : Vector3.forward));
 
-        // Turned along its path, unless it rests on the floor: its edge would tip into it.
         if (velocity.sqrMagnitude > 0f && !projectile.SpawnsFromFloor) live.Body.transform.rotation = Quaternion.LookRotation(velocity);
 
         Logger.Debug($"[Projectile.Launched] #{id} {projectile.Structure} -> {target.Describe()} at {velocity.magnitude:F1} m/s, state {live.Structure?.currentPhysicsState}");
     }
 
-    // Brings each waiting projectile up out of the floor, then holds it at its origin
     public void Update()
     {
         UpdateSlides();

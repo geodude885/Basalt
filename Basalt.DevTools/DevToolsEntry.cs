@@ -18,7 +18,7 @@ namespace Basalt.DevTools;
 public class DevToolsEntry : MelonMod
 {
     private const string Keys =
-        "Ctrl+F desktop camera | Ctrl+T test actor | Ctrl+9 test actor mirror/bot | Ctrl+P plant | " +
+        "Ctrl+W watch charts from above the lane, invincible | Ctrl+F desktop camera | Ctrl+T test actor | Ctrl+9 test actor mirror/bot | Ctrl+P plant | " +
         "Ctrl+K knockback. Click presses picker buttons. No headset: numpad 8/2/4/6 walk, 7/9 turn.";
 
     /// <summary>Orbits the battle's first actor, the test actor, or you.</summary>
@@ -27,9 +27,11 @@ public class DevToolsEntry : MelonMod
         message => Logger.Info($"[DesktopCamera] {message}"));
 
     private MelonPreferences_Entry<bool> _invincibleInCharts = null!;
+    private ChartWatcher _watcher = null!;
 
     public override void OnInitializeMelon()
     {
+        _watcher = new ChartWatcher(_camera);
         if (Mod.Menu is null)
         {
             LoggerInstance.Error("Basalt is not loaded - the dev tools are off");
@@ -38,7 +40,7 @@ public class DevToolsEntry : MelonMod
 
         FlatscreenControls.Log = message => Logger.Info($"[Flatscreen] {message}");
         Logger.Debug($"[Init] flatscreen controls: {FlatscreenControls.Apply(HarmonyInstance)} methods");
-        SelfTest.Configure(_camera.ShowFixed, _camera.CapturePng);
+        SelfTest.Configure(_camera, _watcher);
 
         var settings = MelonPreferences.CreateCategory("BasaltDevTools", "Basalt DevTools");
         settings.SetFilePath(Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt", "devtools.cfg"));
@@ -55,6 +57,7 @@ public class DevToolsEntry : MelonMod
             HandleKeys();
             HandleClick();
             KeepInvincibleInCharts();
+            _watcher.Update();
             TestBench.Update();
             FlatscreenControls.Update();
             SelfTest.Update();
@@ -69,7 +72,7 @@ public class DevToolsEntry : MelonMod
 
     private void KeepInvincibleInCharts()
     {
-        if (!_invincibleInCharts.Value || Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.Run?.Request.Mode == BattleMode.Record) return;
+        if (!(_invincibleInCharts.Value || _watcher.Watching) || Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.Run?.Request.Mode == BattleMode.Record) return;
         if (BattlePlayer.Player is not { Controller: not null } localPlayer) return;
 
         var health = localPlayer.Data.HealthPoints;
@@ -106,7 +109,8 @@ public class DevToolsEntry : MelonMod
     {
         if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) return;
 
-        if (Input.GetKeyDown(KeyCode.F)) _camera.Toggle();
+        if (Input.GetKeyDown(KeyCode.W)) _watcher.Toggle();
+        else if (Input.GetKeyDown(KeyCode.F)) _camera.Toggle();
         else if (Input.GetKeyDown(KeyCode.T)) TestBench.ToggleActor();
         else if (Input.GetKeyDown(KeyCode.Alpha9)) TestBench.ToggleControl();
         else if (Input.GetKeyDown(KeyCode.P)) TestBench.TogglePlant();

@@ -80,7 +80,7 @@ internal class LaneSetup(GameAssets assets)
 
         _previewAnchor = anchor;
         _previewOutOfDate = false;
-        ArenaPreview.Build(anchor, Lane, showBackstop: true, walls: false);
+        ArenaPreview.Create(anchor, Lane, showBackstop: true, walls: false);
         foreach (var actor in Actors) ArenaPreview.Visuals.ActorMarker(anchor.ToWorld(new System.Numerics.Vector3(actor.At.X, 0f, actor.At.Z)).ToUnity());
     }
 

@@ -87,7 +87,7 @@ internal class BasaltMenu(MenuScreens screens, JsonBook<SavedSpot> spots, GameAs
     private bool EnsureExists()
     {
         if (Root != null) return true;
-        if (!assets.HasMenuParts) return false;
+        if (!assets.MenuPartsLoaded) return false;
 
         try
         {

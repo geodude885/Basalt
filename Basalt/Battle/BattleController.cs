@@ -64,7 +64,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
 
     public bool BetweenBattles => State is BattleState.Idle or BattleState.Finished;
 
-    public bool StayInMap => Run != null && Run.Request.Arena.IsMatchMap();
+    public bool StayInMap => Run != null && Run.Request.Arena is ArenaKind.Pit or ArenaKind.Ring;
 
     public bool SongOver => Chart?.Music != null && _music.Ended;
 
@@ -138,7 +138,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
     public void ReturnToGym()
     {
         Stop("returning to the Gym");
-        Maps.LoadGym();
+        Maps.Load(ArenaKind.Gym);
     }
 
     public void OnSceneLoaded(string scene)
@@ -252,7 +252,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                 _player.Place(Run.Frame.Position.ToUnity(), Quaternion.LookRotation(Run.Frame.Forward.ToUnity()));
             }
 
-            _arena.Build(Run.Frame, chart.Lane, showBackstop: true, walls: true, zone: request.Recording ? null : chart.Zone,
+            _arena.Create(Run.Frame, chart.Lane, showBackstop: true, walls: true, zone: request.Recording ? null : chart.Zone,
                 colours: chart.ColoursIn(chart.Phases.LastOrDefault(p => p.Start <= 0)), panes: chart.EverShowsWalls);
             if (request.Recording)
             {
@@ -297,7 +297,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
     {
         if (Run is null) return;
         _arena.Visuals.Tick();
-        _arena.Boundary.LetStructuresThrough();
+        _arena.Colliders.LetStructuresThrough();
         _player.KeepInLane(Run.Frame, Run.Chart, zoned: !Run.Request.Recording);
     }
 
@@ -309,7 +309,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
 
         Run.CountdownEnds = Time.time + CountdownSeconds;
         Run.MusicDeadline = Run.CountdownEnds + MusicWaitSeconds;
-        _arena.Boundary.LetActorsThrough(actors.Actors.Where(a => a.Ready).SelectMany(a => a.Body!.Collisions.All));
+        _arena.Colliders.LetActorsThrough(actors.Actors.Where(a => a.Ready).SelectMany(a => a.Body!.Collisions.All));
         _moves.DisableMoves();
         Visuals.PreloadChartPacks(Run.Chart);
         Run.State = BattleState.Countdown;

@@ -22,7 +22,7 @@ internal class GameAssets
 
     public static readonly Color TextOnRock = new(0.12f, 0.1f, 0.09f);
 
-    public bool HasMenuParts => _rockTemplate != null && _buttonTemplate != null && _sliderTemplate != null;
+    public bool MenuPartsLoaded => _rockTemplate != null && _buttonTemplate != null && _sliderTemplate != null;
 
     private Shader? _shader;
     private bool _searchedForShader;

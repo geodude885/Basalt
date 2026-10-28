@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Basalt.Arenas;
 
-internal class Visuals(GameAssets assets)
+internal class ArenaVisuals(GameAssets assets)
 {
     public const float LineThickness = 0.04f;
     public const float LineHeight = 0.02f;

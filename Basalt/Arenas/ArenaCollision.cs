@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Basalt.Arenas;
 
 // Lane collision only
-internal class Boundary
+internal class ArenaCollision
 {
 
     public const float Height = 8f;

@@ -24,8 +24,6 @@ internal static class Maps
         _ => GymScene,
     };
 
-    public static bool IsMatchMap(this ArenaKind kind) => kind is ArenaKind.Ring or ArenaKind.Pit;
-
     public static bool IsLoaded(this ArenaKind kind) =>
         string.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, kind.Scene(), StringComparison.Ordinal);
 
@@ -35,8 +33,18 @@ internal static class Maps
         ArenaKind.Pit => PitIndex,
         _ => GymIndex,
     });
+    private static void LoadScene(int index)
+    {
+        var scenes = SceneManager.instance ?? UnityEngine.Object.FindObjectOfType<SceneManager>();
+        if (scenes == null)
+        {
+            Logger.Error("[Arena.LoadFailed] no SceneManager to load with");
+            return;
+        }
 
-    public static void LoadGym() => LoadScene(GymIndex);
+        scenes.LoadSceneAsync(index, false, false, LoadFadeSeconds, LoadSceneMode.Single, null);
+        Logger.Debug($"[Arena.Loading] scene {index}");
+    }
 
     public static Vector3 GetArenaOrigin(this ArenaKind kind)
     {
@@ -57,18 +65,5 @@ internal static class Maps
         spot.y = floor;
         Logger.Debug($"[Arena.Lane] {spec.Map}: chart spot {spot.Describe()} facing {spec.Facing:0}deg");
         return new Anchor(spot.ToNumerics(), Degrees.Wrap(spec.Facing));
-    }
-
-    private static void LoadScene(int index)
-    {
-        var scenes = SceneManager.instance ?? UnityEngine.Object.FindObjectOfType<SceneManager>();
-        if (scenes == null)
-        {
-            Logger.Error("[Arena.LoadFailed] no SceneManager to load with");
-            return;
-        }
-
-        scenes.LoadSceneAsync(index, false, false, LoadFadeSeconds, LoadSceneMode.Single, null);
-        Logger.Debug($"[Arena.Loading] scene {index}");
     }
 }

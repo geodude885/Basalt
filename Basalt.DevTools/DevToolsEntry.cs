@@ -91,7 +91,7 @@ public class DevToolsEntry : MelonMod
     private void HandleClick()
     {
         if (!Input.GetMouseButtonDown(0) || EventSystem.current?.IsPointerOverGameObject() == true) return;
-        if (Mod.Menu is not { Visible: true, ButtonRow: { } buttons } || (_camera.Camera ?? Camera.main) is not { } camera) return;
+        if (Mod.Menu is not { Root.activeSelf: true, ButtonRow: { } buttons } || (_camera.Camera ?? Camera.main) is not { } camera) return;
 
         var ray = camera.ScreenPointToRay(Input.mousePosition);
         var unitBox = new Bounds(Vector3.zero, Vector3.one);

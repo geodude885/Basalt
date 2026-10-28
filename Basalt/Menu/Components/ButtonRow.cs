@@ -1,4 +1,4 @@
-using Basalt.Presentation;
+using Basalt.BattlePresentation;
 using UnityEngine;
 
 namespace Basalt.Menu.Components;
@@ -43,7 +43,7 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
         }
     }
 
-    public void Arrived() => _arrivedAt = Time.time;
+    public void HasMovedOrBecomeVisible() => _arrivedAt = Time.time;
 
     public void Update()
     {

@@ -1,8 +1,8 @@
 using System.Collections;
 using Basalt.Actors;
 using Basalt.Arenas;
-using Basalt.Presentation;
-using Basalt.Presentation.Shaders;
+using Basalt.BattlePresentation;
+using Basalt.BattlePresentation.Shaders;
 using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;

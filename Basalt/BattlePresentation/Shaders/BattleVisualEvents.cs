@@ -3,7 +3,7 @@ using Basalt.Services.Charts;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 
-namespace Basalt.Presentation.Shaders;
+namespace Basalt.BattlePresentation.Shaders;
 
 internal class BattleVisualEvents(IShaderProvider? shaders)
 {

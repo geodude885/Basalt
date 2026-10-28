@@ -1,5 +1,5 @@
 using Basalt.Battle;
-using Basalt.Presentation;
+using Basalt.BattlePresentation;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;
 
@@ -53,7 +53,7 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (State != StudioState.Recording) return;
 
-        NewClip = Recorder.Stop(ChartClips().NextName(_actorId));
+        NewClip = Recorder.StopRecording(ChartClips().NextName(_actorId));
         _recordedLane = battle.Run?.Lane ?? _recordedLane;
         battle.Stop("recording stopped");
 
@@ -122,7 +122,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (!BeginEditing(entry)) return;
 
         battle.Stop("lane setup");
-        LaneSetup.BeginWith(Chart!);
+        LaneSetup.SetupFrom(Chart!);
         State = StudioState.Setup;
     }
 
@@ -167,7 +167,7 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if ((battle.Run?.Request.Mode ?? BattleMode.Play) != BattleMode.Record || battle.Run == null)
         {
-            Recorder.Cancel();
+            Recorder.CancelRecording();
             StopEditing();
             return;
         }
@@ -179,7 +179,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         {
             if (BattlePlayer.Player?.Controller is not { } playerController || battle.Run?.Lane is not { } lane) return;
             _recordedLane = lane;
-            Recorder.Start(playerController, lane);
+            Recorder.StartRecording(playerController, lane);
             _recordingStartedAtChartTime = chartTime;
         }
 
@@ -191,7 +191,7 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (!entry.CanEdit) return false;
 
-        Recorder.Cancel();
+        Recorder.CancelRecording();
         StopEditing();
         Entry = entry;
         Chart = entry.Result.Chart!;

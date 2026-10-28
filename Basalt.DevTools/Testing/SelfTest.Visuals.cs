@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
 using Basalt.Battle;
-using Basalt.Presentation.Shaders;
+using Basalt.BattlePresentation.Shaders;
 using Basalt.Services.Charts;
 using MelonLoader;
 using RumbleReShaded.Api;

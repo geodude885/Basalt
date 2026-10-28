@@ -10,6 +10,10 @@ namespace Basalt.Editing;
 // Records both player motion and moves
 internal class ClipRecorder
 {
+    public bool Recording { get; private set; }
+    public double Length => _frames.Count == 0 ? 0 : _frames[^1].Time;
+    public int MoveCount => _moves.Count;
+
     private const float SampleRate = 30f;
 
     private readonly List<ClipFrame> _frames = [];
@@ -22,15 +26,9 @@ internal class ClipRecorder
     private double _clipTime;
     private double _nextSample;
 
-    public bool Recording { get; private set; }
-
-    public double Length => _frames.Count == 0 ? 0 : _frames[^1].Time;
-
-    public int MoveCount => _moves.Count;
-
-    public void Start(PlayerController subject, Anchor space)
+    public void StartRecording(PlayerController subject, Anchor space)
     {
-        Cancel();
+        CancelRecording();
         _subject = subject;
         _anchor = space;
 
@@ -50,12 +48,12 @@ internal class ClipRecorder
         Logger.Debug("[Clip.Recording] started");
     }
 
-    public Clip? Stop(string name)
+    public Clip? StopRecording(string name)
     {
         if (!Recording) return null;
 
         var clip = _frames.Count < 2 ? null : new Clip(name, _frames.ToList()) { Moves = _moves.ToList() };
-        Cancel();
+        CancelRecording();
 
         if (clip == null)
         {
@@ -67,7 +65,6 @@ internal class ClipRecorder
         return clip;
     }
 
-    // Samples the subject, `time` is any clock in seconds
     public void Update(double time)
     {
         if (!Recording || _subject == null) return;
@@ -92,8 +89,7 @@ internal class ClipRecorder
             ClipFingers.From(hands.GetHandPresenceInputForHand(InputManager.Hand.Right, false))));
     }
 
-    // Abandons recording without a clip
-    public void Cancel()
+    public void CancelRecording()
     {
         Recording = false;
         LeaveMoveEvents();
@@ -105,7 +101,6 @@ internal class ClipRecorder
         _nextSample = 0;
     }
 
-    // A move, at the clip time of the latest Update
     private void OnMove(StackConfiguration config)
     {
         try

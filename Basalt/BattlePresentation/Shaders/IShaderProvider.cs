@@ -1,7 +1,7 @@
 using Basalt.Services.Charts;
 using UnityEngine;
 
-namespace Basalt.Presentation.Shaders;
+namespace Basalt.BattlePresentation.Shaders;
 
 internal interface IShaderProvider
 {

@@ -27,7 +27,7 @@ internal class LaneSetupScreen(ChartSelection charts, Studio studio) : IMenuScre
     {
         get
         {
-            var arena = studio.LaneSetup.ArenaSpec;
+            var arena = studio.LaneSetup.ArenaSpecification;
             var lane = studio.LaneSetup.Lane;
             var actor = studio.LaneSetup.Actors.FirstOrDefault();
             var where = $"{arena.Map}, from {arena.X:0.##}, {arena.Z:0.##} facing {arena.Facing:0}";

@@ -321,12 +321,12 @@ internal static partial class SelfTest
     private static IEnumerator CheckPicker()
     {
         var deadline = Time.realtimeSinceStartup + 5f;
-        while (!Mod.Menu.Visible && Time.realtimeSinceStartup < deadline) yield return null;
+        while (Mod.Menu.Root?.activeSelf != true && Time.realtimeSinceStartup < deadline) yield return null;
 
         // Its buttons wait a second after it appears - it can land where a hand is.
         yield return new WaitForSeconds(1.2f);
 
-        if (!Mod.Menu.Visible)
+        if (Mod.Menu.Root?.activeSelf != true)
         {
             _pickerProblem = "the chart picker never appeared";
             yield break;
@@ -395,13 +395,12 @@ internal static partial class SelfTest
         File.WriteAllBytes(path, ImageConversion.EncodeToPNG(image));
         UnityEngine.Object.Destroy(image);
 
-        Mod.Menu.Override = new MenuCard("Cover test<\n<size=50%>a chart with a cover</size>", path);
-        yield return new WaitForSeconds(0.5f);
-        if (Mod.Menu.Card?.Cover.activeSelf != true) _pickerProblem = "a chart's cover image did not show on the picker";
+        // Shown and judged in one frame: the menu's next refresh puts the screen's own card back.
+        Mod.Menu.SelectedChartDescription?.Show(new MenuCard("Cover test<\n<size=50%>a chart with a cover</size>", path));
+        if (Mod.Menu.SelectedChartDescription?.Cover.activeSelf != true) _pickerProblem = "a chart's cover image did not show on the picker";
 
         if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-cover");
 
-        Mod.Menu.Override = null;
         yield return new WaitForSeconds(0.4f);
     }
 
@@ -603,7 +602,7 @@ internal static partial class SelfTest
     }
 
     /// <summary>How many lines carried this tag.</summary>
-    private static string CardText => Mod.Menu.Card?.Text.text ?? "";
+    private static string CardText => Mod.Menu.SelectedChartDescription?.Text.text ?? "";
 
     // As a hand pushing it would: through the game button's own onPressed, so its wiring is checked too.
     private static bool PushGameButton(string id)

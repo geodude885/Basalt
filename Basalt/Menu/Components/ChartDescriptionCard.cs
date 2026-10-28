@@ -1,4 +1,4 @@
-using Basalt.Presentation;
+using Basalt.BattlePresentation;
 using Il2CppTMPro;
 using UnityEngine;
 
@@ -6,6 +6,9 @@ namespace Basalt.Menu.Components;
 
 internal class ChartDescriptionCard
 {
+    public TextMeshPro Text { get; }
+    public GameObject Cover { get; }
+
     private const float RockDepth = 0.04f;
     private const float CoverSize = 0.32f;
 
@@ -31,10 +34,6 @@ internal class ChartDescriptionCard
         Cover.transform.localPosition = new Vector3(-0.2f, 0.17f, 0.005f);
         Cover.SetActive(false);
     }
-
-    public TextMeshPro Text { get; }
-
-    public GameObject Cover { get; }
 
     public void Show(MenuCard card)
     {

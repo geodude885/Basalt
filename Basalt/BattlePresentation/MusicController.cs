@@ -5,7 +5,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace Basalt.Presentation;
+namespace Basalt.BattlePresentation;
 
 internal class MusicController
 {

@@ -2,15 +2,15 @@ using Basalt.Services.Scoring;
 using Il2CppTMPro;
 using UnityEngine;
 
-namespace Basalt.Presentation;
+namespace Basalt.BattlePresentation;
 
 internal class BattleInfoBoard(GameAssets assets)
 {
-    private const float SlabDepth = 0.06f;
-    private const float SlabPadding = 0.12f;
-
     public GameObject? GameObject { get; private set; }
     public float FontSize { get; set; } = 1.6f;
+
+    private const float SlabDepth = 0.06f;
+    private const float SlabPadding = 0.12f;
 
     private TextMeshPro? _text;
     private GameObject? _slab;
@@ -58,25 +58,6 @@ internal class BattleInfoBoard(GameAssets assets)
         if (GameObject != null && Time.time >= _hideAt) Hide();
     }
 
-    public void Forget()
-    {
-        GameObject = null;
-        _text = null;
-        _slab = null;
-        _hideAt = float.PositiveInfinity;
-    }
-
-    private void FitSlabToText()
-    {
-        _slab ??= assets.CreateRockPanel("Slab", GameObject!.transform, Vector3.zero, Vector3.one);
-        _text!.color = _slab == null ? Color.white : GameAssets.TextOnRock;
-        if (_slab == null) return;
-
-        var textSize = _text.GetPreferredValues(_text.text);
-        _slab.transform.localScale = new Vector3(textSize.x + (2f * SlabPadding), textSize.y + (2f * SlabPadding), SlabDepth);
-        _slab.transform.localPosition = new Vector3(0f, 0f, SlabDepth / 2f);
-    }
-
     private bool EnsureExists()
     {
         if (GameObject != null && _text != null) return true;
@@ -94,5 +75,23 @@ internal class BattleInfoBoard(GameAssets assets)
             _text = null;
             return false;
         }
+    }
+    private void FitSlabToText()
+    {
+        _slab ??= assets.CreateRockPanel("Slab", GameObject!.transform, Vector3.zero, Vector3.one);
+        _text!.color = _slab == null ? Color.white : GameAssets.TextOnRock;
+        if (_slab == null) return;
+
+        var textSize = _text.GetPreferredValues(_text.text);
+        _slab.transform.localScale = new Vector3(textSize.x + (2f * SlabPadding), textSize.y + (2f * SlabPadding), SlabDepth);
+        _slab.transform.localPosition = new Vector3(0f, 0f, SlabDepth / 2f);
+    }
+
+    public void Forget()
+    {
+        GameObject = null;
+        _text = null;
+        _slab = null;
+        _hideAt = float.PositiveInfinity;
     }
 }

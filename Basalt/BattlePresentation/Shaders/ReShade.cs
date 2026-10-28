@@ -4,7 +4,7 @@ using RumbleReShaded.Api;
 using Semver;
 using UnityEngine;
 
-namespace Basalt.Presentation.Shaders;
+namespace Basalt.BattlePresentation.Shaders;
 
 internal class ReShade : IShaderProvider
 {

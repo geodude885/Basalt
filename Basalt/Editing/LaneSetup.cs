@@ -1,16 +1,14 @@
 using Basalt.Arenas;
 using Basalt.Battle;
-using Basalt.Presentation;
+using Basalt.BattlePresentation;
 using Basalt.Services.Charts;
 
 namespace Basalt.Editing;
 
-// A preview lane you walk around, resized and moved from the panel, then written into the chart.
 internal class LaneSetup(GameAssets assets)
 {
-    public ArenaSpec ArenaSpec { get; private set; } = ArenaSpec.Default;
+    public ArenaSpec ArenaSpecification { get; private set; } = ArenaSpec.Default;
     public Lane Lane { get; private set; }
-
     public Arena ArenaPreview { get; private set; } = new(assets);
     public List<ActorSpec> Actors = [];
 
@@ -18,14 +16,14 @@ internal class LaneSetup(GameAssets assets)
     private bool _previewOutOfDate;
 
 
-    public void BeginWith(Chart chart)
+    public void SetupFrom(Chart chart)
     {
-        ArenaSpec = chart.Arena;
+        ArenaSpecification = chart.Arena;
         Lane = chart.Lane;
         Actors = chart.Actors.ToList();
         _previewOutOfDate = true;
 
-        if (!ArenaSpec.Map.IsLoaded()) ArenaSpec.Map.Load();
+        if (!ArenaSpecification.Map.IsLoaded()) ArenaSpecification.Map.Load();
     }
 
     public void ResizeLane(float lengthChange, float widthChange)
@@ -40,11 +38,10 @@ internal class LaneSetup(GameAssets assets)
         if (BattlePlayer.Rig is not { } rig || Maps.Current is not { } map) return;
 
         var fromArenaOrigin = rig.Feet - map.GetArenaOrigin();
-        ArenaSpec = new ArenaSpec(map, MathF.Round(fromArenaOrigin.x, 2), MathF.Round(fromArenaOrigin.z, 2), MathF.Round(rig.Facing.Bearing()));
+        ArenaSpecification = new ArenaSpec(map, MathF.Round(fromArenaOrigin.x, 2), MathF.Round(fromArenaOrigin.z, 2), MathF.Round(rig.Facing.Bearing()));
         _previewOutOfDate = true;
     }
 
-    // The lane grows to reach you if you stand past its far end.
     public void MoveFirstActorWherePlayerStands()
     {
         if (BattlePlayer.Rig is not { } rig || _previewAnchor is not { } anchor || Actors.Count == 0) return;
@@ -60,23 +57,23 @@ internal class LaneSetup(GameAssets assets)
 
     public void SwitchToNextMap()
     {
-        var next = (ArenaKind)(((int)ArenaSpec.Map + 1) % Enum.GetValues<ArenaKind>().Length);
-        ArenaSpec = new ArenaSpec(next);
+        var next = (ArenaKind)(((int)ArenaSpecification.Map + 1) % Enum.GetValues<ArenaKind>().Length);
+        ArenaSpecification = new ArenaSpec(next);
         _previewOutOfDate = true;
         if (!next.IsLoaded()) next.Load();
     }
 
-    // Every distance along the lane is scaled with it, so nothing is left past the far end.
     public string WriteIntoChartText(string chartText, Chart chartBefore)
     {
+        // Scales all chart move z lengths
         var lengthScale = chartBefore.Lane.Length > 0 ? Lane.Length / chartBefore.Lane.Length : 1f;
-        return LaneSetupWriter.ScaleDepth(LaneSetupWriter.Write(chartText, ArenaSpec, Lane, Actors), lengthScale, Lane.Length);
+        return LaneSetupWriter.ScaleDepth(LaneSetupWriter.Write(chartText, ArenaSpecification, Lane, Actors), lengthScale, Lane.Length);
     }
 
     public void RebuildPreviewIfOutOfDate()
     {
-        if (!_previewOutOfDate || !ArenaSpec.Map.IsLoaded()) return;
-        if (ArenaSpec.CreateLaneAnchor() is not { } anchor) return;
+        if (!_previewOutOfDate || !ArenaSpecification.Map.IsLoaded()) return;
+        if (ArenaSpecification.CreateLaneAnchor() is not { } anchor) return;
 
         _previewAnchor = anchor;
         _previewOutOfDate = false;

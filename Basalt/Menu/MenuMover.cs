@@ -6,18 +6,12 @@ using UnityEngine;
 
 namespace Basalt.Menu;
 
-// Where the menu stands: near you as its screen asks, or at its saved spot in the Gym.
 internal class MenuMover(JsonBook<SavedSpot> spots)
 {
-    // In front of you: metres ahead of your eyes, above them (negative is below) and to your right.
     private const float DistanceAhead = 0.75f;
     private const float HeightAboveEyes = -0.35f;
     private const float SidewaysToRight = 0f;
-
-    // Behind you while miming, far enough back to be clear of your arms.
     private const float DistanceBehind = 1f;
-
-    // A following menu is brought back once you are this far from it.
     private const float FollowDistance = 1.6f;
 
     public void PlaceOnOpening(Transform menu, MenuPlacement placement)
@@ -41,8 +35,7 @@ internal class MenuMover(JsonBook<SavedSpot> spots)
         menu.SetPositionAndRotation(position, Quaternion.LookRotation((position - rig.Head.position).Flat()));
     }
 
-    // True when it was brought back.
-    public static bool FollowPlayer(Transform menu, MenuPlacement placement)
+    public static bool UpdateFollowPlayer(Transform menu, MenuPlacement placement)
     {
         if (BattlePlayer.Rig is not { } rig) return false;
 

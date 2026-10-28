@@ -2,7 +2,7 @@ using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppTMPro;
 using UnityEngine;
 
-namespace Basalt.Presentation;
+namespace Basalt.BattlePresentation;
 
 internal class GameAssets
 {
@@ -34,7 +34,7 @@ internal class GameAssets
     private Quaternion _sliderRotation;
     private Vector3 _sliderScale;
 
-    public bool CaptureMenuParts() => CaptureRockTemplate() & CaptureButtonTemplate() & CaptureSliderTemplate();
+    public bool CaptureMenuParts() => EnsureRockPanelLoaded() & EnsureButtonLoaded() & EnsureSliderLoaded();
 
     public Material? Colour(Color colour)
     {
@@ -99,18 +99,15 @@ internal class GameAssets
         text.font = _font;
     }
 
-    // A holder scaled to `size` like a primitive cube of that size, wearing the rock panel; its face is towards -Z.
-    // Null until the Gym's menu slab has been seen.
     public GameObject? CreateRockPanel(string name, Transform parent, Vector3 localCentre, Vector3 size)
     {
-        if (!CaptureRockTemplate()) return null;
+        if (!EnsureRockPanelLoaded()) return null;
 
         var holder = new GameObject(name);
         holder.transform.SetParent(parent, false);
         holder.transform.localPosition = localCentre;
         holder.transform.localScale = size;
 
-        // The game's mesh has its own size and pivot: fitted into the holder's unit box.
         var rock = UnityEngine.Object.Instantiate(_rockTemplate!, holder.transform, false);
         rock.name = "Rock";
         rock.transform.localRotation = Quaternion.identity;
@@ -120,8 +117,7 @@ internal class GameAssets
         return holder;
     }
 
-    // Copied the first time the Gym's menu slab is seen, and kept across scene loads.
-    private bool CaptureRockTemplate()
+    private bool EnsureRockPanelLoaded()
     {
         if (_rockTemplate != null) return true;
 
@@ -147,7 +143,7 @@ internal class GameAssets
     // Inspiration courtesy of @SpooderCode's RockUI
     public GameObject? CreateGameButton(Transform parent, Action onPressed)
     {
-        if (!CaptureButtonTemplate()) return null;
+        if (!EnsureButtonLoaded()) return null;
 
         try
         {
@@ -171,7 +167,7 @@ internal class GameAssets
             return null;
         }
     }
-    private bool CaptureButtonTemplate()
+    private bool EnsureButtonLoaded()
     {
         if (_buttonTemplate != null) return true;
 
@@ -200,7 +196,7 @@ internal class GameAssets
     // Inspiration courtesy of @SpooderCode's RockUI
     public GameObject? CreateGameSlider(Transform parent, int steps, int step, Action<int> onStep)
     {
-        if (!CaptureSliderTemplate()) return null;
+        if (!EnsureSliderLoaded()) return null;
 
         try
         {
@@ -230,7 +226,7 @@ internal class GameAssets
         }
     }
 
-    private bool CaptureSliderTemplate()
+    private bool EnsureSliderLoaded()
     {
         if (_sliderTemplate != null) return true;
 
@@ -241,7 +237,6 @@ internal class GameAssets
                 .FirstOrDefault(slider => slider != null && slider.gameObject.scene.IsValid() && PathOf(slider).EndsWith(MenuSlabSliderPath, StringComparison.Ordinal));
             if (original == null) return false;
 
-            // Rock panels are the slab's mesh unrotated, so the slider keeps its turn relative to that mesh.
             var mesh = original.parent.Find("Mesh");
             _sliderRotation = Quaternion.Inverse(mesh != null ? mesh.localRotation : Quaternion.identity) * original.localRotation;
             _sliderScale = original.lossyScale;

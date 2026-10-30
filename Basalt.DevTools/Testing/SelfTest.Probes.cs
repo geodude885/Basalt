@@ -25,7 +25,7 @@ internal static partial class SelfTest
     private static PlayerController? You => BattlePlayer.Player?.Controller;
 
     private static Vector3? LanePoint(float x, float y, float z) =>
-        Mod.Battle.Run?.Lane is { } frame ? frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity() : null;
+        Mod.Battle.Run?.Lane is { } frame ? frame.ToWorld(x, y, z) : null;
 
     private static void ShowOverview()
     {

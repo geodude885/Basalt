@@ -31,7 +31,7 @@ internal class Arena(GameAssets assets)
 
         Vector3 At(float x, float z)
         {
-            return origin.ToWorld(new System.Numerics.Vector3(x, (ArenaCollision.Height - ArenaCollision.WallLengthThroughFloor) / 2f, z)).ToUnity();
+            return origin.ToWorld(x, (ArenaCollision.Height - ArenaCollision.WallLengthThroughFloor) / 2f, z);
         }
 
         Colliders.Wall("Basalt_Backstop", At(0f, -ArenaCollision.EndGap - (ArenaCollision.Thickness / 2f)), along, new Vector3(ends, tall, ArenaCollision.Thickness), layer);
@@ -49,7 +49,7 @@ internal class Arena(GameAssets assets)
             Colliders.Wall("Basalt_ZoneEnd", At(0f, playerZone.Length + ArenaCollision.PlayerEndGap + (ArenaCollision.Thickness / 2f)), along, new Vector3(across, tall, ArenaCollision.Thickness), layer, zone: true);
 
         var depth = playerZone.Length + behind + ArenaCollision.PlayerEndGap + ArenaCollision.Thickness;
-        var ceiling = origin.ToWorld(new System.Numerics.Vector3(0f, playerZone.Height + (ArenaCollision.Thickness / 2f), (depth / 2f) - behind)).ToUnity();
+        var ceiling = origin.ToWorld(0f, playerZone.Height + (ArenaCollision.Thickness / 2f), (depth / 2f) - behind);
         Colliders.Wall("Basalt_ZoneCeiling", ceiling, along, new Vector3(across, ArenaCollision.Thickness, depth), layer, zone: true);
     }
 
@@ -58,27 +58,22 @@ internal class Arena(GameAssets assets)
         Visuals.Colour(colours);
         var along = Quaternion.LookRotation(origin.Forward.ToUnity());
 
-        Vector3 At(float x, float y, float z)
-        {
-            return origin.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();
-        }
-
         var halfWidth = lane.Width / 2f;
 
-        Visuals.Line(At(-halfWidth, ArenaVisuals.LineHeight, lane.Length / 2f), along, new Vector3(ArenaVisuals.LineThickness, ArenaVisuals.LineHeight, lane.Length), Part.Edge);
-        Visuals.Line(At(halfWidth, ArenaVisuals.LineHeight, lane.Length / 2f), along, new Vector3(ArenaVisuals.LineThickness, ArenaVisuals.LineHeight, lane.Length), Part.Edge);
-        Visuals.Line(At(0f, ArenaVisuals.LineHeight, 0f), along, new Vector3(lane.Width, ArenaVisuals.LineHeight, ArenaVisuals.LineThickness), Part.End);
-        Visuals.Line(At(0f, ArenaVisuals.LineHeight, lane.Length), along, new Vector3(lane.Width, ArenaVisuals.LineHeight, ArenaVisuals.LineThickness), Part.End);
+        Visuals.Line(origin.ToWorld(-halfWidth, ArenaVisuals.LineHeight, lane.Length / 2f), along, new Vector3(ArenaVisuals.LineThickness, ArenaVisuals.LineHeight, lane.Length), Part.Edge);
+        Visuals.Line(origin.ToWorld(halfWidth, ArenaVisuals.LineHeight, lane.Length / 2f), along, new Vector3(ArenaVisuals.LineThickness, ArenaVisuals.LineHeight, lane.Length), Part.Edge);
+        Visuals.Line(origin.ToWorld(0f, ArenaVisuals.LineHeight, 0f), along, new Vector3(lane.Width, ArenaVisuals.LineHeight, ArenaVisuals.LineThickness), Part.End);
+        Visuals.Line(origin.ToWorld(0f, ArenaVisuals.LineHeight, lane.Length), along, new Vector3(lane.Width, ArenaVisuals.LineHeight, ArenaVisuals.LineThickness), Part.End);
         if (zone is { } playerZone && playerZone.Length < lane.Length - 0.01f)
-            Visuals.Line(At(0f, ArenaVisuals.LineHeight, playerZone.Length), along, new Vector3(lane.Width, ArenaVisuals.LineHeight, ArenaVisuals.LineThickness), Part.Zone);
+            Visuals.Line(origin.ToWorld(0f, ArenaVisuals.LineHeight, playerZone.Length), along, new Vector3(lane.Width, ArenaVisuals.LineHeight, ArenaVisuals.LineThickness), Part.Zone);
 
         if (frameBackstop)
         {
             var width = lane.Width + 2f;
 
-            Visuals.Line(At(0f, ArenaVisuals.FrameHeight, -ArenaVisuals.FrameGap), along, new Vector3(width, ArenaVisuals.FrameThickness, ArenaVisuals.FrameThickness), Part.Frame);
-            Visuals.Line(At(-width / 2f, ArenaVisuals.FrameHeight / 2f, -ArenaVisuals.FrameGap), along, new Vector3(ArenaVisuals.FrameThickness, ArenaVisuals.FrameHeight, ArenaVisuals.FrameThickness), Part.Frame);
-            Visuals.Line(At(width / 2f, ArenaVisuals.FrameHeight / 2f, -ArenaVisuals.FrameGap), along, new Vector3(ArenaVisuals.FrameThickness, ArenaVisuals.FrameHeight, ArenaVisuals.FrameThickness), Part.Frame);
+            Visuals.Line(origin.ToWorld(0f, ArenaVisuals.FrameHeight, -ArenaVisuals.FrameGap), along, new Vector3(width, ArenaVisuals.FrameThickness, ArenaVisuals.FrameThickness), Part.Frame);
+            Visuals.Line(origin.ToWorld(-width / 2f, ArenaVisuals.FrameHeight / 2f, -ArenaVisuals.FrameGap), along, new Vector3(ArenaVisuals.FrameThickness, ArenaVisuals.FrameHeight, ArenaVisuals.FrameThickness), Part.Frame);
+            Visuals.Line(origin.ToWorld(width / 2f, ArenaVisuals.FrameHeight / 2f, -ArenaVisuals.FrameGap), along, new Vector3(ArenaVisuals.FrameThickness, ArenaVisuals.FrameHeight, ArenaVisuals.FrameThickness), Part.Frame);
         }
 
         if (!panes) return;
@@ -89,11 +84,11 @@ internal class Arena(GameAssets assets)
         var far = lane.Length + ArenaCollision.EndGap;
         var middle = (near + far) / 2f;
 
-        Visuals.Pane(At(-paneX, height / 2f, middle), along, new Vector3(ArenaVisuals.PaneThickness, height, far - near));
-        Visuals.Pane(At(paneX, height / 2f, middle), along, new Vector3(ArenaVisuals.PaneThickness, height, far - near));
-        Visuals.Pane(At(0f, height / 2f, near), along, new Vector3(paneX * 2f, height, ArenaVisuals.PaneThickness));
-        Visuals.Pane(At(0f, height / 2f, far), along, new Vector3(paneX * 2f, height, ArenaVisuals.PaneThickness));
-        if (zone != null) Visuals.Pane(At(0f, height, middle), along, new Vector3(paneX * 2f, ArenaVisuals.PaneThickness, far - near));
+        Visuals.Pane(origin.ToWorld(-paneX, height / 2f, middle), along, new Vector3(ArenaVisuals.PaneThickness, height, far - near));
+        Visuals.Pane(origin.ToWorld(paneX, height / 2f, middle), along, new Vector3(ArenaVisuals.PaneThickness, height, far - near));
+        Visuals.Pane(origin.ToWorld(0f, height / 2f, near), along, new Vector3(paneX * 2f, height, ArenaVisuals.PaneThickness));
+        Visuals.Pane(origin.ToWorld(0f, height / 2f, far), along, new Vector3(paneX * 2f, height, ArenaVisuals.PaneThickness));
+        if (zone != null) Visuals.Pane(origin.ToWorld(0f, height, middle), along, new Vector3(paneX * 2f, ArenaVisuals.PaneThickness, far - near));
     }
 
     public void Destroy()

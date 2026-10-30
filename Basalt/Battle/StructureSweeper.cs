@@ -99,7 +99,7 @@ internal class StructureSweeper
             for (var corner = 0; corner < 8; corner++)
             {
                 var point = bounds.center + Vector3.Scale(bounds.extents, new Vector3((corner & 1) == 0 ? -1 : 1, (corner & 2) == 0 ? -1 : 1, (corner & 4) == 0 ? -1 : 1));
-                front = Math.Max(front, lane.ToLocal(point.ToNumerics()).Z);
+                front = Math.Max(front, lane.ToLocal(point).z);
             }
         }
 

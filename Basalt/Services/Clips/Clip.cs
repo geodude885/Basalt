@@ -77,7 +77,7 @@ public record Clip(string Name, IReadOnlyList<ClipFrame> Frames)
             ClipPose.Lerp(a.LeftHand, b.LeftHand, t),
             ClipPose.Lerp(a.RightHand, b.RightHand, t),
             a.Offset is { } oa && b.Offset is { } ob ? Vector2.Lerp(oa, ob, t) : a.Offset ?? b.Offset,
-            a.Yaw is { } ya && b.Yaw is { } yb ? Degrees.Lerp(ya, yb, t) : a.Yaw ?? b.Yaw,
+            a.Yaw is { } ya && b.Yaw is { } yb ? AngleHelpers.Lerp(ya, yb, t) : a.Yaw ?? b.Yaw,
             a.LeftFingers is { } la && b.LeftFingers is { } lb ? ClipFingers.Lerp(la, lb, t) : a.LeftFingers ?? b.LeftFingers,
             a.RightFingers is { } ra && b.RightFingers is { } rb ? ClipFingers.Lerp(ra, rb, t) : a.RightFingers ?? b.RightFingers);
     }

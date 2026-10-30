@@ -238,12 +238,7 @@ internal static partial class SelfTest
     /// <summary>A screenshot from beside the lane, looking along it at you.</summary>
     private static void Shoot(string folder, string name, Anchor lane, Vector3 at)
     {
-        Vector3 World(float x, float y, float z)
-        {
-            return lane.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();
-        }
-
-        _showCamera?.Invoke(World(2.2f, 2.2f, at.z - 3.5f), World(at.x, 1.1f, at.z));
+        _showCamera?.Invoke(lane.ToWorld(2.2f, 2.2f, at.z - 3.5f), lane.ToWorld(at.x, 1.1f, at.z));
         Shoot(folder, name);
     }
 }

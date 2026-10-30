@@ -46,11 +46,11 @@ internal class LaneSetup(GameAssets assets)
     {
         if (BattlePlayer.Rig is not { } rig || _previewAnchor is not { } anchor || Actors.Count == 0) return;
 
-        var inLane = anchor.ToLocal(rig.Feet.ToNumerics());
-        var along = Math.Max(0.5f, inLane.Z);
+        var inLane = anchor.ToLocal(rig.Feet);
+        var along = Math.Max(0.5f, inLane.z);
         if (along > Lane.Length) Lane = new Lane(Math.Min(LaneSetupWriter.MaxLength, MathF.Ceiling(along)), Lane.Width);
 
-        var across = Math.Clamp(inLane.X, -Lane.Width / 2f, Lane.Width / 2f);
+        var across = Math.Clamp(inLane.x, -Lane.Width / 2f, Lane.Width / 2f);
         Actors[0] = Actors[0] with { At = new Spot(MathF.Round(across, 2), MathF.Round(Math.Min(along, Lane.Length), 2)) };
         _previewOutOfDate = true;
     }
@@ -78,7 +78,7 @@ internal class LaneSetup(GameAssets assets)
         _previewAnchor = anchor;
         _previewOutOfDate = false;
         ArenaPreview.Create(anchor, Lane, showBackstop: true, walls: false);
-        foreach (var actor in Actors) ArenaPreview.Visuals.ActorMarker(anchor.ToWorld(new System.Numerics.Vector3(actor.At.X, 0f, actor.At.Z)).ToUnity());
+        foreach (var actor in Actors) ArenaPreview.Visuals.ActorMarker(anchor.ToWorld(actor.At.X, 0f, actor.At.Z));
     }
 
     public void RemovePreview() => ArenaPreview.Destroy();

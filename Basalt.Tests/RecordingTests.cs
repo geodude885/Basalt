@@ -1,5 +1,6 @@
 using System.Numerics;
 using Basalt.DevTools.Testing;
+using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;
 using Xunit;
@@ -312,7 +313,7 @@ public class FacingTests
     [InlineData(90f, 180f, 0.5f, 135f)]
     [InlineData(0f, 270f, 0.5f, 315f)]
     public void FacingsInterpolateTheShortWayRound(float from, float to, float t, float expected) =>
-        Assert.Equal(expected, Degrees.Lerp(from, to, t) % 360f, 2);
+        Assert.Equal(expected, AngleHelpers.Lerp(from, to, t) % 360f, 2);
 
     [Fact]
     public void AClipKeepsItsFacingsOnDisk()

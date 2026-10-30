@@ -1,7 +1,9 @@
-namespace Basalt;
+using System.Numerics;
+
+namespace Basalt.Services;
 
 /// <summary>Compass degrees as Unity has them: 0 = +Z, clockwise from above, kept to 0..360.</summary>
-public static class Degrees
+public static class AngleHelpers
 {
     public static float Wrap(float degrees)
     {
@@ -16,9 +18,9 @@ public static class Degrees
     public static float Bearing(float x, float z) => (x * x) + (z * z) < 1e-6f ? 0f : Wrap(MathF.Atan2(x, z) * 180f / MathF.PI);
 
     /// <summary>The flat unit direction a bearing points.</summary>
-    public static (float X, float Z) Direction(float bearing)
+    public static Vector3 Direction(float bearing)
     {
         var radians = bearing * MathF.PI / 180f;
-        return (MathF.Sin(radians), MathF.Cos(radians));
+        return new Vector3(MathF.Sin(radians), 0f, MathF.Cos(radians));
     }
 }

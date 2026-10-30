@@ -34,14 +34,14 @@ internal class BattlePlayer
         _nextLaneCheck = Time.time + 0.1f;
 
         var rig = PlayerRig.From(playerController);
-        var at = frame.ToLocal(rig.Feet.ToNumerics()).ToUnity();
+        var at = frame.ToLocal(rig.Feet);
         float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
         var far = zoned ? chart.Zone.Length + 0.3f : chart.Lane.Length + 0.75f;
         var above = rig.Vr.position.y - frame.Position.Y;
         var tooHigh = zoned && above > chart.Zone.Height + 0.8f;
         if (!tooHigh && Math.Abs(at.x) <= side + 0.3f && at.z >= back - 0.3f && at.z <= far + 0.3f) return;
 
-        var inside = frame.ToWorld(new System.Numerics.Vector3(Math.Clamp(at.x, -side + 0.2f, side - 0.2f), 0f, Math.Clamp(at.z, back + 0.2f, far - 0.2f))).ToUnity();
+        var inside = frame.ToWorld(Math.Clamp(at.x, -side + 0.2f, side - 0.2f), 0f, Math.Clamp(at.z, back + 0.2f, far - 0.2f));
         var floor = rig.Feet;
         var shift = new Vector3(inside.x - floor.x, 0f, inside.z - floor.z);
         if (tooHigh) shift.y = -(above - chart.Zone.Height);

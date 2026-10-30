@@ -37,11 +37,6 @@ internal sealed class ChartWatcher(DesktopCamera camera)
     {
         if (Mod.Battle.Run is not { Lane: { } lane } run) return null;
 
-        Vector3 At(float x, float y, float z)
-        {
-            return lane.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();
-        }
-
-        return (At(1.5f, 3.6f, -0.4f), At(0f, 0.8f, run.Request.Chart.Lane.Length * 0.6f));
+        return (lane.ToWorld(1.5f, 3.6f, -0.4f), lane.ToWorld(0f, 0.8f, run.Request.Chart.Lane.Length * 0.6f));
     }
 }

@@ -106,7 +106,7 @@ internal class ClipPlayer(Actor actor, PlayerController controller, PlayerRig ri
 
     private void MoveTowards(Anchor origin, System.Numerics.Vector2 spot)
     {
-        var wanted = origin.ToWorld(new System.Numerics.Vector3(spot.X, 0f, spot.Y)).ToUnity();
+        var wanted = origin.ToWorld(spot.X, 0f, spot.Y);
         var actual = rig.Feet;
         var shift = new Vector3(wanted.x - actual.x, 0f, wanted.z - actual.z);
 

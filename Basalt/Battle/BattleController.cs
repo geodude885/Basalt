@@ -57,7 +57,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         ? Music.Clock ?? (Time.time - run.StartedAt)
         : -1;
 
-    public Vector3 ToLane(Vector3 world) => (Run?.Frame ?? default).ToLocal(world.ToNumerics()).ToUnity();
+    public Vector3 ToLane(Vector3 world) => (Run?.Frame ?? default).ToLocal(world);
 
     public void Start(BattleRequest request)
     {
@@ -445,5 +445,5 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         return null;
     }
 
-    private Vector3 World(float x, float y, float z) => Run!.Frame.ToWorld(new System.Numerics.Vector3(x, y, z)).ToUnity();
+    private Vector3 World(float x, float y, float z) => Run!.Frame.ToWorld(x, y, z);
 }

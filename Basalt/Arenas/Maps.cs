@@ -1,3 +1,4 @@
+using Basalt.Services;
 using Basalt.Services.Charts;
 using Il2CppPhoton.Pun;
 using UnityEngine;
@@ -64,6 +65,6 @@ internal static class Maps
 
         spot.y = floor;
         Logger.Debug($"[Arena.Lane] {spec.Map}: chart spot {spot.Describe()} facing {spec.Facing:0}deg");
-        return new Anchor(spot.ToNumerics(), Degrees.Wrap(spec.Facing));
+        return new Anchor(spot.ToNumerics(), AngleHelpers.Wrap(spec.Facing));
     }
 }

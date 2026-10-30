@@ -76,14 +76,14 @@ internal class ClipRecorder
 
         var rig = PlayerRig.From(_subject);
         var hands = _subject.PlayerHandPresence;
-        var spot = _anchor.ToLocal(rig.Feet.ToNumerics());
+        var spot = _anchor.ToLocal(rig.Feet);
 
         _frames.Add(new ClipFrame(
             (float)_clipTime,
             ClipPose.From(rig.Head),
             ClipPose.From(rig.LeftHand),
             ClipPose.From(rig.RightHand),
-            new Vector2(spot.X, spot.Z),
+            new Vector2(spot.x, spot.z),
             _anchor.ToLocalYaw(rig.Vr.eulerAngles.y),
             ClipFingers.From(hands.GetHandPresenceInputForHand(InputManager.Hand.Left, false)),
             ClipFingers.From(hands.GetHandPresenceInputForHand(InputManager.Hand.Right, false))));

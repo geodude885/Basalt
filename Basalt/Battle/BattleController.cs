@@ -168,7 +168,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                 _projectiles.Update();
                 if (run.Request.Mode != BattleMode.Record) _player.KeepVulnerable();
                 Visuals.Update(run.Request.Chart, ChartTime);
-                _sweeper.Update(run.Request.Chart.Rules.CleanupSeconds);
+                _sweeper.Update(run.Request.Chart.Rules, run.Lane);
                 foreach (var command in run.Runner!.Advance(Math.Max(0, ChartTime)))
                 {
                     RunBattle(command);

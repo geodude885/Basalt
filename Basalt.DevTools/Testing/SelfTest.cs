@@ -74,6 +74,9 @@ internal static partial class SelfTest
     private static bool _running;
     private static bool _settled;
 
+    // The game's own first load of the Gym - before it, the game is still signing in, and loading a map hangs it.
+    private static bool _gymSeen;
+
     // The catalog is read once a session, so a later battle in a listening session never logs it again.
     private static bool _stoneCatalogRead;
     private static int _runNumber;
@@ -119,6 +122,7 @@ internal static partial class SelfTest
 
     public static void OnSceneLoaded(string scene)
     {
+        if (string.Equals(scene, Maps.GymScene, StringComparison.Ordinal)) _gymSeen = true;
         if (!Enabled || _runNumber > 0 || _running || !string.Equals(scene, Maps.GymScene, StringComparison.Ordinal)) return;
 
         if (_firstRequest is [var request]) MelonCoroutines.Start(Run(request));
@@ -202,13 +206,17 @@ internal static partial class SelfTest
         _sawSimulatedActor = false;
         if (test.Equals("walls", StringComparison.OrdinalIgnoreCase)) yield break;
 
+        // A listened-for request can arrive while the game is still starting up: wait for its Gym, never load one over it.
+        var deadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
+        while (!_gymSeen && Time.realtimeSinceStartup < deadline) yield return null;
+
         if (!ArenaKind.Gym.IsLoaded() || Mod.Battle.Run != null)
         {
             Mod.Battle.Stop("self-test: next test");
             if (!ArenaKind.Gym.IsLoaded()) Mod.Battle.ReturnToGym();
         }
 
-        var deadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
+        deadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
         while ((!ArenaKind.Gym.IsLoaded() || BattlePlayer.Player?.Controller == null) && Time.realtimeSinceStartup < deadline) yield return null;
         if (BattlePlayer.Player?.Controller == null)
         {

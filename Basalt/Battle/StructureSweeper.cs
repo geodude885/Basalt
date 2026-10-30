@@ -1,10 +1,14 @@
+using Basalt.Services.Charts;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
 namespace Basalt.Battle;
 
+// Break structures after n seconds, or when behind lane back wall
 internal class StructureSweeper
 {
+    private const float BehindMargin = 0.05f;
+
     private static readonly string[] PlayerStructures = { "Disc", "Ball", "RockCube", "Pillar", "Wall" };
 
     private readonly Dictionary<IntPtr, (Vector3 At, float Since)> _still = [];
@@ -39,10 +43,11 @@ internal class StructureSweeper
 
     public void Reset() => _still.Clear();
 
-    // Breaks any structure still for <afterSeconds>s
-    public void Update(double afterSeconds)
+    public void Update(Rules rules, Anchor? lane)
     {
-        if (afterSeconds <= 0 || Time.time < _nextSweep) return;
+        var afterSeconds = rules.CleanupSeconds;
+        var behind = rules.BreakBehind ? lane : null;
+        if ((afterSeconds <= 0 && behind == null) || Time.time < _nextSweep) return;
         _nextSweep = Time.time + 0.25f;
 
         var combat = CombatManager.instance;
@@ -52,6 +57,14 @@ internal class StructureSweeper
         foreach (var structure in combat.Structures.ToArray())
         {
             if (structure == null || !structure.gameObject.activeInHierarchy) continue;
+
+            if (behind is { } frame && IsBehindLane(structure, frame))
+            {
+                Break(structure, "behind the lane", sound: false);
+                continue;
+            }
+
+            if (afterSeconds <= 0) continue;
             var body = structure.GetComponent<Rigidbody>();
             if (body == null || body.isKinematic) continue;
 
@@ -65,19 +78,44 @@ internal class StructureSweeper
 
             if (Time.time - still.Since < afterSeconds) continue;
 
-            try
-            {
-                structure.Kill(at, true, true, false);
-                Logger.Debug($"[Battle.CleanedUp] {structure.gameObject.name} still for {afterSeconds:0.#}s - broken");
-            }
-            catch (Exception e)
-            {
-                Logger.Error($"[Battle.CleanupFailed] {structure.gameObject.name}: {e.Message}");
-            }
-
+            Break(structure, $"still for {afterSeconds:0.#}s", sound: true);
             _still.Remove(structure.Pointer);
         }
 
         foreach (var gone in _still.Keys.Where(k => !seen.Contains(k)).ToList()) _still.Remove(gone);
+    }
+
+    private static bool IsBehindLane(Structure structure, Anchor lane)
+    {
+        var name = structure.gameObject.name;
+        if (!PlayerStructures.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase))) return false;
+
+        var front = float.NegativeInfinity;
+        foreach (var collider in structure.GetComponentsInChildren<Collider>())
+        {
+            if (collider == null || !collider.enabled || collider.isTrigger) continue;
+
+            var bounds = collider.bounds;
+            for (var corner = 0; corner < 8; corner++)
+            {
+                var point = bounds.center + Vector3.Scale(bounds.extents, new Vector3((corner & 1) == 0 ? -1 : 1, (corner & 2) == 0 ? -1 : 1, (corner & 4) == 0 ? -1 : 1));
+                front = Math.Max(front, lane.ToLocal(point.ToNumerics()).Z);
+            }
+        }
+
+        return front is > float.NegativeInfinity and < -BehindMargin;
+    }
+
+    private static void Break(Structure structure, string why, bool sound)
+    {
+        try
+        {
+            structure.Kill(Vector3.zero, sound, true, false);
+            Logger.Debug($"[Battle.CleanedUp] {structure.gameObject.name} {why} - broken");
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"[Battle.CleanupFailed] {structure.gameObject.name}: {e.Message}");
+        }
     }
 }

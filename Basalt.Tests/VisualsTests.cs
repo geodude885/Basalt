@@ -348,4 +348,15 @@ public class GroundedAndCleanupTests
         Assert.Equal(SpawnRule.Discs, ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "spawn": "discs", "cleanup": 5 } }""").Chart!.Rules.Spawn);
         Assert.False(ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "cleanup": -1 } }""").Ok);
     }
+
+    [Fact]
+    public void BreakingBehindIsOffUnlessAsked()
+    {
+        Assert.False(ChartLoader.Load("{}").Chart!.Rules.BreakBehind);
+        Assert.False(ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "cleanup": 5 } }""").Chart!.Rules.BreakBehind);
+
+        var rules = ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "breakBehind": true } }""").Chart!.Rules;
+        Assert.True(rules.BreakBehind);
+        Assert.Equal(Rules.DefaultCleanupSeconds, rules.CleanupSeconds);
+    }
 }

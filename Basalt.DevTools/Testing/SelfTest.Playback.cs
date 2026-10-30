@@ -87,6 +87,9 @@ internal static partial class SelfTest
         var structureSpeeds = new Dictionary<IntPtr, float>();
         var lowestActor = (Height: float.MaxValue, Id: "", Time: 0.0);
         var highestActor = (Height: float.MinValue, Id: "", Time: 0.0);
+        var mostBehind = (Count: 0, Time: 0.0);
+        var behindSince = new Dictionary<IntPtr, double>();
+        var longestBehind = (Seconds: 0.0, Name: "", Time: 0.0);
         deadline = Time.realtimeSinceStartup + (float)chart.End + 60f;
         while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
@@ -99,6 +102,16 @@ internal static partial class SelfTest
                 var height = Mod.Battle.ToLane(standing.Body.Rig.Feet).y;
                 if (height < lowestActor.Height) lowestActor = (height, standing.Id, t);
                 if (t > 0 && height > highestActor.Height) highestActor = (height, standing.Id, t);
+            }
+
+            // How many are back there, and how long any one stays: a burst arriving together is fine, a pile is not.
+            var behind = StructuresBehindLane();
+            if (behind.Count > mostBehind.Count) mostBehind = (behind.Count, t);
+            foreach (var gone in behindSince.Keys.Where(k => !behind.ContainsKey(k)).ToList()) behindSince.Remove(gone);
+            foreach ((var pointer, var name) in behind)
+            {
+                if (!behindSince.TryGetValue(pointer, out var since)) behindSince[pointer] = since = t;
+                if (t - since > longestBehind.Seconds) longestBehind = (t - since, name, t);
             }
 
             if (_shots && shotTimes.Count > 0 && t >= shotTimes.Peek())
@@ -116,7 +129,25 @@ internal static partial class SelfTest
         if (lowestActor.Height < -0.3f) problems.Add($"actor {lowestActor.Id} sank {-lowestActor.Height:0.0} m through the floor at {lowestActor.Time:0.0}s");
         Logger.Info($"[SelfTest] highest actor: {highestActor.Id} at lane y {highestActor.Height:0.00}, {highestActor.Time:0.0}s");
         if (highestActor.Height > 0.3f) problems.Add($"actor {highestActor.Id} was lifted {highestActor.Height:0.0} m off the floor at {highestActor.Time:0.0}s - a structure pushing it?");
+        var brokenBehind = Lines.Count(l => l.Line.StartsWith("[Battle.CleanedUp]", StringComparison.Ordinal) && l.Line.EndsWith("behind the lane - broken", StringComparison.Ordinal));
+        Logger.Info($"[SelfTest] behind the lane: at most {mostBehind.Count} structure(s) at once ({mostBehind.Time:0.0}s), longest stay {longestBehind.Seconds:0.00}s ({longestBehind.Name}); {brokenBehind} broken there (breakBehind {(chart.Rules.BreakBehind ? "on" : "off")})");
+        if (chart.Rules.BreakBehind && longestBehind.Seconds > 1.0) problems.Add($"breakBehind is on, but {longestBehind.Name} stayed behind the lane {longestBehind.Seconds:0.0}s (to {longestBehind.Time:0.0}s)");
         Report(entry.Stem, chart, recorded, samples, problems);
+    }
+
+    /// <summary>Spawned structures whose middle is past the lane's near end - the pile breakBehind clears.</summary>
+    private static Dictionary<IntPtr, string> StructuresBehindLane()
+    {
+        var behind = new Dictionary<IntPtr, string>();
+        var combat = CombatManager.instance;
+        if (combat == null) return behind;
+
+        foreach (var s in combat.Structures)
+        {
+            if (s != null && s.gameObject.activeInHierarchy && Mod.Battle.ToLane(s.transform.position).z < -0.15f) behind[s.Pointer] = s.gameObject.name;
+        }
+
+        return behind;
     }
 
     /// <summary>The fastest structure an actor's move last touched.</summary>

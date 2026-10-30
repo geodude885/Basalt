@@ -195,7 +195,7 @@ internal class ChartReader(ChartDto dto)
 
         var cleanup = rules.Cleanup ?? Rules.DefaultCleanupSeconds;
         if (cleanup < 0) Errors.Add($"rules.cleanup cannot be negative (got {Format(cleanup)}) - 0 turns it off");
-        return new Rules(spawn) { CleanupSeconds = Math.Max(0, cleanup) };
+        return new Rules(spawn) { CleanupSeconds = Math.Max(0, cleanup), BreakBehind = rules.BreakBehind ?? false };
     }
 
     private List<Track> Tracks()

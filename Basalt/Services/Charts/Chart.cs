@@ -78,6 +78,9 @@ public record Rules(SpawnRule Spawn)
 
     /// <summary>A structure still for this long breaks; 0 never.</summary>
     public double CleanupSeconds { get; init; } = DefaultCleanupSeconds;
+
+    /// <summary>A structure wholly behind your end of the lane breaks, without a sound - so none pile up there.</summary>
+    public bool BreakBehind { get; init; }
 }
 
 /// <summary>An actor's recorded performance: clips, each playing until the next starts or its own end.</summary>

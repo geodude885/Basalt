@@ -140,7 +140,7 @@ internal class GameAssets
         }
     }
 
-    // Inspiration courtesy of @SpooderCode's RockUI
+    // Inspiration from of @SpooderCode's RockUI
     public GameObject? CreateGameButton(Transform parent, Action onPressed)
     {
         if (!EnsureButtonLoaded()) return null;
@@ -193,7 +193,7 @@ internal class GameAssets
         }
     }
 
-    // Inspiration courtesy of @SpooderCode's RockUI
+    // Inspiration from of @SpooderCode's RockUI
     public GameObject? CreateGameSlider(Transform parent, int steps, int step, Action<int> onStep)
     {
         if (!EnsureSliderLoaded()) return null;
@@ -242,7 +242,6 @@ internal class GameAssets
             _sliderScale = original.lossyScale;
             _sliderTemplate = KeepCopyOf(original.gameObject, "Basalt_SliderTemplate");
 
-            // Its own labels are the setting's.
             foreach (var label in _sliderTemplate.GetComponentsInChildren<TMP_Text>(true)) label.gameObject.SetActive(false);
 
             Logger.Debug($"[Assets.Slider] copied {PathOf(original)} (scale {_sliderScale.Describe()})");

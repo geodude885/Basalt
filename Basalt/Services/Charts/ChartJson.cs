@@ -91,6 +91,7 @@ internal class RulesDto
 {
     public string? Spawn { get; set; }
     public double? Cleanup { get; set; }
+    public bool? BreakBehind { get; set; }
 }
 
 internal class TrackDto

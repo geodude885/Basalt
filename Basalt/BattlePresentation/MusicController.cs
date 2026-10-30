@@ -74,7 +74,6 @@ internal class MusicController
         Logger.Debug($"[Music.Playing] {_clip.name} from {start:0.00}s at volume {_source.volume:0.00}");
     }
 
-    // The clock keeps running until Stop.
     public void FadeOut()
     {
         if (_source != null && _source.isPlaying) MelonCoroutines.Start(Fade(_source, _loadNumber));

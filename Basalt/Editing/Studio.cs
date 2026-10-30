@@ -33,7 +33,6 @@ internal class Studio(BattleController battle, GameAssets assets)
     private string _actorId = "";
 
     public string ActorName => Chart?.Actors.FirstOrDefault(a => a.Id == _actorId)?.Name ?? _actorId;
-    public (double Seconds, int Moves) Progress => (Recorder.Length, Recorder.MoveCount);
 
     public static bool CanUndo(ChartEntry? entry) => entry is { CanEdit: true } && ChartFiles.HasBackup(entry.File);
     public static string Undo(ChartEntry entry) =>

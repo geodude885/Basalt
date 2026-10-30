@@ -55,7 +55,7 @@ Turn on **Chart editing** in the settings. The menu then gains:
 - **UNDO:** puts back the chart as it was before its last save.
 
 The settings window also has *New chart* (a commented template that plays as it is, wearing your
-look and stones) and *Open chart folder*.
+look and stones).
 
 **The chart editor** is a separate desktop app for Windows, macOS and Linux, Basalt
 Editor: the song's waveform under a beat grid, projectiles on a top-down lane, phases, colours, and a

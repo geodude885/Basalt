@@ -356,7 +356,7 @@ internal static partial class SelfTest
         foreach (var _ in Mod.Charts.Library.Songs)
         {
             yield return new WaitForSeconds(0.4f);
-            if (Mod.Menu.StepSlider?.Spec?.Labels.Count > 1 && Mod.Charts.Chosen is { } startedOn)
+            if (Mod.Menu.StepSlider?.Spec?.Labels.Count > 1 && Mod.Charts.CurrentlyChosen is { } startedOn)
             {
                 songsTried++;
                 var difficulties = Mod.Charts.Library.DifficultiesOf(startedOn);
@@ -364,7 +364,7 @@ internal static partial class SelfTest
                 {
                     Mod.Menu.StepSlider.Root?.GetComponentInChildren<InteractionSlider>(true)?.SetStep(step, false, false);
                     yield return new WaitForSeconds(0.4f);
-                    if (Mod.Charts.Chosen != difficulties[step]) _pickerProblem = $"step {step} of {startedOn.Name}'s slider chose {Mod.Charts.Chosen?.Stem}, not {difficulties[step].Stem}";
+                    if (Mod.Charts.CurrentlyChosen != difficulties[step]) _pickerProblem = $"step {step} of {startedOn.Name}'s slider chose {Mod.Charts.CurrentlyChosen?.Stem}, not {difficulties[step].Stem}";
                 }
 
                 if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-difficulties");

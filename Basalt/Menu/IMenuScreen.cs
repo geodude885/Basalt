@@ -2,30 +2,19 @@ using UnityEngine;
 
 namespace Basalt.Menu;
 
-// What the menu shows for one mode: refreshed a few times a second while it shows.
 internal interface IMenuScreen
 {
     MenuCard Card { get; }
-
     IReadOnlyList<MenuButton> Buttons { get; }
-
     MenuSlider? Slider => null;
-
     MenuPlacement Placement => MenuPlacement.InFront;
-
     bool FollowsPlayer => false;
 }
 
-// What the card shows: rich text, and a cover image file or none.
 internal record MenuCard(string Text, string? CoverPath = null);
-
-// A button under the card; the id is for keys and tests.
 internal record MenuButton(string Id, string Label, Color Colour, Action Press);
-
-// A stepped slider beside the card, its first step at the top; the id is for keys and tests.
 internal record MenuSlider(string Id, IReadOnlyList<string> Labels, int Step, Action<int> Choose);
 
-// Where the menu stands when it opens.
 internal enum MenuPlacement
 {
     InFront,

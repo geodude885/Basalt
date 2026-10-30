@@ -5,16 +5,15 @@ using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Scoring;
 
-namespace Basalt.Menu.Screens;
+namespace Basalt.Menu.Pages;
 
-internal class MenuScreens(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio)
+internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio)
 {
-    private readonly ChartsScreen _charts = new(charts, library, scores, settings, battle, studio);
-    private readonly RecordingScreen _recording = new(studio);
-    private readonly ReviewScreen _review = new(charts, studio);
-    private readonly LaneSetupScreen _laneSetup = new(charts, studio);
+    private readonly ChartsPage _charts = new(charts, library, scores, settings, battle, studio);
+    private readonly RecordingPage _recording = new(studio);
+    private readonly ReviewRecordingPage _review = new(charts, studio);
+    private readonly LaneSetupPage _laneSetup = new(charts, studio);
 
-    // The screen for the moment; none while a battle plays or a clip is replayed.
     public IMenuScreen? Current => studio.State switch
     {
         StudioState.Recording => battle.Run?.State == BattleState.Running ? _recording : null,

@@ -3,7 +3,7 @@ using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Editing;
 using Basalt.Menu;
-using Basalt.Menu.Screens;
+using Basalt.Menu.Pages;
 using Basalt.Patches;
 using Basalt.BattlePresentation;
 using Basalt.Services;
@@ -50,7 +50,7 @@ public class ModEntry : MelonMod
         _battle = new BattleController(_actors, scores, _assets, _settings);
         _studio = new Studio(_battle, _assets);
         _charts = new ChartSelection(library, _settings, _battle, _studio);
-        _menu = new BasaltMenu(new MenuScreens(_charts, library, scores, _settings, _battle, _studio), menuSpots, _assets);
+        _menu = new BasaltMenu(new PageSwitcher(_charts, library, scores, _settings, _battle, _studio), menuSpots, _assets);
         Mod.Share(_actors, _battle, _studio, _charts, _menu);
 
         _settings.Create();
@@ -66,7 +66,6 @@ public class ModEntry : MelonMod
             ("Stop", "Stop battle", "End the battle and remove its actors.", () => _battle.Stop("stopped from the menu")),
             ("Menu", "Menu here", "Bring the Basalt menu in front of you - in the Gym, this sets its fixed spot.", _menu.Summon),
             ("New", "New chart", "Chart editing: make a new chart folder from a template, and pick it.", () => IfEditing(() => _charts.NewChart())),
-            ("Folder", "Open chart folder", "Chart editing: open the chosen chart's folder, to edit it in the Basalt Editor.", () => IfEditing(_charts.OpenChartFolder)),
         })
         {
             UIFramework.UI.CreateButtonEntry(_settings.Category, text, name, description, handler);

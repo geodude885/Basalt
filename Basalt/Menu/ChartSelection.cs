@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Basalt.Actors;
 using Basalt.Battle;
@@ -8,7 +7,6 @@ using UnityEngine;
 
 namespace Basalt.Menu;
 
-// The chart you have chosen, and everything done to it: starting, recording into, making and opening.
 internal class ChartSelection(ChartLibrary library, Settings settings, BattleController battle, Studio studio)
 {
     private long _chartsFingerprint;
@@ -18,8 +16,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 
     public ChartLibrary Library => library;
 
-    // Even one that does not load (so the picker can say why), else the first playable one.
-    public ChartEntry? Chosen
+    public ChartEntry? CurrentlyChosen
     {
         get
         {
@@ -36,7 +33,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     public void StepSong(int step)
     {
         var songs = library.Songs;
-        if (songs.Count == 0 || Chosen is not { } chosen) return;
+        if (songs.Count == 0 || CurrentlyChosen is not { } chosen) return;
 
         var current = songs.ToList().FindIndex(song => string.Equals(song.Name, chosen.Name, StringComparison.OrdinalIgnoreCase));
         var nextSong = songs[(((current + step) % songs.Count) + songs.Count) % songs.Count];
@@ -54,7 +51,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 
     public void StartBattle()
     {
-        var entry = Chosen;
+        var entry = CurrentlyChosen;
         if (entry == null)
         {
             Logger.Warning($"[Battle.NoChart] no chart called \"{settings.Chart.Value}\" in {library.Folder}");
@@ -70,11 +67,9 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         battle.Start(new BattleRequest(entry.Result.Chart) { AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey });
     }
 
-    public ActorSpec? ActorToRecord => Chosen?.Result.Chart is { } chart ? chart.Actors.FirstOrDefault(a => a.Id == _actorToRecordId) ?? chart.DefaultActor : null;
-
     public void StepActorToRecord()
     {
-        if (Chosen?.Result.Chart is not { } chart || ActorToRecord is not { } current) return;
+        if (CurrentlyChosen?.Result.Chart is not { } chart || ActorToRecord is not { } current) return;
 
         var actors = chart.Actors.ToList();
         _actorToRecordId = actors[(actors.IndexOf(current) + 1) % actors.Count].Id;
@@ -82,7 +77,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 
     public void RecordChosen(bool mime = false)
     {
-        var entry = Chosen;
+        var entry = CurrentlyChosen;
         if (entry is not { CanEdit: true })
         {
             Logger.Info(entry?.Source == ChartSource.Package
@@ -167,25 +162,11 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         }
     }
 
-    // The chosen chart's folder (else the Charts folder), to open in the desktop chart editor.
-    public void OpenChartFolder()
-    {
-        try
-        {
-            var entry = Chosen;
-            var folder = entry is { CanEdit: true } ? entry.AssetFolder : library.Folder;
-            Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true })?.Dispose();
-            Logger.Info($"[Charts] {entry?.Name ?? "the charts"}: {folder} - open it in the Basalt Editor, save, and the game reloads");
-        }
-        catch (Exception e)
-        {
-            Logger.Info($"[Charts] could not open the chart folder: {e.Message}");
-        }
-    }
-
     private void Choose(ChartEntry entry)
     {
         _chosenFile = entry.File;
         settings.Chart.Value = entry.Stem;
     }
+    public ActorSpec? ActorToRecord => CurrentlyChosen?.Result.Chart is { } chart ? chart.Actors.FirstOrDefault(a => a.Id == _actorToRecordId) ?? chart.DefaultActor : null;
+
 }

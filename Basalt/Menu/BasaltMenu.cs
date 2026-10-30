@@ -1,13 +1,13 @@
 using Basalt.Battle;
 using Basalt.Menu.Components;
-using Basalt.Menu.Screens;
+using Basalt.Menu.Pages;
 using Basalt.BattlePresentation;
 using Basalt.Services;
 using UnityEngine;
 
 namespace Basalt.Menu;
 
-internal class BasaltMenu(MenuScreens screens, JsonBook<SavedSpot> spots, GameAssets assets)
+internal class BasaltMenu(PageSwitcher screens, JsonBook<SavedSpot> spots, GameAssets assets)
 {
     public GameObject? Root { get; private set; }
     public ChartDescriptionCard? SelectedChartDescription { get; private set; }
@@ -48,8 +48,6 @@ internal class BasaltMenu(MenuScreens screens, JsonBook<SavedSpot> spots, GameAs
 
         if (screen.FollowsPlayer && MenuMover.UpdateFollowPlayer(Root!.transform, screen.Placement))
             ButtonRow!.HasMovedOrBecomeVisible();
-
-        ButtonRow!.Update();
     }
 
     public void Summon()

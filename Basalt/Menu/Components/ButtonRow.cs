@@ -9,12 +9,9 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
     private const float ButtonGap = 0.04f;
     private const int ButtonsPerRow = 5;
     private const float RowSpacing = 0.21f;
-    private const float PressedSeconds = 0.15f;
     private const float PressCooldown = 0.5f;
 
     private const float AfterMenuMovedLockForSeconds = 1f;
-
-    private static readonly Color PressedColour = new(1f, 0.9f, 0.4f);
 
     private string _key = "";
     private float _cooldownUntil;
@@ -45,17 +42,11 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
 
     public void HasMovedOrBecomeVisible() => _arrivedAt = Time.time;
 
-    public void Update()
-    {
-        foreach (var button in Buttons) button.Settle();
-    }
-
     public bool Press(string id)
     {
         var button = Buttons.FirstOrDefault(b => b.Spec.Id == id);
         if (button == null) return false;
 
-        button.Flash();
         Logger.Debug($"[Menu.Pressed] {id}");
         button.Spec.Press();
         pressed();
@@ -95,49 +86,25 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
         Buttons.Add(made);
     }
 
-    // The cap takes the button's colour through the game shader's overlay, which tints without a material of its own.
     public class Button
     {
-        private readonly Renderer _cap;
-        private readonly Vector3 _rest;
-        private float _releaseAt;
+        public MenuButton Spec { get; set; }
+        public GameObject Root { get; }
+        public GameObject Face { get; }
 
         public Button(MenuButton spec, GameObject root, GameObject face, Renderer cap)
         {
             Spec = spec;
             Root = root;
             Face = face;
-            _cap = cap;
-            _rest = face.transform.localPosition;
-            Tint(spec.Colour);
+            Tint(cap, spec.Colour);
         }
 
-        public MenuButton Spec { get; set; }
-
-        public GameObject Root { get; }
-
-        public GameObject Face { get; }
-
-        public void Flash()
-        {
-            _releaseAt = Time.time + PressedSeconds;
-            Tint(PressedColour);
-            Face.transform.localPosition = _rest + new Vector3(0f, 0f, 0.02f);
-        }
-
-        public void Settle()
-        {
-            if (_releaseAt == 0f || Time.time < _releaseAt) return;
-            _releaseAt = 0f;
-            Tint(Spec.Colour);
-            Face.transform.localPosition = _rest;
-        }
-
-        private void Tint(Color colour)
+        private static void Tint(Renderer cap, Color colour)
         {
             var overlay = new MaterialPropertyBlock();
             overlay.SetColor("_Overlay", colour with { a = 1f });
-            _cap.SetPropertyBlock(overlay);
+            cap.SetPropertyBlock(overlay);
         }
     }
 }

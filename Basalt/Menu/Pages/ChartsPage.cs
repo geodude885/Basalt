@@ -6,10 +6,9 @@ using Basalt.Services.Charts;
 using Basalt.Services.Scoring;
 using static Basalt.Menu.MenuColours;
 
-namespace Basalt.Menu.Screens;
+namespace Basalt.Menu.Pages;
 
-// Choosing a song and its difficulty, starting it, and the chart-making tools when editing is on.
-internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio) : IMenuScreen
+internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio) : IMenuScreen
 {
     public IReadOnlyList<MenuButton> Buttons
     {
@@ -24,7 +23,7 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
 
             if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new MenuButton("gym", "GYM", Orange, battle.ReturnToGym));
 
-            if (settings.Editing.Value && charts.Chosen is { CanEdit: true } chosen)
+            if (settings.Editing.Value && charts.CurrentlyChosen is { CanEdit: true } chosen)
             {
                 buttons.Add(new MenuButton("setup", "SETUP", Blue, () => studio.OpenChartOptions(chosen)));
                 buttons.Add(new MenuButton("record", "RECORD", Red, () => charts.RecordChosen()));
@@ -43,7 +42,7 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
     {
         get
         {
-            if (charts.Chosen is not { } chosen) return null;
+            if (charts.CurrentlyChosen is not { } chosen) return null;
 
             var difficulties = library.DifficultiesOf(chosen);
             if (difficulties.Count < 2) return null;
@@ -60,7 +59,7 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
         get
         {
             var songs = library.Songs.ToList();
-            var entry = charts.Chosen;
+            var entry = charts.CurrentlyChosen;
             if (entry == null) return new MenuCard($"No charts");
 
             var song = songs.FindIndex(s => string.Equals(s.Name, entry.Name, StringComparison.OrdinalIgnoreCase));
@@ -76,12 +75,7 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
             }
 
             var by = string.Join("  |  ", new[] { chart.Info.Author == null ? null : $"by {chart.Info.Author}", chart.Info.Difficulty }.Where(p => p != null));
-            var facts = string.Join("  |  ", new[]
-            {
-                chart.Arena.Map.ToString(),
-                $"{chart.End:0}s",
-                chart.Music == null ? null : $"music: {Path.GetFileNameWithoutExtension(chart.Music.File)}"
-            }.Where(p => p != null));
+            var length = $"{chart.End:0}s";
 
             var best = scores.Get(entry.ScoreKey);
 
@@ -89,7 +83,7 @@ internal class ChartsScreen(ChartSelection charts, ChartLibrary library, JsonBoo
                 position +
                 $"{chart.Name}\n" +
                 (by.Length > 0 ? $"<size=55%>{by}</size>\n" : "") +
-                $"<size=50%>{facts}</size>\n" +
+                $"<size=50%>{length}</size>\n" +
                 (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "") +
                 $"<size=55%>{(best == null ? "no best yet" : $"best: {best.Rank} {best.Score}")}</size>" +
                 (settings.Editing.Value && chart.Actors.Count > 1 ? $"\n<size=45%>Selected recording actor: {charts.ActorToRecord?.Name}</size>" : ""),

@@ -1,10 +1,9 @@
 using Basalt.Editing;
 using static Basalt.Menu.MenuColours;
 
-namespace Basalt.Menu.Screens;
+namespace Basalt.Menu.Pages;
 
-// Laying out a chart's lane by walking the preview: beside you, and following you as you go.
-internal class LaneSetupScreen(ChartSelection charts, Studio studio) : IMenuScreen
+internal class LaneSetupPage(ChartSelection charts, Studio studio) : IMenuScreen
 {
     public IReadOnlyList<MenuButton> Buttons =>
     [
@@ -29,12 +28,10 @@ internal class LaneSetupScreen(ChartSelection charts, Studio studio) : IMenuScre
         {
             var arena = studio.LaneSetup.ArenaSpecification;
             var lane = studio.LaneSetup.Lane;
-            var actor = studio.LaneSetup.Actors.FirstOrDefault();
             var where = $"{arena.Map}, from {arena.X:0.##}, {arena.Z:0.##} facing {arena.Facing:0}";
             return new MenuCard(
                 $"<size=45%>LANE SETUP</size>\n{studio.Entry?.Name}\n<size=50%>{where}\n" +
-                $"{lane.Length:0.#} m long  |  {lane.Width:0.#} m wide{(actor == null ? "" : $"  |  actor at {actor.At.X:0.#}, {actor.At.Z:0.#}")}</size>\n" +
-                "<size=38%>walk the preview: LANE HERE starts the lane where you stand, facing the way you face; ACTOR HERE puts the actor where you stand</size>");
+                $"{lane.Length:0.#} m long  |  {lane.Width:0.#} m wide</size>\n");
         }
     }
 }

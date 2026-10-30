@@ -40,7 +40,7 @@ public static class ChartPackage
                 var name = entry.FullName.Replace('\\', '/');
                 if (name.EndsWith('/')) continue;
 
-                var path = ChartFiles.Inside(partial, name[prefix.Length..]);
+                var path = ChartFiles.EnsureInsideFolder(partial, name[prefix.Length..]);
                 if (path == null) return (null, $"has an entry \"{entry.FullName}\" outside the package");
 
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);

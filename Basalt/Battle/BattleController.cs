@@ -87,7 +87,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         Music.Clear();
         if (chart.Music != null)
         {
-            var song = request.AssetFolder == null ? null : ChartFiles.Inside(request.AssetFolder, chart.Music.File);
+            var song = request.AssetFolder == null ? null : ChartFiles.EnsureInsideFolder(request.AssetFolder, chart.Music.File);
             if (song == null) Logger.Warning($"[Music.Missing] {chart.Name}: no folder to find {chart.Music.File} in - playing without music");
             else Music.Load(song);
         }

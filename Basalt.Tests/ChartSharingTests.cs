@@ -124,8 +124,8 @@ public class ChartPathTests
     {
         var folder = Path.Combine(Path.GetTempPath(), "charts");
 
-        Assert.Equal(Path.GetFullPath(Path.Combine(folder, "a", "b.ogg")), ChartFiles.Inside(folder, "a/b.ogg"));
-        Assert.Null(ChartFiles.Inside(folder, "../b.ogg"));
+        Assert.Equal(Path.GetFullPath(Path.Combine(folder, "a", "b.ogg")), ChartFiles.EnsureInsideFolder(folder, "a/b.ogg"));
+        Assert.Null(ChartFiles.EnsureInsideFolder(folder, "../b.ogg"));
     }
 }
 

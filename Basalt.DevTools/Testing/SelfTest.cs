@@ -305,12 +305,12 @@ internal static partial class SelfTest
             var playerRig = PlayerRig.From(playerController);
             if (FlatLane(playerRig.Feet, chart.Lane.Length, chart.Lane.Width) is { } lane)
             {
-                gymLane = Anchor.Facing(lane.Start.ToNumerics(), lane.Direction.ToNumerics());
+                gymLane = Anchor.CreateFacingDirection(lane.Start.ToNumerics(), lane.Direction.ToNumerics());
                 Logger.Info($"[SelfTest] laying the lane at {lane.Start.Describe()} towards {lane.Direction.Describe()}");
             }
             else
             {
-                gymLane = Anchor.Facing(playerRig.Feet.ToNumerics(), playerRig.Facing.ToNumerics());
+                gymLane = Anchor.CreateFacingDirection(playerRig.Feet.ToNumerics(), playerRig.Facing.ToNumerics());
                 Logger.Info("[SelfTest] no flat, open spot for the lane near you - laying it where you stand");
             }
         }

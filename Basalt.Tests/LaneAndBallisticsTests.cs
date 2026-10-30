@@ -12,7 +12,7 @@ public class AnchorTests
     public void LaneAxesFollowThePlayersFacing()
     {
         // Facing +X: down the lane is +X, lane-right is -Z (Unity is left-handed).
-        var frame = Anchor.Facing(new Vector3(10, 0, 5), new Vector3(1, 0.3f, 0));
+        var frame = Anchor.CreateFacingDirection(new Vector3(10, 0, 5), new Vector3(1, 0.3f, 0));
 
         AssertClose(new Vector3(1, 0, 0), frame.Forward);
         AssertClose(new Vector3(0, 0, -1), frame.Right);
@@ -22,7 +22,7 @@ public class AnchorTests
     [Fact]
     public void ToLocalUndoesToWorld()
     {
-        var frame = Anchor.Facing(new Vector3(-3, 0.7f, 8), new Vector3(0.6f, 0, -0.8f));
+        var frame = Anchor.CreateFacingDirection(new Vector3(-3, 0.7f, 8), new Vector3(0.6f, 0, -0.8f));
         var lane = new Vector3(-1.2f, 1.4f, 10.5f);
 
         AssertClose(lane, frame.ToLocal(frame.ToWorld(lane)));
@@ -31,7 +31,7 @@ public class AnchorTests
     [Fact]
     public void AnActorWithNoFacingLooksBackDownTheLane()
     {
-        var north = Anchor.Facing(Vector3.Zero, Vector3.UnitZ);
+        var north = Anchor.CreateFacingDirection(Vector3.Zero, Vector3.UnitZ);
 
         Assert.Equal(180f, north.ActorYaw(0), 3);
         Assert.Equal(210f, north.ActorYaw(30), 3);
@@ -55,7 +55,7 @@ public class BallisticsTests
         var from = new Vector3(0, 1.4f, 10);
         var to = new Vector3(0.8f, 1.2f, 0);
 
-        var velocity = Ballistics.LaunchVelocity(from, to, speed, Gravity);
+        var velocity = Ballistics.GetLaunchVelocity(from, to, speed, Gravity);
         var time = Vector3.Distance(from, to) / speed;
 
         var landed = from + (velocity * time) - (Vector3.UnitY * (0.5f * Gravity * time * time));
@@ -68,9 +68,9 @@ public class BallisticsTests
         var from = new Vector3(0, 1.4f, 10);
         var to = new Vector3(0, 1.4f, 0);
 
-        Assert.True(Ballistics.LaunchVelocity(from, to, 6f, Gravity).Y > Ballistics.LaunchVelocity(from, to, 20f, Gravity).Y);
+        Assert.True(Ballistics.GetLaunchVelocity(from, to, 6f, Gravity).Y > Ballistics.GetLaunchVelocity(from, to, 20f, Gravity).Y);
     }
 
     [Fact]
-    public void ZeroSpeedIsRejected() => Assert.Throws<ArgumentOutOfRangeException>(() => Ballistics.LaunchVelocity(Vector3.Zero, Vector3.UnitZ, 0f, Gravity));
+    public void ZeroSpeedIsRejected() => Assert.Throws<ArgumentOutOfRangeException>(() => Ballistics.GetLaunchVelocity(Vector3.Zero, Vector3.UnitZ, 0f, Gravity));
 }

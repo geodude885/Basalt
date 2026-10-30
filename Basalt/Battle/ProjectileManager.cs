@@ -81,7 +81,7 @@ internal class ProjectileManager(ActorsRegistry actors)
         }
 
         var from = live.Hold;
-        var velocity = Ballistics.LaunchVelocity(
+        var velocity = Ballistics.GetLaunchVelocity(
             from.ToNumerics(), target.ToNumerics(), projectile.Speed, -Physics.gravity.y).ToUnity();
 
         live.Body.transform.position = from;

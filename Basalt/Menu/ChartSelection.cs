@@ -140,7 +140,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     {
         try
         {
-            var name = ChartFiles.FirstFreeName("My Chart", " ", candidate => library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
+            var name = ChartFiles.CreateFileNameAvoidingDuplicates("My Chart", " ", candidate => library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
             var localPlayer = BattlePlayer.Player;
             var look = localPlayer?.Data?.VisualData?.ToPlayfabDataString();

@@ -42,7 +42,7 @@ public class ClipLibrary(string folder)
     // The actor's next clip name, counting up from its highest so far: boss-clip-1, boss-clip-2...
     public string NextName(string actorId)
     {
-        var prefix = $"{ChartFiles.FileStem(actorId)}-clip-";
+        var prefix = $"{ChartFiles.SanitizeFileStem(actorId)}-clip-";
         var highest = !Directory.Exists(folder) ? 0 : Directory.EnumerateFiles(folder, prefix + "*.json")
             .Select(file => int.TryParse(Path.GetFileNameWithoutExtension(file)[prefix.Length..], NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : 0)
             .DefaultIfEmpty(0)
@@ -55,7 +55,7 @@ public class ClipLibrary(string folder)
     {
         Directory.CreateDirectory(folder);
 
-        var stem = ChartFiles.FirstFreeName(ChartFiles.FileStem(clip.Name), "-", candidate => File.Exists(Path.Combine(folder, $"{candidate}.json")));
+        var stem = ChartFiles.CreateFileNameAvoidingDuplicates(ChartFiles.SanitizeFileStem(clip.Name), "-", candidate => File.Exists(Path.Combine(folder, $"{candidate}.json")));
         var path = Path.Combine(folder, $"{stem}.json");
         File.WriteAllText(path, ClipFile.Write(clip));
         _clips[clip.Name] = clip;

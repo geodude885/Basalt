@@ -334,7 +334,7 @@ public class FacingTests
     [Fact]
     public void LaneYawsRoundTrip()
     {
-        var lane = Anchor.Facing(Vector3.Zero, new Vector3(1f, 0f, 0f));
+        var lane = Anchor.CreateFacingDirection(Vector3.Zero, new Vector3(1f, 0f, 0f));
 
         Assert.Equal(90f, lane.Yaw, 2);
         Assert.Equal(180f, lane.ToLocalYaw(270f), 2);

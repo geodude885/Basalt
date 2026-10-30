@@ -96,7 +96,7 @@ internal class Studio(BattleController battle, GameAssets assets)
             keptText = LaneSetupWriter.WriteActors(keptText, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
         }
 
-        ChartFiles.SaveKeepingBackup(Entry.File, chartText, keptText);
+        ChartFiles.BackupAndSave(Entry.File, chartText, keptText);
         battle.Stop("clip kept");
 
         var what = $"kept {clip.Name} ({clip.Duration - clip.Start:0.0}s, {clip.Moves.Count} moves) in {Entry.Name}";
@@ -130,7 +130,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (Entry == null || Chart == null || State != StudioState.Setup) return "no lane setup to save";
 
         var chartText = File.ReadAllText(Entry.File);
-        ChartFiles.SaveKeepingBackup(Entry.File, chartText, LaneSetup.WriteIntoChartText(chartText, Chart));
+        ChartFiles.BackupAndSave(Entry.File, chartText, LaneSetup.WriteIntoChartText(chartText, Chart));
         ExitChartOptions();
         return $"saved {Entry.Name}'s lane";
     }

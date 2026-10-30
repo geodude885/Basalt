@@ -60,7 +60,7 @@ Recorded clips are kept in the chart's own `clips/`.
 | `bpm` | number or list | - | Beats per minute, for `beat` / `startBeat` times - or tempo changes: `[ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]` (the first at beat 0; each holds until the next). |
 | `lane` | object | 12 x 3 | `length` (over 2) and `width` in metres. |
 | `zone` | object | 2 m short of the far end, 3.5 m high | Where you may go: `length` along the lane from your end, `height` above the floor. Invisible walls stop you - not structures, not actors. |
-| `rules` | object | everything allowed | `spawn`: `all`, `discs` (discs only - for moving) or `none` (moves only). `cleanup`: seconds a structure may sit still in a battle before it breaks (default 3; 0 never) - a wall grounded in front of you does not soak up a whole section. |
+| `rules` | object | everything allowed | `spawn`: `all`, `discs` (discs only - for moving) or `none` (moves only). `cleanup`: seconds a structure may sit still in a battle before it breaks (default 3; 0 never) - a wall grounded in front of you does not soak up a whole section. `breakBehind`: `true` breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you (default `false`; one you spawn behind yourself goes too). |
 | `actors` | array | one at the far end | Below. |
 | `phases` | array | one, "Battle" | Below. |
 | `events` | array | none | Below. |

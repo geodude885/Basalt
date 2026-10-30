@@ -528,6 +528,11 @@
     "rules": {
       "type": "object",
       "properties": {
+        "breakBehind": {
+          "type": "boolean",
+          "default": false,
+          "description": "Breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you."
+        },
         "cleanup": {
           "type": "number",
           "minimum": 0,

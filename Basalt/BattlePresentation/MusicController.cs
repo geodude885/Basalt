@@ -13,7 +13,6 @@ internal class MusicController
     private const float FadeSeconds = 1.5f;
 
     private const float MaxVolume = 0.56f;
-    private const long MonoAboveSamples = 32_000_000;
 
     private const int ChunksDecodedAhead = 30;
     private const int ChunksCopiedPerFrame = 4;
@@ -100,7 +99,7 @@ internal class MusicController
         var name = Path.GetFileName(path);
 
         // Off the main thread: an MP3's length is found by reading through the whole file.
-        var opening = Task.Run(() => AudioDecoder.Open(path, MonoAboveSamples));
+        var opening = Task.Run(() => AudioDecoder.Open(path));
         while (!opening.IsCompleted) yield return null;
 
         if (loadNumber != _loadNumber)
@@ -139,7 +138,7 @@ internal class MusicController
                 {
                     var block = new float[song.SampleRate * song.Channels];
                     int read;
-                    while ((read = song.Read(block, 0, block.Length)) > 0) chunks.Add(block[..read]);
+                    while ((read = song.ReadSamples(block, 0, block.Length)) > 0) chunks.Add(block[..read]);
                 }
                 finally
                 {

@@ -25,4 +25,9 @@
 		<ProjectReference Include="..\Basalt\Basalt.csproj" Private="false" />
 	</ItemGroup>
 
+	<!-- The self-test's metronome song (120 bpm, 20 s), made once with ffmpeg: the mod plays MP3 and OGG only. -->
+	<ItemGroup>
+		<EmbeddedResource Include="Testing\selftest-tone.ogg" LogicalName="selftest-tone.ogg" />
+	</ItemGroup>
+
 </Project>

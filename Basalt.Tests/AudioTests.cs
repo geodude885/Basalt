@@ -9,7 +9,6 @@ public class AudioDecoderTests
     [Theory]
     [InlineData("tone.mp3")]
     [InlineData("tone.ogg")]
-    [InlineData("tone.wav")]
     public void DecodesASecondOfStereoTone(string file)
     {
         using var source = AudioDecoder.Open(Fixture(file));
@@ -29,42 +28,35 @@ public class AudioDecoderTests
     [Fact]
     public void ReadsInBlocks()
     {
-        using var source = AudioDecoder.Open(Fixture("tone.wav"));
+        using var source = AudioDecoder.Open(Fixture("tone.ogg"));
         var block = new float[1000];
         long total = 0;
         int read;
-        while ((read = source.Read(block, 0, block.Length)) > 0) total += read;
+        while ((read = source.ReadSamples(block, 0, block.Length)) > 0) total += read;
 
         Assert.Equal(source.Frames * source.Channels, total);
     }
 
+    // The music loader's copying carries on, reading these, after its decoding thread has disposed the song.
     [Theory]
     [InlineData("tone.mp3")]
     [InlineData("tone.ogg")]
-    [InlineData("tone.wav")]
-    public void LongSongsAreDownmixedToMono(string file)
+    public void ASongsShapeOutlivesDisposing(string file)
     {
-        using var stereo = AudioDecoder.Open(Fixture(file));
-        var stereoAudio = TestAudio.DecodeAll(stereo);
-        using var mono = AudioDecoder.Open(Fixture(file), monoAboveSamples: 1000);
-        var monoAudio = TestAudio.DecodeAll(mono);
+        var source = AudioDecoder.Open(Fixture(file));
+        (var channels, var rate, var frames) = (source.Channels, source.SampleRate, source.Frames);
 
-        Assert.Equal(1, monoAudio.Channels);
-        Assert.Equal(stereo.Frames, mono.Frames);
-        Assert.Equal(stereoAudio.Samples.Length / 2, monoAudio.Samples.Length);
-        Assert.Equal((stereoAudio.Samples[200] + stereoAudio.Samples[201]) / 2f, monoAudio.Samples[100], 5);
+        source.Dispose();
+
+        Assert.Equal(channels, source.Channels);
+        Assert.Equal(rate, source.SampleRate);
+        Assert.Equal(frames, source.Frames);
     }
 
-    [Fact]
-    public void ShortSongsStayStereo()
-    {
-        using var source = AudioDecoder.Open(Fixture("tone.wav"), monoAboveSamples: 1_000_000);
-
-        Assert.Equal(2, source.Channels);
-    }
-
-    [Fact]
-    public void OtherFormatsAreRefused() => Assert.Throws<NotSupportedException>(() => AudioDecoder.Open("song.flac"));
+    [Theory]
+    [InlineData("song.wav")]
+    [InlineData("song.flac")]
+    public void OtherFormatsAreRefused(string file) => Assert.Throws<NotSupportedException>(() => AudioDecoder.Open(file));
 
     private static string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
 }

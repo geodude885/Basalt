@@ -70,7 +70,7 @@
       "properties": {
         "file": {
           "type": "string",
-          "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(ogg|wav|mp3)$"
+          "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(ogg|mp3)$"
         },
         "start": {
           "type": "number",

@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using Basalt.DevTools.Testing;
 using Basalt.Services;
-using Basalt.Services.Audio;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;
 using Basalt.Services.Scoring;
@@ -175,7 +174,7 @@ public sealed class ChartPackageTests : IDisposable
         Assert.True(entry.Result.Ok, string.Join("; ", entry.Result.Errors));
         Assert.Equal(ChartSource.Package, entry.Source);
         Assert.Equal("Folder Song", entry.Name);
-        Assert.True(File.Exists(Path.Combine(entry.AssetFolder, "song.wav")));
+        Assert.True(File.Exists(Path.Combine(entry.AssetFolder, "song.ogg")));
         Assert.True(File.Exists(Path.Combine(entry.AssetFolder, "clips", "wave.json")));
         Assert.Contains("// kept", File.ReadAllText(Path.Combine(entry.AssetFolder, "chart.json")), StringComparison.Ordinal);
     }
@@ -278,13 +277,13 @@ public sealed class ChartPackageTests : IDisposable
             {
               // kept: comments survive zipping
               "name": "Folder Song",
-              "music": { "file": "song.wav" },
+              "music": { "file": "song.ogg" },
               "cover": "cover.png",
               "format": 2,
               "tracks": [ { "clips": [ { "t": 1, "clip": "wave" } ] } ]
             }
             """);
-        File.WriteAllBytes(Path.Combine(folder, "song.wav"), TestAudio.Write(TestAudio.Metronome(120, 0.5)));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "tone.ogg"), Path.Combine(folder, "song.ogg"));
         File.WriteAllBytes(Path.Combine(folder, "cover.png"), new byte[] { 0x89, 0x50, 0x4E, 0x47 });
         File.WriteAllText(Path.Combine(folder, ChartPackage.ClipsFolder, "wave.json"), ClipFile.Write(SyntheticClips.Sway("wave", 1f)));
         return folder;
@@ -340,40 +339,6 @@ public sealed class BestScoreTests : IDisposable
     private static BattleResult Result(int score, string rank) => new("Song", true, 30, 0, 0, 0, 10, score, rank);
 }
 
-public class WavFileTests
-{
-    [Fact]
-    public void WritesAndReadsBack()
-    {
-        var tone = TestAudio.Metronome(120, 1.0, 8000);
-
-        var read = Decode(TestAudio.Write(tone));
-
-        Assert.Equal(1, read.Channels);
-        Assert.Equal(8000, read.SampleRate);
-        Assert.Equal(tone.Samples.Length, read.Samples.Length);
-        Assert.Equal(1.0, read.Seconds, 3);
-        for (var i = 0; i < tone.Samples.Length; i += 97) Assert.Equal(tone.Samples[i], read.Samples[i], 3);
-    }
-
-    [Fact]
-    public void RefusesWhatIsNotAWav() => Assert.Throws<InvalidDataException>(() => Decode("OggS not a wav at all"u8.ToArray()));
-
-    private static PcmAudio Decode(byte[] wav)
-    {
-        var path = Path.Combine(Path.GetTempPath(), $"basalt-{Guid.NewGuid():N}.wav");
-        File.WriteAllBytes(path, wav);
-        try
-        {
-            using var source = AudioDecoder.Open(path);
-            return TestAudio.DecodeAll(source);
-        }
-        finally
-        {
-            File.Delete(path);
-        }
-    }
-}
 
 public sealed class JsonBookTests : IDisposable
 {

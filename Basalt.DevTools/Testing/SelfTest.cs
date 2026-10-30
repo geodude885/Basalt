@@ -37,10 +37,13 @@ internal static partial class SelfTest
     private const float PlayerTimeoutSeconds = 120f;
     private const float TimeoutSeconds = 90f;
     private const float QuitDelaySeconds = 2f;
-    private const string ToneFile = "selftest-tone.wav";
+    private const string ToneFile = "selftest-tone.ogg";
+
+    // The tone's length; a self-test chart longer than this (less 2 s) would run past its song.
+    private const double ToneSeconds = 20;
 
     /// <summary>Dropped into the self-test folder by hand, one of these is played instead of the tone - to check a format.</summary>
-    private static readonly string[] SongFiles = { "selftest-song.mp3", "selftest-song.ogg", "selftest-song.wav" };
+    private static readonly string[] SongFiles = { "selftest-song.mp3", "selftest-song.ogg" };
 
     private static readonly Dictionary<string, Func<List<string>, IEnumerator>> Tests = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -277,7 +280,13 @@ internal static partial class SelfTest
         // a song dropped in by hand to check a format Unity has to decode.
         var assets = Folder;
         Directory.CreateDirectory(assets);
-        File.WriteAllBytes(Path.Combine(assets, ToneFile), TestAudio.Write(TestAudio.Metronome(120, chart.End + 2)));
+        if (chart.End + 2 > ToneSeconds) problems.Add($"the self-test chart runs {chart.End:0}s, longer than its {ToneSeconds:0}s tone - make a longer selftest-tone.ogg");
+        using (var tone = typeof(SelfTest).Assembly.GetManifestResourceStream(ToneFile)!)
+        using (var file = File.Create(Path.Combine(assets, ToneFile)))
+        {
+            tone.CopyTo(file);
+        }
+
         _song = SongFiles.FirstOrDefault(f => File.Exists(Path.Combine(assets, f))) ?? ToneFile;
 
         // In the Ring and Pit, the 10 m lane centred on the arena, running north.

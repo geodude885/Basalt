@@ -17,7 +17,7 @@ Point an editor at [chart.schema.json](chart.schema.json) for completion and che
 In game, *New chart* in the settings window makes `Charts/my-chart/chart.json`
 from a template that plays as it is, with a comment on every part, and picks it. Edit it and save:
 charts reload by themselves between battles, and one that does not load shows its problems on the
-menu. Put a `song.wav` and `cover.png` beside it and uncomment their lines. *SETUP* on the menu
+menu. Put a `song.mp3` and `cover.png` beside it and uncomment their lines. *SETUP* on the menu
 walks the lane in place and writes the `"arena"` line. Basalt Editor packs a finished chart to share.
 
 ## Where a chart lives
@@ -88,10 +88,10 @@ Lane setup in game saves an `at` and `facing` for you.
 | `start` | seconds | 0 | How far into the song chart time 0 is: skip an intro, or put beat 0 on the first downbeat. Negative starts the song that many seconds after chart time 0, with silence before it. |
 | `volume` | 0-1 | 1 | The chart's own level; the game's music volume applies too. |
 
-Songs can be **MP3, OGG Vorbis or WAV** (PCM 8/16/24/32-bit or 32-bit float). The game ships
-without Unity's audio decoding, so the mod decodes them itself (NLayer and NVorbis, in `UserLibs`)
-while the battle loads; the countdown waits and shows how far it has got. Songs over about six
-minutes are kept in mono to save memory. Prefer MP3 or OGG for sharing - a WAV is ten times bigger.
+Songs can be **MP3 or OGG Vorbis** (a WAV can be converted with any audio tool, e.g.
+`ffmpeg -i song.wav -q:a 5 song.ogg`). The game ships without Unity's audio decoding, so the mod
+decodes them itself (NLayer and NVorbis, in `UserLibs`) while the battle loads; the countdown waits
+and shows how far it has got.
 
 ### `actors[]`
 

@@ -35,7 +35,7 @@ public static class ChartTemplate
           // lane, resize it, and SAVE writes this line (and "lane" and "actors") for you.
           "arena": { "map": "ring", "at": { "x": 0, "z": -6 }, "facing": 0 },
 
-          // A song and a cover image, put beside this file - uncomment to use them. Songs: MP3, OGG or WAV.
+          // A song and a cover image, put beside this file - uncomment to use them. Songs: MP3 or OGG.
           // "music": { "file": "song.mp3", "start": 0, "volume": 1 },
           // "cover": "cover.png",
 

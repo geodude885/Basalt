@@ -30,7 +30,7 @@ public static class ChartLoader
     public const int TracksFormat = 2;
 
     /// <summary>Song files a chart may name; Unity decodes these.</summary>
-    public static readonly IReadOnlyList<string> MusicExtensions = new[] { ".ogg", ".wav", ".mp3" };
+    public static readonly IReadOnlyList<string> MusicExtensions = new[] { ".ogg", ".mp3" };
 
     /// <summary>Cover images a chart may name; Unity decodes these.</summary>
     public static readonly IReadOnlyList<string> CoverExtensions = new[] { ".png", ".jpg", ".jpeg" };

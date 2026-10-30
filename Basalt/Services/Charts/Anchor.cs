@@ -2,14 +2,10 @@ using System.Numerics;
 
 namespace Basalt.Services.Charts;
 
-/// <summary>
-/// An upright place in the world: a floor <see cref="Position"/> and the compass <see cref="Yaw"/> it faces
-/// (degrees, Unity: 0 = +Z, clockwise from above). Local x is to its right, z ahead; Unity is left-handed.
-/// </summary>
+// A relative position and direction
 public readonly record struct Anchor(Vector3 Position, float Yaw)
 {
     public Vector3 Forward => Flat(Yaw);
-
     public Vector3 Right => Flat(Yaw + 90f);
 
     /// <summary>An anchor facing <paramref name="direction"/>; its tilt is ignored, and no direction faces +Z.</summary>

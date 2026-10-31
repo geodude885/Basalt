@@ -23,7 +23,7 @@ public class ChartWritingTests
     [Fact]
     public void CommentsAndTrailingCommasAreReadAndPlainJsonIsWritten()
     {
-        var saved = LaneSetupWriter.WriteActors(HandWritten, [new ActorSpec("boss", "Boss", new Spot(0f, 10f), "you")]);
+        var saved = ChartWriter.WriteActors(HandWritten, [new ActorSpec("boss", "Boss", new Spot(0f, 10f), "you")]);
         var chart = ChartLoader.Load(saved).Chart!;
 
         Assert.Equal("Song", chart.Name);
@@ -35,7 +35,7 @@ public class ChartWritingTests
     [Fact]
     public void ApostrophesAndAccentsAreWrittenAsTheyAre()
     {
-        var saved = LaneSetupWriter.WriteActors(HandWritten, []);
+        var saved = ChartWriter.WriteActors(HandWritten, []);
 
         Assert.Contains("Don't panic - it's été", saved, StringComparison.Ordinal);
     }
@@ -43,17 +43,17 @@ public class ChartWritingTests
     [Fact]
     public void KeysAreMatchedAsTheLoaderMatchesThem()
     {
-        var saved = LaneSetupWriter.WriteActors(/*lang=json,strict*/ """{ "Actors": [ { "id": "old" } ] }""", [new ActorSpec("new", "New", new Spot(0f, 5f), "you")]);
+        var saved = ChartWriter.WriteActors(/*lang=json,strict*/ """{ "Actors": [ { "id": "old" } ] }""", [new ActorSpec("new", "New", new Spot(0f, 5f), "you")]);
 
         Assert.Equal("new", Assert.Single(ChartLoader.Load(saved).Chart!.Actors).Id);
         Assert.DoesNotContain("old", saved, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => LaneSetupWriter.WriteActors("[1]", []));
+    public void NotAnObjectIsRefused() => Assert.Throws<FormatException>(() => ChartWriter.WriteActors("[1]", []));
 
     [Fact]
-    public void BrokenJsonIsRefusedAsAFormatProblem() => Assert.Throws<FormatException>(() => LaneSetupWriter.WriteActors("{ \"name\": ", []));
+    public void BrokenJsonIsRefusedAsAFormatProblem() => Assert.Throws<FormatException>(() => ChartWriter.WriteActors("{ \"name\": ", []));
 }
 
 public class TrackTests
@@ -111,13 +111,13 @@ public class TrackTests
         var chart = Load(text);
         var clip = Recorded("boss-clip-1", 0f, 9.5f);
 
-        var kept = PerformanceWriter.KeepWhole(text, chart, "boss", clip, 0);
+        var kept = ChartWriter.WritePerformances(text, chart, "boss", clip, 0);
         var after = Load(kept);
 
         Assert.Equal(new PerformanceClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Performances).Clips));
         Assert.Equal(10.5, after.End);
 
-        var again = PerformanceWriter.KeepWhole(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
+        var again = ChartWriter.WritePerformances(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
         Assert.Equal("boss-clip-2", Assert.Single(Assert.Single(Load(again).Performances).Clips).Clip);
         Assert.Equal(10.5, Load(again).End);
     }
@@ -126,7 +126,7 @@ public class TrackTests
     public void AClipRecordedLateStartsAtZeroAndTheTrackPlacesIt()
     {
         const string text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ], "end": 5 }""";
-        var after = Load(PerformanceWriter.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
+        var after = Load(ChartWriter.WritePerformances(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
 
         Assert.Equal(new PerformanceClip(40, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Performances).Clips));
         Assert.Equal(45, after.End);
@@ -221,9 +221,9 @@ public class LaneSetupTests
             }
             """;
         var chart = ChartLoader.Load(text).Chart!;
-        (var lane, var actors) = LaneSetupWriter.Resize(chart.Lane, chart.Actors, 14f, 3.5f);
+        (var lane, var actors) = chart.Lane.Resize(chart.Actors, 14f, 3.5f);
 
-        var saved = LaneSetupWriter.Write(text, new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), lane, actors);
+        var saved = ChartWriter.WriteLaneSetup(text, new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), lane, actors);
         var after = ChartLoader.Load(saved).Chart!;
 
         Assert.Equal(new ArenaSpec(ArenaKind.Gym, 1.25f, -3f, 90f), after.Arena);
@@ -237,10 +237,10 @@ public class LaneSetupTests
     {
         var actors = new[] { new ActorSpec("a", "A", new Spot(0, 12), "you"), new ActorSpec("b", "B", new Spot(1, 6), "you") };
 
-        (var lane, var moved) = LaneSetupWriter.Resize(new Lane(12, 3), actors, 100f, 0.1f);
+        (var lane, var moved) = new Lane(12, 3).Resize(actors, 100f, 0.1f);
 
-        Assert.Equal(new Lane(LaneSetupWriter.MaxLength, LaneSetupWriter.MinWidth), lane);
-        Assert.Equal(LaneSetupWriter.MaxLength, moved[0].At.Z);
+        Assert.Equal(new Lane(Lane.MaxLength, Lane.MinWidth), lane);
+        Assert.Equal(Lane.MaxLength, moved[0].At.Z);
         Assert.Equal(6f, moved[1].At.Z);
     }
 }
@@ -297,9 +297,9 @@ public class LaneScaleTests
               { "t": 2, "at": { "x": -1, "z": 11 } } ] }
             """;
         var before = ChartLoader.Load(text).Chart!;
-        (var lane, var actors) = LaneSetupWriter.Resize(before.Lane, before.Actors, 9f, before.Lane.Width);
+        (var lane, var actors) = before.Lane.Resize(before.Actors, 9f, before.Lane.Width);
 
-        var saved = LaneSetupWriter.ScaleDepth(LaneSetupWriter.Write(text, new ArenaSpec(ArenaKind.Pit, 1.7f, -7.2f, 354f), lane, actors), 9f / 12f, 9f);
+        var saved = ChartWriter.ScaleChartOnLaneLengthChange(ChartWriter.WriteLaneSetup(text, new ArenaSpec(ArenaKind.Pit, 1.7f, -7.2f, 354f), lane, actors), 9f / 12f, 9f);
         var after = ChartLoader.Load(saved);
 
         Assert.True(after.Ok, string.Join("; ", after.Errors));
@@ -378,7 +378,7 @@ public class ZoneAndRulesTests
     public void TheZoneGoesWithTheLane()
     {
         const string text = /*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 }, "playerZone": { "length": 8, "height": 3 } }""";
-        var scaled = LaneSetupWriter.ScaleDepth(text, 0.75f, 9f);
+        var scaled = ChartWriter.ScaleChartOnLaneLengthChange(text, 0.75f, 9f);
 
         Assert.Equal(6f, ChartLoader.Load(scaled).Chart!.PlayerZone.Length);
     }

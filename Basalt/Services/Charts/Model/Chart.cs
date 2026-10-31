@@ -29,8 +29,6 @@ public record Chart(
     public IReadOnlyList<ShaderCue> Shaders { get; init; } = Array.Empty<ShaderCue>();
 }
 
-public readonly record struct Lane(float Length, float Width);
-
 public readonly record struct Spot(float X, float Z, float Facing = 0f);
 
 public record Phase(string Name, double Time, double ScoreMultiplier)

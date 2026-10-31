@@ -71,11 +71,11 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (NewClip == null || Chart == null || Entry == null) return;
 
-        var whole = PerformanceWriter.WholeClipPerformance(NewClip, _recordingStartedAtChartTime, Mime);
+        var take = new PerformanceClip(Math.Round(_recordingStartedAtChartTime, 3), NewClip.Name, MathF.Round(NewClip.Start, 2)) { Mime = Mime };
         var chart = Chart with
         {
-            Performances = PerformanceWriter.PerformancesWithActorsReplaced(Chart, _actorId, whole),
-            End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + PerformanceWriter.EndPadding),
+            Performances = ChartWriter.UpdateActorPerformance(Chart, _actorId, take),
+            End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + ChartWriter.ClipEndPadding),
         };
         battle.Start(StudioBattle(chart) with { Mode = BattleMode.Review, Lane = _recordedLane, PendingClip = NewClip });
         State = StudioState.Reviewing;
@@ -89,12 +89,12 @@ internal class Studio(BattleController battle, GameAssets assets)
         ChartClips().Save(clip);
 
         var chartText = File.ReadAllText(Entry.File);
-        var keptText = PerformanceWriter.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
+        var keptText = ChartWriter.WritePerformances(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
         if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } playerMeasurement)
         {
             var size = new BodySize(playerMeasurement.Length, playerMeasurement.ArmSpan);
-            keptText = LaneSetupWriter.WriteActors(keptText, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
+            keptText = ChartWriter.WriteActors(keptText, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
         }
 
         ChartFiles.BackupAndSave(Entry.File, chartText, keptText);

@@ -2,6 +2,9 @@ namespace Basalt.Services.Charts.Model;
 
 public record ActorSpec(string Id, string Name, Spot At, string Look)
 {
+    public const string DefaultId = "actor";
+    public const string DefaultLook = "you";
+
     public IReadOnlyList<string> Shiftstones { get; init; } = [];
     public BodySize? Measurement { get; init; }
 }

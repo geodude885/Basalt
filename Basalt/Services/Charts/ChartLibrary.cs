@@ -1,3 +1,5 @@
+using Basalt.Services.Charts.Files;
+
 namespace Basalt.Services.Charts;
 
 public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source, string? Folder = null)
@@ -15,18 +17,14 @@ public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source
 
 public class ChartLibrary(string folder, string? packageCache = null)
 {
-    public const string FolderChartFile = "chart.json";
-
-    private static readonly string[] KnownDifficulties = { "Expert", "Hard", "Normal", "Easy" };
-
-    private readonly string _packageCache = packageCache ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(folder)) ?? folder, "ChartCache");
-
-    private List<ChartEntry> _entries = [];
-
     public string Folder => folder;
-
     public IReadOnlyList<ChartEntry> Entries => _entries;
     public IEnumerable<ChartEntry> Playable => _entries.Where(e => e.Result.Ok);
+
+    public const string FolderChartFile = "chart.json";
+    private static readonly string[] KnownDifficulties = { "Expert", "Hard", "Normal", "Easy" };
+    private readonly string _packageCache = packageCache ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(folder)) ?? folder, "ChartCache");
+    private List<ChartEntry> _entries = [];
 
     public void Reload()
     {

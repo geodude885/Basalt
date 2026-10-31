@@ -14,6 +14,8 @@ public record ProjectileEvent(
     float Telegraph,
     string ActorId) : ChartEvent(Time, Order)
 {
+    public const float DefaultTelegraph = 0.5f;
+
     public bool? Grounded { get; init; }
 
     public static bool GroundedByDefault(string structure) =>

@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 
-namespace Basalt.Services.Charts;
+namespace Basalt.Services.Charts.Files;
 
 // The sharing format: a .bbchart is a zip of a chart folder, made by Basalt Editor and unpacked here into a cache
 // keyed by its contents. Packages are other people's files, so entries outside the folder, too many entries or too

@@ -3,6 +3,7 @@ using Basalt.Actors;
 using Basalt.Battle;
 using Basalt.Editing;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using UnityEngine;
 

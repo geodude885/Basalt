@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 
-namespace Basalt.Services.Charts;
+namespace Basalt.Services.Charts.Files;
 
 public static class ChartWriter
 {
@@ -54,7 +54,7 @@ public static class ChartWriter
         if (Math.Abs(factor - 1f) < 0.001f) return chartText;
 
         var chart = ChartJson.Parse(chartText);
-        ScaleAllNumbersByName("z", chart["events"], factor, 0, length + ChartLoader.ProjectileReach);
+        ScaleAllNumbersByName("z", chart["events"], factor, 0, length + Lane.ProjectileReach);
         ScaleAllNumbersByName("length", chart["playerZone"], factor, 0.5, length);
         return ChartJson.Write(chart);
     }

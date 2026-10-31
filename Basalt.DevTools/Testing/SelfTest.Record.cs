@@ -8,6 +8,7 @@ using Basalt.Services.Clips;
 using Il2CppRUMBLE.Players;
 using MelonLoader.Utils;
 using UnityEngine;
+using Basalt.Services.Charts.Files;
 
 namespace Basalt.DevTools.Testing;
 

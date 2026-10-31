@@ -9,11 +9,13 @@ public record Chart(
     IReadOnlyList<ChartEvent> Events,
     double End)
 {
+    public const double DefaultEndPadding = 3.0;
+
     public ChartInfo Info { get; init; } = ChartInfo.None;
     public Rules Rules { get; init; } = Rules.Default;
 
     public ArenaSpec Arena { get; init; } = ArenaSpec.Default;
-    public PlayerZone PlayerZone { get; init; } = PlayerZone.For(new Lane(ChartLoader.DefaultLaneLength, ChartLoader.DefaultLaneWidth));
+    public PlayerZone PlayerZone { get; init; } = PlayerZone.For(Lane.Default);
 
 
     public MusicSpec? Music { get; init; }

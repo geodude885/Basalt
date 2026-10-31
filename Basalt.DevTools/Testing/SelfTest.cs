@@ -5,6 +5,7 @@ using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
 using Basalt.Menu;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Basalt.Services.Scoring;
 using Il2CppRUMBLE.Interactions.InteractionBase;

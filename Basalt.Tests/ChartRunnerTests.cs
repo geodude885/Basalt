@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Xunit;
 
@@ -94,7 +95,7 @@ public class ChartRunnerTests
             c =>
             {
                 var place = Assert.IsType<PlaceActor>(c);
-                Assert.Equal(ChartLoader.DefaultActorId, place.ActorId);
+                Assert.Equal(ActorSpec.DefaultId, place.ActorId);
                 Assert.Equal(new Spot(1, 9), place.At);
             });
 

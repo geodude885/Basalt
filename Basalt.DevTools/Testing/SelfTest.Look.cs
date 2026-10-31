@@ -2,6 +2,7 @@ using System.Collections;
 using Basalt.Actors;
 using Basalt.Battle;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Players;
 using MelonLoader.Utils;

@@ -2,6 +2,7 @@ using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.BattlePresentation;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 
 namespace Basalt.Editing;

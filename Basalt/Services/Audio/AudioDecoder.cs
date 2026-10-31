@@ -15,10 +15,12 @@ public interface IPcmSource : IDisposable
 
 public static class AudioDecoder
 {
+    public static readonly IReadOnlyList<string> Extensions = new[] { ".ogg", ".mp3" };
+
     public static IPcmSource Open(string path)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
-        if (extension is not (".mp3" or ".ogg")) throw new NotSupportedException($"{Path.GetFileName(path)}: songs are .mp3 or .ogg");
+        if (!Extensions.Contains(extension)) throw new NotSupportedException($"{Path.GetFileName(path)}: songs are .mp3 or .ogg");
 
         var stream = File.OpenRead(path);
         try

@@ -2,12 +2,12 @@ using Basalt.Services.Charts.Model;
 
 namespace Basalt.Services.Charts;
 
-/// <summary>
-/// Plays a chart against a clock: <see cref="Advance"/> returns every command due since the last
-/// call. At the same moment, phases come first, then placements, then the rest in chart order.
-/// </summary>
 public class ChartRunner
 {
+    public Chart Chart { get; }
+    public IReadOnlyList<ChartCommand> Schedule => _schedule;
+    public bool Finished => _next >= _schedule.Count;
+
     private const int RankPhase = 0;
     private const int RankPlace = 1;
     private const int RankSpawn = 2;
@@ -25,14 +25,6 @@ public class ChartRunner
         _schedule = BuildSchedule(chart);
     }
 
-    public Chart Chart { get; }
-
-    public IReadOnlyList<ChartCommand> Schedule => _schedule;
-
-    public bool Finished => _next >= _schedule.Count;
-
-    /// <summary>Every command with a time at or before <paramref name="now"/> not yet returned.</summary>
-    /// <exception cref="ArgumentException">If the clock goes backwards.</exception>
     public IReadOnlyList<ChartCommand> Advance(double now)
     {
         if (now < _now) throw new ArgumentException($"the clock went backwards: {now} after {_now}", nameof(now));
@@ -73,7 +65,6 @@ public class ChartRunner
 
         foreach (var performance in chart.Performances)
         {
-            // Each clip plays until its own end or the next clip, whichever is first.
             var nextStarts = performance.Clips.Skip(1).Select(t => (double?)t.Time).Append(null);
             foreach ((var clip, var next) in performance.Clips.Zip(nextStarts))
             {

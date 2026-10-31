@@ -1,42 +1,19 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
+using Basalt.Services.Audio;
 using Basalt.Services.Charts.Model;
-using static Basalt.Services.Charts.ChartLoader;
 
-namespace Basalt.Services.Charts;
+namespace Basalt.Services.Charts.Files;
 
-/// <summary>The outcome of loading a chart: a chart, or every problem found, each with its path in the file.</summary>
 public record ChartLoadResult(Chart? Chart, IReadOnlyList<string> Errors)
 {
     public bool Ok => Chart != null;
 }
 
-// Reads and validates a chart; ChartReader does the reading.
 public static class ChartLoader
 {
-    public const float DefaultLaneLength = 12f;
-    public const float DefaultLaneWidth = 3f;
-    public const float DefaultTelegraph = 0.5f;
-
-    /// <summary>How far outside the lane - past its far end or its sides - a projectile may start.</summary>
-    public const float ProjectileReach = 6f;
-    public const string DefaultActorId = "actor";
-    public const string DefaultLook = "you";
-
-    /// <summary>The newest chart format this build reads. A chart may say which it was written for with "format".</summary>
     public const int NewestFormat = 3;
-
-    /// <summary>Song files a chart may name; Unity decodes these.</summary>
-    public static readonly IReadOnlyList<string> MusicExtensions = new[] { ".ogg", ".mp3" };
-
-    /// <summary>Cover images a chart may name; Unity decodes these.</summary>
-    public static readonly IReadOnlyList<string> CoverExtensions = new[] { ".png", ".jpg", ".jpeg" };
-
-    /// <summary>With no "end", the battle ends this long after its last event.</summary>
-    public const double DefaultEndPadding = 3.0;
-
-    private static readonly string[] EmptyFile = { "the file is empty" };
 
     public static ChartLoadResult Load(string json)
     {
@@ -47,13 +24,13 @@ public static class ChartLoader
         }
         catch (JsonException e)
         {
-            return new ChartLoadResult(null, new[] { $"not valid chart JSON: {e.Message}" });
+            return new ChartLoadResult(null, [$"not valid chart JSON: {e.Message}"]);
         }
 
-        if (dto == null) return new ChartLoadResult(null, EmptyFile);
+        if (dto == null) return new ChartLoadResult(null, ["the file is empty"]);
 
         if (dto.Format is > NewestFormat)
-            return new ChartLoadResult(null, new[] { $"made for a newer Basalt (chart format {dto.Format}; this one reads up to {NewestFormat}) - update the mod" });
+            return new ChartLoadResult(null, [$"made for a newer Basalt (chart format {dto.Format}; this one reads up to {NewestFormat}) - update the mod"]);
 
         var reader = new ChartReader(dto);
         var chart = reader.Build();
@@ -61,20 +38,21 @@ public static class ChartLoader
     }
 }
 
-// Builds a chart from its parsed JSON, collecting every problem - each with its path in the file - rather than
-// stopping at the first.
+// Builds chart from its parsed JSON
 internal class ChartReader(ChartDto dto)
 {
+    public List<string> Errors { get; } = [];
+
+    private static readonly string[] CoverExtensions = { ".png", ".jpg", ".jpeg" };
     private Lane _lane;
     private TempoMap? _tempo;
     private HashSet<string> _actorIds = [];
-    private string _defaultActorId = DefaultActorId;
+    private string _defaultActorId = ActorSpec.DefaultId;
 
-    public List<string> Errors { get; } = [];
 
     public Chart Build()
     {
-        _lane = new Lane(dto.Lane?.Length ?? DefaultLaneLength, dto.Lane?.Width ?? DefaultLaneWidth);
+        _lane = new Lane(dto.Lane?.Length ?? Lane.Default.Length, dto.Lane?.Width ?? Lane.Default.Width);
         if (_lane.Length <= 2f) Errors.Add($"lane.length must be over 2 m (got {Format(_lane.Length)})");
         if (_lane.Width <= 0f) Errors.Add($"lane.width must be over 0 (got {Format(_lane.Width)})");
 
@@ -88,12 +66,15 @@ internal class ChartReader(ChartDto dto)
         var events = Events();
 
         var lastEvent = events.Count == 0 ? 0 : events.Max(e => e.Time);
-        var end = dto.End ?? (lastEvent + DefaultEndPadding);
+        var end = dto.End ?? (lastEvent + Chart.DefaultEndPadding);
         if (end < lastEvent) Errors.Add($"end ({Format(end)}) is before the last event ({Format(lastEvent)})");
 
         return new Chart(string.IsNullOrWhiteSpace(dto.Name) ? "Untitled" : dto.Name, _lane, actors, phases, events, end)
         {
-            Info = new ChartInfo(Blank(dto.Author), Blank(dto.Description), Blank(dto.Difficulty)),
+            Info = new ChartInfo(
+                Blank(dto.Author),
+                Blank(dto.Description),
+                Blank(dto.Difficulty)),
             Arena = ReadArena(dto.Arena),
             Music = ReadMusic(dto.Music),
             Cover = ReadCover(dto.Cover),
@@ -105,8 +86,6 @@ internal class ChartReader(ChartDto dto)
             Colours = ReadColours(dto.Colours, "colours") ?? LaneColours.Default,
         };
     }
-
-    private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     private ArenaSpec ReadArena(ArenaDto? arena)
     {
@@ -258,8 +237,8 @@ internal class ChartReader(ChartDto dto)
         var file = music.File?.Trim() ?? "";
         if (file.Length == 0) Errors.Add("music.file is required - a song next to the chart, e.g. \"song.ogg\"");
         else if (!ChartFiles.IsSafeRelative(file)) Errors.Add($"music.file \"{file}\" must be a path inside the chart's folder or package");
-        else if (!MusicExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
-            Errors.Add($"music.file \"{file}\" must be one of {string.Join(", ", MusicExtensions)}");
+        else if (!AudioDecoder.Extensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+            Errors.Add($"music.file \"{file}\" must be one of {string.Join(", ", AudioDecoder.Extensions)}");
 
         var offset = music.Offset ?? 0;
 
@@ -299,7 +278,7 @@ internal class ChartReader(ChartDto dto)
     private List<ActorSpec> Actors()
     {
         if (dto.Actors == null || dto.Actors.Count == 0)
-            return [new(DefaultActorId, "Actor", new Spot(0f, _lane.Length), DefaultLook)];
+            return [new(ActorSpec.DefaultId, "Actor", new Spot(0f, _lane.Length), ActorSpec.DefaultLook)];
 
         var actors = new List<ActorSpec>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -308,11 +287,11 @@ internal class ChartReader(ChartDto dto)
         {
             var path = $"actors[{i}]";
 
-            var id = string.IsNullOrWhiteSpace(actor.Id) ? (i == 0 ? DefaultActorId : $"actor{i + 1}") : actor.Id;
+            var id = string.IsNullOrWhiteSpace(actor.Id) ? (i == 0 ? ActorSpec.DefaultId : $"actor{i + 1}") : actor.Id;
             if (!seen.Add(id)) Errors.Add($"{path}.id \"{id}\" is used twice");
 
             var at = actor.At == null ? new Spot(0f, _lane.Length) : ReadSpot(actor.At, $"{path}.at");
-            var look = string.IsNullOrWhiteSpace(actor.Look) ? DefaultLook : actor.Look;
+            var look = string.IsNullOrWhiteSpace(actor.Look) ? ActorSpec.DefaultLook : actor.Look;
 
             actors.Add(new ActorSpec(id, string.IsNullOrWhiteSpace(actor.Name) ? id : actor.Name, at, look)
             {
@@ -427,11 +406,11 @@ internal class ChartReader(ChartDto dto)
         {
             from = new Vector3(p.From.X.Value, p.From.Y.Value, p.From.Z.Value);
 
-            if (from.Z <= 0f || from.Z > _lane.Length + ProjectileReach)
-                Errors.Add($"{path}.from.z ({Format(from.Z)}) must be in front of you and within the lane or up to {Format(ProjectileReach)} m past it: over 0, up to {Format(_lane.Length + ProjectileReach)}");
-            var side = (_lane.Width / 2f) + ProjectileReach;
+            if (from.Z <= 0f || from.Z > _lane.Length + Lane.ProjectileReach)
+                Errors.Add($"{path}.from.z ({Format(from.Z)}) must be in front of you and within the lane or up to {Format(Lane.ProjectileReach)} m past it: over 0, up to {Format(_lane.Length + Lane.ProjectileReach)}");
+            var side = (_lane.Width / 2f) + Lane.ProjectileReach;
             if (Math.Abs(from.X) > side)
-                Errors.Add($"{path}.from.x ({Format(from.X)}) must be within {Format(ProjectileReach)} m of the lane's sides: -{Format(side)} to {Format(side)}");
+                Errors.Add($"{path}.from.x ({Format(from.X)}) must be within {Format(Lane.ProjectileReach)} m of the lane's sides: -{Format(side)} to {Format(side)}");
             if (from.Y < 0f) Errors.Add($"{path}.from.y ({Format(from.Y)}) is below the floor");
         }
 
@@ -445,7 +424,7 @@ internal class ChartReader(ChartDto dto)
         var speed = p.Speed ?? 0f;
         if (speed <= 0f) Errors.Add($"{path}.speed must be over 0 m/s (got {Format(speed)})");
 
-        var telegraph = p.Telegraph ?? DefaultTelegraph;
+        var telegraph = p.Telegraph ?? ProjectileEvent.DefaultTelegraph;
         if (telegraph < 0f) Errors.Add($"{path}.telegraph cannot be negative (got {Format(telegraph)})");
         else if (time - telegraph < 0)
             Errors.Add($"{path} would appear before the battle starts: launch at {Format(time)} with a {Format(telegraph)} s telegraph");
@@ -505,6 +484,7 @@ internal class ChartReader(ChartDto dto)
 
         return seconds;
     }
+    private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     private static string Format(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 }

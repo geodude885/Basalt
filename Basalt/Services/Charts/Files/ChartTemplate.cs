@@ -1,4 +1,4 @@
-namespace Basalt.Services.Charts;
+namespace Basalt.Services.Charts.Files;
 
 public static class ChartTemplate
 {

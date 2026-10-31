@@ -1,6 +1,6 @@
 using System.Numerics;
 using Basalt.DevTools.Testing;
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Xunit;
 
@@ -46,7 +46,7 @@ public class ChartLoaderTests
         Assert.Equal(40, chart.End);
 
         Assert.Equal(2, chart.Actors.Count);
-        Assert.Equal(new ActorSpec("dummy", "Training Dummy", new Spot(0, 12), ChartLoader.DefaultLook), chart.Actors[0]);
+        Assert.Equal(new ActorSpec("dummy", "Training Dummy", new Spot(0, 12), ActorSpec.DefaultLook), chart.Actors[0]);
         Assert.Equal(new ActorSpec("add", "add", new Spot(-1, 10, 20), "default"), chart.Actors[1]);
         Assert.Same(chart.Actors[0], chart.DefaultActor);
 
@@ -59,7 +59,7 @@ public class ChartLoaderTests
         var ball = Assert.IsType<ProjectileEvent>(chart.Events[1]);
         Assert.True(ball.To.AtPlayer);
         Assert.Equal("dummy", ball.ActorId);
-        Assert.Equal(ChartLoader.DefaultTelegraph, ball.Telegraph);
+        Assert.Equal(ProjectileEvent.DefaultTelegraph, ball.Telegraph);
 
         Assert.Equal("add", Assert.IsType<MoveEvent>(chart.Events[2]).ActorId);
         Assert.Equal("dummy", Assert.IsType<PlaceEvent>(chart.Events[3]).ActorId);
@@ -84,10 +84,10 @@ public class ChartLoaderTests
         var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 10, "move": "Kick" } ] }""").Chart!;
 
         Assert.Equal("Untitled", chart.Name);
-        Assert.Equal(new Lane(ChartLoader.DefaultLaneLength, ChartLoader.DefaultLaneWidth), chart.Lane);
-        Assert.Equal(new ActorSpec(ChartLoader.DefaultActorId, "Actor", new Spot(0, ChartLoader.DefaultLaneLength), ChartLoader.DefaultLook), Assert.Single(chart.Actors));
+        Assert.Equal(Lane.Default, chart.Lane);
+        Assert.Equal(new ActorSpec(ActorSpec.DefaultId, "Actor", new Spot(0, Lane.Default.Length), ActorSpec.DefaultLook), Assert.Single(chart.Actors));
         Assert.Single(chart.Phases);
-        Assert.Equal(10 + ChartLoader.DefaultEndPadding, chart.End, 6);
+        Assert.Equal(10 + Chart.DefaultEndPadding, chart.End, 6);
     }
 
     [Fact]

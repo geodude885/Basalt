@@ -20,10 +20,10 @@ internal static partial class SelfTest
     private const string RecordChart = /*lang=json*/ """
         {
           // The self-test records into this chart.
-          "format": 1,
+          "format": 3,
           "name": "Record Test",
           // The Ring's floor is flat - the Gym's slopes would let you slide off the spot.
-          "arena": { "map": "ring", "at": { "x": 0, "z": -4 }, "facing": 0 },
+          "arena": { "map": "ring", "at": { "x": 0, "z": -4, "facing": 0 } },
           "lane": { "length": 8, "width": 3 },
           "actors": [ { "id": "boss", "name": "Recorded", "at": { "x": 0, "z": 8 } } ],
           "end": 3

@@ -64,24 +64,35 @@ public sealed class ChartLibraryTests : IDisposable
     private readonly string _folder = Path.Combine(Path.GetTempPath(), $"Basalt-{Guid.NewGuid():N}");
 
     [Fact]
-    public void AnEmptyFolderGetsTheStarterCharts()
+    public void AnEmptyFolderStaysEmpty()
     {
         var library = new ChartLibrary(_folder);
+        library.Reload();
 
-        Assert.Equal(StarterCharts.All.Count, library.Reload());
-        Assert.Equal(StarterCharts.All.Count, library.Playable.Count());
-        Assert.NotNull(library.Find("Warm-up"));
+        Assert.Empty(library.Entries);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(_folder));
+    }
+
+    [Fact]
+    public void ALooseJsonFileIsNotAChart()
+    {
+        Directory.CreateDirectory(_folder);
+        File.WriteAllText(Path.Combine(_folder, "loose.json"), /*lang=json,strict*/ """{ "name": "Loose" }""");
+        var library = new ChartLibrary(_folder);
+        library.Reload();
+
+        Assert.Empty(library.Entries);
     }
 
     [Fact]
     public void ChartsSharingANameAreOneSongWithItsDifficultiesHardestFirst()
     {
         Directory.CreateDirectory(_folder);
-        File.WriteAllText(Path.Combine(_folder, "a-hard.json"), /*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""");
-        File.WriteAllText(Path.Combine(_folder, "b-other.json"), /*lang=json,strict*/ """{ "name": "Other" }""");
-        File.WriteAllText(Path.Combine(_folder, "c-easy.json"), /*lang=json,strict*/ """{ "name": "song", "difficulty": "easy" }""");
-        File.WriteAllText(Path.Combine(_folder, "d-wild.json"), /*lang=json,strict*/ """{ "name": "Song", "difficulty": "Wild" }""");
-        File.WriteAllText(Path.Combine(_folder, "e-none.json"), /*lang=json,strict*/ """{ "name": "Song" }""");
+        WriteChart("a-hard", /*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""");
+        WriteChart("b-other", /*lang=json,strict*/ """{ "name": "Other" }""");
+        WriteChart("c-easy", /*lang=json,strict*/ """{ "name": "song", "difficulty": "easy" }""");
+        WriteChart("d-wild", /*lang=json,strict*/ """{ "name": "Song", "difficulty": "Wild" }""");
+        WriteChart("e-none", /*lang=json,strict*/ """{ "name": "Song" }""");
         var library = new ChartLibrary(_folder);
         library.Reload();
 
@@ -91,45 +102,10 @@ public sealed class ChartLibraryTests : IDisposable
     }
 
     [Fact]
-    public void AFolderWithChartsIsNeverWrittenTo()
-    {
-        Directory.CreateDirectory(_folder);
-        File.WriteAllText(Path.Combine(_folder, "mine.json"), /*lang=json,strict*/ """{ "name": "Mine" }""");
-
-        var library = new ChartLibrary(_folder);
-
-        Assert.Equal(0, library.Reload());
-        Assert.Equal("Mine", Assert.Single(library.Entries).Name);
-    }
-
-    [Fact]
-    public void UneditedStarterChartsAreUpdatedAndEditedOnesAreNot()
-    {
-        var library = new ChartLibrary(_folder);
-        library.Reload();
-        (var first, var firstJson) = StarterCharts.All[0];
-        (var second, _) = StarterCharts.All[1];
-
-        // Pretend an older mod wrote them: rewrite both and the record, then edit the second.
-        File.WriteAllText(Path.Combine(_folder, first), /*lang=json,strict*/ "{ \"name\": \"Old Warm-up\" }");
-        File.WriteAllText(Path.Combine(_folder, second), /*lang=json,strict*/ "{ \"name\": \"Old Crossfire\" }");
-        var record = Path.Combine(_folder, ".starters");
-        File.WriteAllLines(record, File.ReadAllLines(record).Select(l => l.EndsWith(first, StringComparison.Ordinal) ? $"{Hash(/*lang=json,strict*/ "{ \"name\": \"Old Warm-up\" }")} {first}" : l));
-
-        Assert.Equal(1, library.Reload());
-        Assert.Equal(firstJson, File.ReadAllText(Path.Combine(_folder, first)));
-        Assert.Contains("Old Crossfire", File.ReadAllText(Path.Combine(_folder, second)), StringComparison.Ordinal);
-        Assert.DoesNotContain(library.Entries, e => e.File.EndsWith(".starters", StringComparison.Ordinal));
-    }
-
-    private static string Hash(string text) =>
-        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text.Replace("\r\n", "\n"))))[..16];
-
-    [Fact]
     public void ABrokenChartIsListedWithItsErrorsButNotPlayable()
     {
         Directory.CreateDirectory(_folder);
-        File.WriteAllText(Path.Combine(_folder, "broken.json"), /*lang=json,strict*/ """{ "events": [ { "t": 1 } ] }""");
+        WriteChart("broken", /*lang=json,strict*/ """{ "events": [ { "t": 1 } ] }""");
 
         var library = new ChartLibrary(_folder);
         library.Reload();
@@ -138,6 +114,13 @@ public sealed class ChartLibraryTests : IDisposable
         Assert.Equal("broken", entry.Name);
         Assert.False(entry.Result.Ok);
         Assert.Empty(library.Playable);
+    }
+
+    private void WriteChart(string name, string json)
+    {
+        var folder = Path.Combine(_folder, name);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, ChartLibrary.FolderChartFile), json);
     }
 
     public void Dispose()

@@ -17,7 +17,7 @@ public class ChartHeaderTests
         var chart = Load(/*lang=json,strict*/ """
             {
               "format": 1, "name": "Song", "author": "someone", "difficulty": "Hard", "description": "A song.",
-              "arena": { "map": "Ring", "at": { "x": 1.5, "z": -6 }, "facing": 90 },
+              "arena": { "map": "Ring", "at": { "x": 1.5, "z": -6, "facing": 90 } },
               "music": { "file": "music/song.ogg", "offset": 2.5, "volume": 0.7 }
             }
             """);
@@ -35,14 +35,14 @@ public class ChartHeaderTests
     public void ReadsACover() => Assert.Equal("art/cover.png", Load(/*lang=json,strict*/ """{ "cover": "art/cover.png" }""").Cover);
 
     [Fact]
-    public void TheNewChartTemplatePlaysAsItIs()
+    public void ANewChartIsBlankButForItsHeader()
     {
         var result = ChartLoader.Load(ChartTemplate.Json("Quote \" test", "someone"));
 
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         Assert.Equal("Quote \" test", result.Chart!.Name);
         Assert.Equal("someone", result.Chart.Info.Author);
-        Assert.NotEmpty(result.Chart.Events.OfType<ProjectileEvent>());
+        Assert.Empty(result.Chart.Events);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class ChartHeaderTests
     }
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "format": 3 }""", "newer Basalt")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 99 }""", "newer Basalt")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "moon" } }""", "arena.map \"moon\"")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "ring", "at": { "x": 1 } } }""", "arena.at needs x and z")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "here" } }""", "arena.map \"here\" is not one of gym, ring, pit")]
@@ -85,17 +85,6 @@ public class ChartHeaderTests
 
     [Fact]
     public void UnknownFieldsAreIgnoredSoNewerChartsStillLoad() => Assert.True(ChartLoader.Load(/*lang=json,strict*/ """{ "$schema": "chart.schema.json", "weather": { "sky": "red" } }""").Ok);
-
-    [Fact]
-    public void EveryStarterChartNamesItsAuthorAndDifficulty()
-    {
-        foreach ((var file, var json) in StarterCharts.All)
-        {
-            var chart = ChartLoader.Load(json).Chart ?? throw new InvalidOperationException(file);
-            Assert.NotNull(chart.Info.Author);
-            Assert.NotNull(chart.Info.Difficulty);
-        }
-    }
 
     private static Chart Load(string json)
     {
@@ -144,7 +133,7 @@ public sealed class ChartPackageTests : IDisposable
         var folder = WriteFolderChart("my-song");
 
         var library = new ChartLibrary(Charts, Cache);
-        Assert.Equal(0, library.Reload());
+        library.Reload();
 
         var entry = Assert.Single(library.Entries);
         Assert.True(entry.Result.Ok, string.Join("; ", entry.Result.Errors));
@@ -169,7 +158,7 @@ public sealed class ChartPackageTests : IDisposable
         File.Copy(package, Path.Combine(otherPlayersFolder, Path.GetFileName(package)));
 
         var otherPlayersLibrary = new ChartLibrary(otherPlayersFolder, Path.Combine(_root, "Theirs", "Cache"));
-        Assert.Equal(0, otherPlayersLibrary.Reload());
+        otherPlayersLibrary.Reload();
 
         var entry = Assert.Single(otherPlayersLibrary.Entries);
         Assert.True(entry.Result.Ok, string.Join("; ", entry.Result.Errors));
@@ -382,7 +371,7 @@ public sealed class ChartAuthoringTests : IDisposable
 
         Assert.NotEqual(first, second);
         var library = new ChartLibrary(_folder, Path.Combine(_folder, "..", "cache-" + Guid.NewGuid().ToString("N")));
-        Assert.Equal(0, library.Reload());
+        library.Reload();
         Assert.Equal(2, library.Playable.Count());
         Assert.True(Directory.Exists(Path.Combine(first, ChartPackage.ClipsFolder)));
     }

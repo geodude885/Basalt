@@ -10,7 +10,7 @@ public static class SelfTestChart
 
     public const string Json = /*lang=json,strict*/ """
         {
-          "format": 2,
+          "format": 3,
           "name": "Self Test",
           "author": "Basalt",
           "difficulty": "Test",
@@ -22,7 +22,7 @@ public static class SelfTestChart
           "actors": [ { "id": "probe", "name": "Self Test", "at": { "x": 0, "z": 10 }, "shiftstones": [ "Vigor", "Flow" ] } ],
           "phases": [ { "name": "Start", "t": 0 }, { "name": "Moved", "t": 3, "colours": { "sideLines": "#ffaa00", "walls": "none" } } ],
           "events": [
-            { "t": 1.5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 8 }, "to": "player", "speed": 10, "telegraph": 0.5, "actor": "probe" } },
+            { "t": 1.5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 8 }, "speed": 10, "telegraph": 0.5 } },
             { "t": 2, "projectile": { "structure": "RockCube", "from": { "x": 1.2, "y": 0, "z": 8 }, "to": { "x": 1.4, "y": 1 }, "speed": 8, "telegraph": 0.5 } },
             { "t": 2.5, "projectile": { "structure": "Ball", "from": { "x": -1, "y": 1.2, "z": 8 }, "to": { "x": 0.5, "y": 1.2 }, "speed": 8, "telegraph": 0.5 } },
             { "t": 3,   "at": { "x": 1, "z": 9 } },

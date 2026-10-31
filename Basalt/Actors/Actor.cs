@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Basalt.Actors;
 
-internal class Actor(string id, string name, string customisationString, IReadOnlyList<string>? stones = null)
+internal class Actor(string id, string name, string customisationString, IReadOnlyList<string> stones)
 {
     public const short MaxHealth = 20;
 
@@ -21,7 +21,7 @@ internal class Actor(string id, string name, string customisationString, IReadOn
     public string Id { get; } = id;
     public string Name { get; } = name;
     public string PlayerCustomisation { get; } = customisationString;
-    public IReadOnlyList<string>? Stones { get; } = stones;
+    public IReadOnlyList<string> Stones { get; } = stones;
     public BodySize? Measurement { get; init; }
     public float SelfKnockbackMultiplier { get; set; } = 1f;
 

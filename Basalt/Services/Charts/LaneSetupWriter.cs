@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Basalt.Services.Charts.Model;
 
@@ -18,8 +17,7 @@ public static class LaneSetupWriter
         chart["arena"] = ChartJson.ToNode(new ArenaDto
         {
             Map = arena.Map.ToString().ToLowerInvariant(),
-            At = new PointDto { X = Round(arena.X), Z = Round(arena.Z) },
-            Facing = Round(arena.Facing),
+            At = new PointDto { X = Round(arena.X), Z = Round(arena.Z), Facing = Round(arena.Facing) },
         });
         chart["lane"] = ChartJson.ToNode(new LaneDto { Length = Round(lane.Length), Width = Round(lane.Width) });
         chart["actors"] = ActorsJson(actors);
@@ -60,7 +58,7 @@ public static class LaneSetupWriter
         Name = actor.Name,
         At = new PointDto { X = Round(actor.At.X), Z = Round(actor.At.Z), Facing = actor.At.Facing == 0f ? null : Round(actor.At.Facing) },
         Look = actor.Look,
-        Shiftstones = actor.Shiftstones == null ? null : JsonSerializer.SerializeToElement(actor.Shiftstones),
+        Shiftstones = actor.Shiftstones.Count == 0 ? null : actor.Shiftstones.ToList(),
         Measurement = actor.Measurement is { } size ? new MeasurementDto { Height = MathF.Round(size.Height, 3), ArmSpan = MathF.Round(size.ArmSpan, 3) } : null,
     }).ToList());
 

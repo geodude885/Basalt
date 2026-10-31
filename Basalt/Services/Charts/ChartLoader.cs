@@ -25,10 +25,7 @@ public static class ChartLoader
     public const string DefaultLook = "you";
 
     /// <summary>The newest chart format this build reads. A chart may say which it was written for with "format".</summary>
-    public const int NewestFormat = 2;
-
-    /// <summary>Recorded performances arrived in format 2: a chart using them says so, so an older mod refuses it rather than playing it without them.</summary>
-    public const int PerformancesFormat = 2;
+    public const int NewestFormat = 3;
 
     /// <summary>Song files a chart may name; Unity decodes these.</summary>
     public static readonly IReadOnlyList<string> MusicExtensions = new[] { ".ogg", ".mp3" };
@@ -46,7 +43,7 @@ public static class ChartLoader
         ChartDto? dto;
         try
         {
-            dto = JsonSerializer.Deserialize<ChartDto>(json, ChartJson.Options);
+            dto = JsonSerializer.Deserialize<ChartDto>(json, ChartJson.JsonOptions);
         }
         catch (JsonException e)
         {
@@ -81,7 +78,7 @@ internal class ChartReader(ChartDto dto)
         if (_lane.Length <= 2f) Errors.Add($"lane.length must be over 2 m (got {Format(_lane.Length)})");
         if (_lane.Width <= 0f) Errors.Add($"lane.width must be over 0 (got {Format(_lane.Width)})");
 
-        _tempo = ReadTempo(dto.Bpm);
+        _tempo = ReadTempo(dto.Bpm, dto.BpmChanges);
 
         var actors = Actors();
         _actorIds = actors.Select(a => a.Id).ToHashSet(StringComparer.Ordinal);
@@ -128,9 +125,7 @@ internal class ChartReader(ChartDto dto)
             return new ArenaSpec(map);
         }
 
-        if (arena.At?.Facing != null) Errors.Add("arena.at.facing is not read - facing goes beside at, in arena.facing");
-
-        return new ArenaSpec(map, arena.At?.X ?? 0f, arena.At?.Z ?? 0f, arena.Facing ?? 0f);
+        return new ArenaSpec(map, arena.At?.X ?? 0f, arena.At?.Z ?? 0f, arena.At?.Facing ?? 0f);
     }
 
     private PlayerZone ReadPlayerZone(PlayerZoneDto? zone)
@@ -174,7 +169,6 @@ internal class ChartReader(ChartDto dto)
             if (string.IsNullOrWhiteSpace(v.Pack)) Errors.Add($"{path} needs a pack - a RumbleReShaded pack's name, e.g. \"UltraShade\"");
             var off = v.Off ?? false;
             if (off && v.Values is { Count: > 0 }) Errors.Add($"{path} has both \"off\" and \"values\" - an off fades the pack back to the player's own settings");
-            if (!off && v.Values is not { Count: > 0 } && v.On != true) Errors.Add($"{path} needs \"values\" (slider values), \"on\": true or \"off\": true");
             var fade = v.Fade ?? 0;
             if (fade < 0) Errors.Add($"{path}.fade cannot be negative (got {Format(fade)})");
 
@@ -205,9 +199,6 @@ internal class ChartReader(ChartDto dto)
     {
         var performances = new List<ActorPerformance>();
         if (dto.Performances == null || dto.Performances.Count == 0) return performances;
-
-        if ((dto.Format ?? 1) < PerformancesFormat)
-            Errors.Add($"performances need \"format\": {PerformancesFormat} or later - set it at the top of the chart");
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach ((var performance, var i) in dto.Performances.Select((t, i) => (t, i)))
@@ -278,60 +269,31 @@ internal class ChartReader(ChartDto dto)
         return Errors.Count == before ? new MusicSpec(file, offset, volume) : null;
     }
 
-    /// <summary><c>"bpm": 120</c>, or tempo changes: <c>"bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]</c>.</summary>
-    private TempoMap? ReadTempo(JsonElement? bpm)
+    private TempoMap? ReadTempo(double? bpm, List<BpmChangeDto>? changes)
     {
-        if (bpm is not { } value || value.ValueKind == JsonValueKind.Null) return null;
-
-        if (value.ValueKind == JsonValueKind.Number)
+        if (bpm == null)
         {
-            var single = value.GetDouble();
-            if (single > 0) return TempoMap.Constant(single);
-            Errors.Add($"bpm must be over 0 (got {Format(single)})");
+            if (changes is { Count: > 0 }) Errors.Add("bpmChanges needs a bpm to start from");
             return null;
         }
 
-        if (value.ValueKind != JsonValueKind.Array)
+        if (bpm <= 0)
         {
-            Errors.Add("bpm must be a number, or a list of tempo changes: [ { \"beat\": 0, \"bpm\": 120 }, ... ]");
+            Errors.Add($"bpm must be over 0 (got {Format(bpm.Value)})");
             return null;
         }
 
-        var changes = new List<TempoSection>();
-        var index = 0;
-        foreach (var change in value.EnumerateArray())
+        var sections = new List<TempoSection> { new(0, bpm.Value) };
+        foreach ((var change, var i) in (changes ?? []).Select((c, i) => (c, i)))
         {
-            var path = $"bpm[{index++}]";
-            if (change.ValueKind != JsonValueKind.Object
-                || !TryNumber(change, "beat", out var beat) || !TryNumber(change, "bpm", out var rate))
-            {
-                Errors.Add($"{path} needs a beat and a bpm");
-                continue;
-            }
-
-            if (rate <= 0) Errors.Add($"{path}.bpm must be over 0 (got {Format(rate)})");
-            else if (changes.Count == 0 && beat != 0) Errors.Add($"{path}.beat must be 0 - the first tempo starts the song");
-            else if (changes.Count > 0 && beat <= changes[^1].Beat) Errors.Add($"{path}.beat ({Format(beat)}) must be after the change before it ({Format(changes[^1].Beat)})");
-            else changes.Add(new TempoSection(beat, rate));
+            var path = $"bpmChanges[{i}]";
+            if (change.Beat is not { } beat || change.Bpm is not { } rate) Errors.Add($"{path} needs a beat and a bpm");
+            else if (rate <= 0) Errors.Add($"{path}.bpm must be over 0 (got {Format(rate)})");
+            else if (beat <= sections[^1].Beat) Errors.Add($"{path}.beat ({Format(beat)}) must be after the tempo before it ({Format(sections[^1].Beat)})");
+            else sections.Add(new TempoSection(beat, rate));
         }
 
-        if (changes.Count == 0)
-        {
-            if (index == 0) Errors.Add("bpm has no tempo changes");
-            return null;
-        }
-
-        return new TempoMap(changes);
-    }
-
-    private static bool TryNumber(JsonElement element, string name, out double number)
-    {
-        var found = element.EnumerateObject()
-            .Where(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind == JsonValueKind.Number)
-            .Select(p => (double?)p.Value.GetDouble())
-            .FirstOrDefault();
-        number = found ?? 0;
-        return found != null;
+        return new TempoMap(sections);
     }
 
     private List<ActorSpec> Actors()
@@ -375,20 +337,13 @@ internal class ChartReader(ChartDto dto)
         return new BodySize(measurement.Height.Value, measurement.ArmSpan.Value);
     }
 
-    private List<string>? ReadStones(JsonElement? stones, string path)
+    private IReadOnlyList<string> ReadStones(List<string>? stones, string path)
     {
-        if (stones is not { } value || value.ValueKind == JsonValueKind.Null) return null;
-        if (value.ValueKind == JsonValueKind.String && string.Equals(value.GetString(), "you", StringComparison.OrdinalIgnoreCase)) return null;
+        if (stones == null) return Array.Empty<string>();
 
-        if (value.ValueKind != JsonValueKind.Array || value.EnumerateArray().Any(s => s.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(s.GetString())))
-        {
-            Errors.Add($"{path} must be \"you\" or a list of stone names, e.g. [\"Vigor\", \"Flow\"]");
-            return null;
-        }
-
-        var names = value.EnumerateArray().Select(s => s.GetString()!.Trim()).ToList();
-        if (names.Count > 2) Errors.Add($"{path} has {names.Count} stones - a player wears two at most");
-        return names;
+        if (stones.Any(string.IsNullOrWhiteSpace)) Errors.Add($"{path} must be a list of stone names, e.g. [\"Vigor\", \"Flow\"]");
+        if (stones.Count > 2) Errors.Add($"{path} has {stones.Count} stones - a player wears two at most");
+        return stones.Select(s => s?.Trim() ?? "").ToList();
     }
 
     private List<Phase> Phases()
@@ -457,7 +412,7 @@ internal class ChartReader(ChartDto dto)
         return events;
     }
 
-    private ProjectileEvent? Projectile(ProjectileDto p, double time, int order, string path, string eventActor)
+    private ProjectileEvent? Projectile(ProjectileDto p, double time, int order, string path, string actor)
     {
         var before = Errors.Count;
 
@@ -481,22 +436,10 @@ internal class ChartReader(ChartDto dto)
         }
 
         var aim = Aim.Player;
-        if (p.To is JsonElement to)
+        if (p.To != null)
         {
-            if (to.ValueKind == JsonValueKind.String && string.Equals(to.GetString(), "player", StringComparison.OrdinalIgnoreCase))
-            {
-                aim = Aim.Player;
-            }
-            else if (to.ValueKind == JsonValueKind.Object
-                     && to.TryGetProperty("x", out var x) && x.TryGetSingle(out var tx)
-                     && to.TryGetProperty("y", out var y) && y.TryGetSingle(out var ty))
-            {
-                aim = Aim.Point(tx, ty);
-            }
-            else
-            {
-                Errors.Add($"{path}.to must be \"player\" or {{ \"x\": ..., \"y\": ... }}");
-            }
+            if (p.To.X == null || p.To.Y == null) Errors.Add($"{path}.to needs x and y");
+            else aim = Aim.Point(p.To.X.Value, p.To.Y.Value);
         }
 
         var speed = p.Speed ?? 0f;
@@ -506,8 +449,6 @@ internal class ChartReader(ChartDto dto)
         if (telegraph < 0f) Errors.Add($"{path}.telegraph cannot be negative (got {Format(telegraph)})");
         else if (time - telegraph < 0)
             Errors.Add($"{path} would appear before the battle starts: launch at {Format(time)} with a {Format(telegraph)} s telegraph");
-
-        var actor = p.Actor == null ? eventActor : ActorRef(p.Actor, $"{path}.actor");
 
         return Errors.Count == before ? new ProjectileEvent(time, order, p.Structure!, from, aim, speed, telegraph, actor) { Grounded = p.Grounded } : null;
     }
@@ -534,17 +475,17 @@ internal class ChartReader(ChartDto dto)
     }
 
     /// <summary>Seconds from either a seconds field or a beats field - exactly one of them.</summary>
-    private double? Time(double? seconds, double? beats, string path, string secondsName = "t", string beatsName = "beat")
+    private double? Time(double? seconds, double? beats, string path)
     {
         if (seconds != null && beats != null)
         {
-            Errors.Add($"{path} has both {secondsName} and {beatsName} - use one");
+            Errors.Add($"{path} has both t and beat - use one");
             return null;
         }
 
         if (beats != null && _tempo == null)
         {
-            Errors.Add($"{path}.{beatsName} needs the chart's bpm");
+            Errors.Add($"{path}.beat needs the chart's bpm");
             return null;
         }
 
@@ -552,13 +493,13 @@ internal class ChartReader(ChartDto dto)
 
         if (seconds == null)
         {
-            Errors.Add($"{path} needs a time: {secondsName} (seconds) or {beatsName}");
+            Errors.Add($"{path} needs a time: t (seconds) or beat");
             return null;
         }
 
         if (seconds < 0)
         {
-            Errors.Add($"{path}.{secondsName} cannot be negative (got {Format(seconds.Value)})");
+            Errors.Add($"{path}.t cannot be negative (got {Format(seconds.Value)})");
             return null;
         }
 

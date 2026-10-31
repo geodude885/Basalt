@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Basalt chart",
-  "description": "A Basalt chart, format 2. See docs/chart-format.md.",
+  "description": "A Basalt chart, format 3. See docs/chart-format.md.",
   "type": "object",
   "properties": {
     "$schema": {
@@ -10,7 +10,7 @@
     "format": {
       "type": "integer",
       "minimum": 1,
-      "maximum": 2,
+      "maximum": 3,
       "default": 1
     },
     "name": {
@@ -51,16 +51,16 @@
             },
             "z": {
               "type": "number"
+            },
+            "facing": {
+              "type": "number",
+              "description": "Compass degrees the lane runs from you: 0 = +Z, 90 = +X. Default 0."
             }
           },
           "required": [
             "x",
             "z"
           ]
-        },
-        "facing": {
-          "type": "number",
-          "description": "Compass degrees the lane runs from you: 0 = +Z, 90 = +X. Default 0."
         }
       },
       "description": "Where it is played. Without one: the Ring, at { x: 0, z: -6 } facing north."
@@ -93,32 +93,29 @@
       "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(png|jpg|jpeg)$"
     },
     "bpm": {
-      "oneOf": [
-        {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "beat": {
-                "type": "number",
-                "minimum": 0
-              },
-              "bpm": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              }
-            },
-            "required": [
-              "beat",
-              "bpm"
-            ]
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "bpmChanges": {
+      "description": "Tempo changes after the start, each holding until the next.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "beat": {
+            "type": "number",
+            "minimum": 0
+          },
+          "bpm": {
+            "type": "number",
+            "exclusiveMinimum": 0
           }
-        }
-      ]
+        },
+        "required": [
+          "beat",
+          "bpm"
+        ]
+      }
     },
     "lane": {
       "type": "object",
@@ -150,29 +147,22 @@
             "$ref": "#/$defs/spot"
           },
           "shiftstones": {
-            "description": "\"you\" for whoever plays's stones, or up to two names.",
-            "oneOf": [
-              {
-                "const": "you"
-              },
-              {
-                "type": "array",
-                "maxItems": 2,
-                "items": {
-                  "type": "string",
-                  "examples": [
-                    "Adamant",
-                    "Charge",
-                    "Flow",
-                    "Guard",
-                    "Stubborn",
-                    "Surge",
-                    "Vigor",
-                    "Volatile"
-                  ]
-                }
-              }
-            ]
+            "description": "The stones it wears, up to two names. Without it: none.",
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "type": "string",
+              "examples": [
+                "Adamant",
+                "Charge",
+                "Flow",
+                "Guard",
+                "Stubborn",
+                "Surge",
+                "Vigor",
+                "Volatile"
+              ]
+            }
           },
           "look": {
             "type": "string",
@@ -304,25 +294,19 @@
                 ]
               },
               "to": {
-                "oneOf": [
-                  {
-                    "const": "player"
+                "description": "Where it arrives on your end of the lane. Without it: at you.",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
                   },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "x": {
-                        "type": "number"
-                      },
-                      "y": {
-                        "type": "number"
-                      }
-                    },
-                    "required": [
-                      "x",
-                      "y"
-                    ]
+                  "y": {
+                    "type": "number"
                   }
+                },
+                "required": [
+                  "x",
+                  "y"
                 ]
               },
               "speed": {
@@ -337,9 +321,6 @@
               "grounded": {
                 "type": "boolean",
                 "description": "Thrown along the floor in the game's grounded state. Default true for Pillar, RockCube and Wall."
-              },
-              "actor": {
-                "type": "string"
               }
             },
             "required": [
@@ -501,9 +482,6 @@
               "type": "number"
             },
             "description": "Slider values by label or property."
-          },
-          "on": {
-            "type": "boolean"
           },
           "off": {
             "type": "boolean"

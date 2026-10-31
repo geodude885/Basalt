@@ -23,21 +23,20 @@ internal static class ShiftstoneHelpers
             .Select(stone => stone.gameObject.name.Replace("(Clone)", "", StringComparison.Ordinal).Trim())
             .ToList();
 
-    // The chart's stones for an actor, else the ones `from` has equipped. Attached as Remote: a Local player's
-    // stones move to a first-person layer.
-    public static void CopyOnto(Actor actor, PlayerController to, PlayerController from)
+    // The chart's stones for an actor. Attached as Remote
+    public static void AttachTo(Actor actor, PlayerController to)
     {
         var simulatedAs = to.controllerType;
         to.controllerType = ControllerType.Remote;
 
         try
         {
-            var pools = actor.Stones?.Select(ToIdOrDefault).ToList() ?? EquippedBy(from).Select(p => (string?)p).ToList();
+            var pools = actor.Stones.Select(ToIdOrDefault).ToList();
             foreach ((var pool, var slot) in pools.Select((p, slot) => (p, slot)))
             {
                 if (pool == null)
                 {
-                    Logger.Warning($"[Actor.UnknownStone] {actor}: no shiftstone called \"{actor.Stones![slot]}\"");
+                    Logger.Warning($"[Actor.UnknownStone] {actor}: no shiftstone called \"{actor.Stones[slot]}\"");
                     continue;
                 }
 

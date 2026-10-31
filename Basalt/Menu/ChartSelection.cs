@@ -92,8 +92,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 
     public void ReloadCharts()
     {
-        var written = library.Reload();
-        if (written > 0) Logger.Info($"wrote {written} starter chart(s) to {library.Folder}");
+        library.Reload();
 
         foreach (var entry in library.Entries.Where(e => !e.Result.Ok))
             Logger.Info($"chart {Path.GetFileName(entry.File)} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");

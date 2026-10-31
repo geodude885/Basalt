@@ -5,11 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace Basalt.Services.Charts;
 
-// A chart file's JSON, as ChartReader reads it and the writers change it.
 internal static class ChartJson
 {
 
-    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
+    public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
@@ -31,9 +30,9 @@ internal static class ChartJson
         }
     }
 
-    public static JsonNode? ToNode<T>(T value) => JsonSerializer.SerializeToNode(value, Options);
+    public static JsonNode? ToNode<T>(T value) => JsonSerializer.SerializeToNode(value, JsonOptions);
 
-    public static string Write(JsonObject chart) => chart.ToJsonString(Options);
+    public static string Write(JsonObject chart) => chart.ToJsonString(JsonOptions);
 }
 
 internal class ChartDto
@@ -50,13 +49,20 @@ internal class ChartDto
     public PlayerZoneDto? PlayerZone { get; set; }
     public RulesDto? Rules { get; set; }
     public LaneDto? Lane { get; set; }
-    public JsonElement? Bpm { get; set; }
+    public double? Bpm { get; set; }
+    public List<BpmChangeDto>? BpmChanges { get; set; }
     public List<ActorDto>? Actors { get; set; }
     public List<PhaseDto>? Phases { get; set; }
     public List<EventDto>? Events { get; set; }
     public List<ShaderDto>? Shaders { get; set; }
     public ColoursDto? Colours { get; set; }
     public double? End { get; set; }
+}
+
+internal class BpmChangeDto
+{
+    public double? Beat { get; set; }
+    public double? Bpm { get; set; }
 }
 
 internal class ColoursDto
@@ -74,7 +80,6 @@ internal class ShaderDto
     public double? Beat { get; set; }
     public string? Pack { get; set; }
     public Dictionary<string, float>? Values { get; set; }
-    public bool? On { get; set; }
     public bool? Off { get; set; }
     public double? Fade { get; set; }
 }
@@ -112,7 +117,6 @@ internal class ArenaDto
 {
     public string? Map { get; set; }
     public PointDto? At { get; set; }
-    public float? Facing { get; set; }
 }
 
 internal class MusicDto
@@ -134,7 +138,7 @@ internal class ActorDto
     public string? Name { get; set; }
     public PointDto? At { get; set; }
     public string? Look { get; set; }
-    public JsonElement? Shiftstones { get; set; }
+    public List<string>? Shiftstones { get; set; }
     public MeasurementDto? Measurement { get; set; }
 }
 
@@ -167,10 +171,9 @@ internal class ProjectileDto
 {
     public string? Structure { get; set; }
     public PointDto? From { get; set; }
-    public JsonElement? To { get; set; }
+    public PointDto? To { get; set; }
     public float? Speed { get; set; }
     public float? Telegraph { get; set; }
-    public string? Actor { get; set; }
     public bool? Grounded { get; set; }
 }
 

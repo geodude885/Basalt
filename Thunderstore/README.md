@@ -35,9 +35,9 @@ shader looks apply.
 
 ## Charts
 
-Charts live in `UserData/Basalt/Charts`: a `.json` file, a folder holding `chart.json` with its
-song, cover and `clips/`, or a `.bbchart` package. An empty folder gets two starter charts. Charts
-reload by themselves when saved, and a chart that does not load says why on the menu.
+Charts live in `UserData/Basalt/Charts`: a folder holding `chart.json` with its
+song, cover and `clips/`, or a `.bbchart` package. Charts reload by
+themselves when saved, and a chart that does not load says why on the menu.
 
 The format, field by field, is in
 [docs/chart-format.md](https://github.com/geodude885/Basalt/blob/main/docs/chart-format.md).
@@ -54,8 +54,7 @@ Turn on **Chart editing** in the settings. The menu then gains:
   so duets and group dances are recorded one actor at a time.
 - **UNDO:** puts back the chart as it was before its last save.
 
-The settings window also has *New chart* (a commented template that plays as it is, wearing your
-look and stones).
+The settings window also has *New chart* (a blank chart with a boss wearing your look and stones).
 
 **The chart editor** is a separate desktop app for Windows, macOS and Linux, Basalt
 Editor: the song's waveform under a beat grid, projectiles on a top-down lane, phases, colours, and a

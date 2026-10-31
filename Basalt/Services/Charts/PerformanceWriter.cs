@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 
@@ -20,7 +19,7 @@ public static class PerformanceWriter
     public static List<ActorPerformance> PerformancesWithActorsReplaced(Chart chart, string actorId, IReadOnlyList<PerformanceClip> actorClips) =>
         chart.Performances.Where(t => t.ActorId != actorId).Append(new ActorPerformance(actorId, actorClips)).ToList();
 
-    // The performances written, the chart's format raised to one that has performances, and its end moved to cover the last clip.
+    // The performances written, and the chart's end moved to cover the last clip.
     private static string WritePerformances(string chartText, Chart chart, IReadOnlyList<ActorPerformance> performances, double lastClipEnd)
     {
         var chartJson = ChartJson.Parse(chartText);
@@ -30,8 +29,6 @@ public static class PerformanceWriter
             Clips = performance.Clips.Select(c => new PerformanceClipDto { T = c.Time, Clip = c.Clip, Start = c.Start, End = c.End, Mime = c.Mime ? true : null }).ToList(),
         }).ToList());
 
-        var writtenFormat = chartJson["format"] is JsonValue format && format.TryGetValue<int>(out var number) ? number : 1;
-        if (writtenFormat < ChartLoader.PerformancesFormat) chartJson["format"] = ChartLoader.PerformancesFormat;
 
         var end = Math.Max(chart.End, Round(lastClipEnd + EndPadding));
         if (end > chart.End) chartJson["end"] = end;

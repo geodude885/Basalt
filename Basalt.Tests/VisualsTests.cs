@@ -33,16 +33,23 @@ public class VisualsTests
 
     [Theory]
     [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "values": { "Strength": 1 } } ] }""", "needs a pack")]
-    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale" } ] }""", "needs \"values\"")]
     [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale", "off": true, "values": { "Strength": 1 } } ] }""", "both \"off\" and \"values\"")]
-    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale", "on": true, "fade": -1 } ] }""", "fade cannot be negative")]
-    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "beat": 1, "pack": "Grayscale", "on": true } ] }""", "needs the chart's bpm")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale", "fade": -1 } ] }""", "fade cannot be negative")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "beat": 1, "pack": "Grayscale" } ] }""", "needs the chart's bpm")]
     public void RejectsBrokenCues(string json, string expected)
     {
         var result = ChartLoader.Load(json);
 
         Assert.False(result.Ok);
         Assert.Contains(result.Errors, e => e.Contains(expected, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ACueWithoutValuesJustSwitchesThePackOn()
+    {
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale" } ] }""");
+
+        Assert.Empty(Assert.Single(result.Chart!.Shaders).Values);
     }
 
     [Fact]
@@ -196,28 +203,26 @@ public class PhaseColourTests
 public class ActorLookTests
 {
     [Fact]
-    public void ShiftstonesAreThePlayersUnlessNamed()
+    public void AnActorWearsNoShiftstonesUnlessNamed()
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """
             {
               "actors": [
                 { "id": "a" },
-                { "id": "b", "shiftstones": "you" },
-                { "id": "c", "shiftstones": [ "Vigor", "FlowStone" ] },
-                { "id": "d", "shiftstones": [] }
+                { "id": "b", "shiftstones": [ "Vigor", "FlowStone" ] },
+                { "id": "c", "shiftstones": [] }
               ]
             }
             """).Chart!;
 
-        Assert.Null(chart.Actors[0].Shiftstones);
-        Assert.Null(chart.Actors[1].Shiftstones);
-        Assert.Equal(new[] { "Vigor", "FlowStone" }, chart.Actors[2].Shiftstones);
-        Assert.Empty(chart.Actors[3].Shiftstones!);
+        Assert.Empty(chart.Actors[0].Shiftstones);
+        Assert.Equal(new[] { "Vigor", "FlowStone" }, chart.Actors[1].Shiftstones);
+        Assert.Empty(chart.Actors[2].Shiftstones);
     }
 
     [Theory]
     [InlineData(/*lang=json,strict*/ """{ "actors": [ { "shiftstones": [ "A", "B", "C" ] } ] }""", "two at most")]
-    [InlineData(/*lang=json,strict*/ """{ "actors": [ { "shiftstones": "Vigor" } ] }""", "must be \"you\" or a list")]
+    [InlineData(/*lang=json,strict*/ """{ "actors": [ { "shiftstones": [ " " ] } ] }""", "must be a list of stone names")]
     public void RejectsBadShiftstones(string json, string expected) => Assert.Contains(ChartLoader.Load(json).Errors, e => e.Contains(expected, StringComparison.Ordinal));
 
     [Fact]

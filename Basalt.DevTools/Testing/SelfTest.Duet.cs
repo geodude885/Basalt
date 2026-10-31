@@ -12,9 +12,9 @@ internal static partial class SelfTest
 {
     private const string DuetChart = /*lang=json*/ """
         {
-          "format": 1,
+          "format": 3,
           "name": "Duet Test",
-          "arena": { "map": "ring", "at": { "x": 0, "z": -4 }, "facing": 0 },
+          "arena": { "map": "ring", "at": { "x": 0, "z": -4, "facing": 0 } },
           "lane": { "length": 8, "width": 4 },
           "actors": [
             { "id": "lead", "name": "Lead", "at": { "x": -1, "z": 8 } },

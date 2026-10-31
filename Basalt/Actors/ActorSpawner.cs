@@ -68,7 +68,7 @@ internal static class ActorSpawner
         player.Data.VisualData = ActorLook.Resolve(actor, BattlePlayer.Player!.Data.VisualData);
         PresentAsRemote(actor, controller);
 
-        ShiftstoneHelpers.CopyOnto(actor, controller, BattlePlayer.Player?.Controller!);
+        ShiftstoneHelpers.AttachTo(actor, controller);
         var hiddenUi = PlayerUiPaths.Select(path => body.transform.Find(path)).Where(part => part != null).ToArray();
         foreach (var part in hiddenUi) part.localScale = Vector3.zero;
 

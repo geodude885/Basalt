@@ -83,7 +83,6 @@ public class TrackTests
     }
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "performances": [ { "clips": [ { "t": 0, "clip": "a" } ] } ] }""", "format")]
     [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "actor": "nobody", "clips": [] } ] }""", "is not one of the chart's actors")]
     [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "clips": [ { "t": 0 } ] } ] }""", "needs the clip's name")]
     [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "clips": [ { "t": 2, "clip": "a" }, { "t": 1, "clip": "b" } ] } ] }""", "must be after the clip before it")]
@@ -98,7 +97,7 @@ public class TrackTests
     }
 
     [Fact]
-    public void KeepingAClipWritesTheTrackRaisesTheFormatAndCoversTheEnd()
+    public void KeepingAClipWritesThePerformanceAndCoversTheEnd()
     {
         const string text = /*lang=json*/ """
             {
@@ -264,7 +263,7 @@ public class TempoTests
     public void ChartsTimeBeatsThroughTheirTempoChanges()
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """
-            { "bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 8, "bpm": 60 } ], "events": [ { "beat": 10, "move": "Straight" } ] }
+            { "bpm": 120, "bpmChanges": [ { "beat": 8, "bpm": 60 } ], "events": [ { "beat": 10, "move": "Straight" } ] }
             """).Chart!;
 
         Assert.Equal(4 + 2, Assert.Single(chart.Events).Time, 6);
@@ -277,11 +276,11 @@ public class TempoTests
         Assert.Equal(2, Assert.Single(ChartLoader.Load(/*lang=json,strict*/ """{ "bpm": 120, "events": [ { "beat": 4, "move": "Straight" } ] }""").Chart!.Events).Time, 6);
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "bpm": [ { "beat": 4, "bpm": 120 } ] }""", "must be 0")]
-    [InlineData(/*lang=json,strict*/ """{ "bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 0, "bpm": 140 } ] }""", "must be after")]
-    [InlineData(/*lang=json,strict*/ """{ "bpm": [ { "beat": 0, "bpm": -1 } ] }""", "must be over 0")]
-    [InlineData(/*lang=json,strict*/ """{ "bpm": [ { "beat": 0 } ] }""", "needs a beat and a bpm")]
-    [InlineData(/*lang=json,strict*/ """{ "bpm": "fast" }""", "a list of tempo changes")]
+    [InlineData(/*lang=json,strict*/ """{ "bpmChanges": [ { "beat": 8, "bpm": 60 } ] }""", "needs a bpm")]
+    [InlineData(/*lang=json,strict*/ """{ "bpm": 120, "bpmChanges": [ { "beat": 0, "bpm": 140 } ] }""", "must be after")]
+    [InlineData(/*lang=json,strict*/ """{ "bpm": 120, "bpmChanges": [ { "beat": 4, "bpm": -1 } ] }""", "must be over 0")]
+    [InlineData(/*lang=json,strict*/ """{ "bpm": 120, "bpmChanges": [ { "beat": 4 } ] }""", "needs a beat and a bpm")]
+    [InlineData(/*lang=json,strict*/ """{ "bpm": "fast" }""", "not valid chart JSON")]
     [InlineData(/*lang=json,strict*/ """{ "bpm": 0 }""", "must be over 0")]
     public void BadTemposAreReported(string json, string expected) =>
         Assert.Contains(ChartLoader.Load(json).Errors, e => e.Contains(expected, StringComparison.Ordinal));
@@ -292,7 +291,11 @@ public class LaneScaleTests
     [Fact]
     public void ShorteningTheLaneTakesTheChartWithIt()
     {
-        var text = ChartTemplate.Json("Scaled", "me");
+        var text = /*lang=json,strict*/ """
+            { "lane": { "length": 12, "width": 3 }, "actors": [ { "id": "boss", "at": { "x": 0, "z": 12 } } ], "events": [
+              { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 10 }, "speed": 8 } },
+              { "t": 2, "at": { "x": -1, "z": 11 } } ] }
+            """;
         var before = ChartLoader.Load(text).Chart!;
         (var lane, var actors) = LaneSetupWriter.Resize(before.Lane, before.Actors, 9f, before.Lane.Width);
 

@@ -41,7 +41,7 @@ internal static partial class SelfTest
         else
         {
             if (boss.Look != playerLook) problems.Add($"the new chart's boss look is \"{boss.Look}\", not yours");
-            if (boss.Shiftstones == null || !boss.Shiftstones.SequenceEqual(stones)) problems.Add($"the new chart's boss stones are [{string.Join(", ", boss.Shiftstones ?? Array.Empty<string>())}], not yours [{string.Join(", ", stones)}]");
+            if (!boss.Shiftstones.SequenceEqual(stones)) problems.Add($"the new chart's boss stones are [{string.Join(", ", boss.Shiftstones)}], not yours [{string.Join(", ", stones)}]");
         }
 
         if (made != null) yield return PlayAndShoot(made, folder, playerLook, "1-made", problems);
@@ -111,7 +111,7 @@ internal static partial class SelfTest
     {
         _keepPlayerAlive = true;
         var before = Mod.Actors.Actors.ToList();
-        // Warm-up's spot: the template's 12 m lane fits across the Ring from there.
+        // The template's 12 m lane fits across the Ring from this spot.
         Mod.Battle.Start(new BattleRequest(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }) { AssetFolder = folder });
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;

@@ -56,7 +56,7 @@ internal static class TestBench
         var playerRig = PlayerRig.From(playerController);
         var at = playerRig.Feet + (playerRig.Facing * SpawnDistance);
 
-        _actor = new Actor("test", "Test Actor", "you");
+        _actor = new Actor("test", "Test Actor", "you", ShiftstoneHelpers.EquippedBy(playerController));
         Mod.Actors.Spawn(_actor, at, Quaternion.LookRotation(-playerRig.Facing));
         _mirroring = true;
     }

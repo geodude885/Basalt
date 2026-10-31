@@ -1,4 +1,4 @@
-# Basalt chart format (format 2)
+# Basalt chart format (format 3)
 
 A chart is one JSON object. Comments (`//`, `/* */`) and trailing commas are allowed; field names
 are case-insensitive; fields the mod does not know are ignored, so a chart written for a newer
@@ -15,16 +15,15 @@ Point an editor at [chart.schema.json](chart.schema.json) for completion and che
 ## Making one
 
 In game, *New chart* in the settings window makes `Charts/my-chart/chart.json`
-from a template that plays as it is, with a comment on every part, and picks it. Edit it and save:
+blank but for your name, look and stones, and picks it. Edit it and save:
 charts reload by themselves between battles, and one that does not load shows its problems on the
-menu. Put a `song.mp3` and `cover.png` beside it and uncomment their lines. *SETUP* on the menu
+menu. Put a song and cover beside it and add `music` and `cover`. *SETUP* on the menu
 walks the lane in place and writes the `"arena"` line. Basalt Editor packs a finished chart to share.
 
 ## Where a chart lives
 
 | Form | Path | Its song and clips |
 |---|---|---|
-| File | `Charts/<name>.json` | beside it in `Charts/` |
 | Folder | `Charts/<folder>/chart.json` | in the folder; clips in `clips/` |
 | Package | `Charts/<name>.bbchart` | inside the package |
 
@@ -43,7 +42,7 @@ Recorded clips are kept in the chart's own `clips/`.
   compass bearing in degrees: 0 = world +Z, 90 = world +X. Lane setup's *LANE HERE* writes your own
   spot in exactly this form.
 - **Time:** seconds from GO (`t`), or beats (`beat`) when the chart
-  has a `bpm`. With a song, time follows the song: chart time 0 is `music.start` seconds into it.
+  has a `bpm`. With a song, time follows the song: chart time 0 is `music.offset` seconds into it.
 
 ## Top level
 
@@ -57,14 +56,15 @@ Recorded clips are kept in the chart's own `clips/`.
 | `arena` | object | the Ring, at `{ x: 0, z: -6 }` facing north | Where it is played - below. |
 | `music` | object | - | A song - below. |
 | `cover` | path | - | A PNG or JPG beside the chart, shown on the menu (square looks best; up to 16 MB, though 512 px is plenty). |
-| `bpm` | number or list | - | Beats per minute, for `beat` times - or tempo changes: `[ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]` (the first at beat 0; each holds until the next). |
+| `bpm` | number | - | Beats per minute, for `beat` times. |
+| `bpmChanges` | list | none | Tempo changes after the start: `[ { "beat": 64, "bpm": 140 } ]`, each holding until the next. |
 | `lane` | object | 12 x 3 | `length` (over 2) and `width` in metres. |
 | `playerZone` | object | 2 m short of the far end, 3.5 m high | Where you may go: `length` along the lane from your end, `height` above the floor. Invisible walls stop you - not structures, not actors. |
 | `rules` | object | everything allowed | `playerSpawns`: `all`, `discs` (discs only - for moving) or `none` (moves only). `breakStillAfter`: seconds a structure may sit still in a battle before it breaks (default 3; 0 never) - a wall grounded in front of you does not soak up a whole section. `breakBehind`: `true` breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you (default `false`; one you spawn behind yourself goes too). |
 | `actors` | array | one at the far end | Below. |
 | `phases` | array | one, "Battle" | Below. |
 | `events` | array | none | Below. |
-| `performances` | array | none | Recorded performances - below. Needs `"format": 2`. |
+| `performances` | array | none | Recorded performances - below. |
 | `colours` | object | the mod's own | The lane's colours - below. |
 | `shaders` | array | none | Shader looks over time, with [RumbleReShaded](https://github.com/Pepuldope/RumbleReShaded) - below. |
 | `end` | number | last event + 3 s | When you have survived. |
@@ -74,11 +74,10 @@ Recorded clips are kept in the chart's own `clips/`.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `map` | `gym` / `ring` / `pit` | `ring` | Starting the chart takes you there. |
-| `at` | `{ x, z }` | `{ x: 0, z: 0 }` | Where you stand, from the map's centre. The lane runs `lane.length` from here along `facing`. |
-| `facing` | degrees | 0 (north) | The compass direction the lane runs from you. |
+| `at` | `{ x, z, facing }` | `{ x: 0, z: 0 }` | Where you stand, from the map's centre. The lane runs `lane.length` from here along `facing`: the compass direction, in degrees, default 0 (north). |
 
 A chart is always played from its spot, so every run, and every restart, starts from the same place.
-Lane setup in game saves an `at` and `facing` for you.
+Lane setup in game saves an `at` for you.
 
 ### `music`
 
@@ -101,7 +100,7 @@ and shows how far it has got.
 | `name` | string | the id | Shown over its head. |
 | `at` | `{ x, z, facing }` | far end, centre | Its lane spot; `facing` in degrees, 0 = looking down the lane at you. |
 | `look` | string | `you` | `you` (whoever plays), `default`, `defaultMale`, `defaultFemale`, or a character string as the game stores it. A chart made in game stores its maker's, so everyone fights the boss as it was dressed. |
-| `shiftstones` | `"you"` or list | `you` | The stones it wears: `"you"` for whoever plays's, or up to two names - `Adamant`, `Charge`, `Flow`, `Guard`, `Stubborn`, `Surge`, `Vigor`, `Volatile` (`"VigorStone"` works too); `[]` for none. A chart made in game stores its maker's. |
+| `shiftstones` | list | none | The stones it wears, up to two names - `Adamant`, `Charge`, `Flow`, `Guard`, `Stubborn`, `Surge`, `Vigor`, `Volatile` (`"VigorStone"` works too). A chart made in game stores its maker's. |
 | `measurement` | `{ height, armSpan }` | yours | The body's size in metres. KEEPing a clip stores the recorder's, so recorded poses fit the body whoever plays. |
 
 ### `phases[]`
@@ -129,11 +128,10 @@ Each has a time (`t` or `beat`), optionally `actor` (default: the first), and ex
 |---|---|---|---|
 | `structure` | pool name | required | `Disc`, `Ball`, `Pillar`, `Wall`, `RockCube`, `BoulderBall`, `SmallRock`, `LargeRock`. |
 | `from` | `{ x, y, z }` | required | Where it appears: `z` over 0, in the lane or up to 6 m past its far end; `x` up to 6 m outside its sides - shots can come from beyond the boss or across from the side. A grounded one (Disc, cube, Pillar, Wall) needs floor under it there. |
-| `to` | `"player"` or `{ x, y }` | `"player"` | Where it arrives, on your end of the lane. |
+| `to` | `{ x, y }` | at you | Where it arrives, on your end of the lane. |
 | `speed` | m/s | required | Sets the flight time; the arc is chosen so it still arrives where aimed. |
 | `telegraph` | seconds | 0.5 | How long before the throw it is spawned: it comes up out of the floor at `from` like a player's spawn (with the spawn move's sound and dust), waits there, and at `t` flies with the punch's sound. |
 | `grounded` | bool | Pillar, RockCube, Wall: true | Thrown grounded: it rests on the floor in the game's grounded state - more damage - and is driven along the floor at its target (only the target's `x` matters), as a player's straight sends a grounded structure. `false` throws a Pillar, cube or Wall through the air instead; `true` grounds any other structure. A grounded one ignores `from.y`. |
-| `actor` | actor id | the event's, else the first | Who throws it. |
 
 ### `performances[]`
 
@@ -187,8 +185,7 @@ again when the battle ends or stops.
 |---|---|---|---|
 | `t` / `beat` | time | required | When the cue starts. |
 | `pack` | name | required | An RRS pack's name, as in its menu (`UltraShade`, `Grayscale`, ...). Not installed: skipped. |
-| `values` | `{ name: value }` | - | Slider values. A name is the slider's label (`"Chromatic Aberration"`) or property (`"_ChromAb"`, `"ChromAb"`); values are kept within the slider's range. Sliders not named stay as the player has them. |
-| `on` | bool | - | `true`: just switch the pack on, with the player's own values. |
+| `values` | `{ name: value }` | - | Slider values. A name is the slider's label (`"Chromatic Aberration"`) or property (`"_ChromAb"`, `"ChromAb"`); values are kept within the slider's range. Sliders not named stay as the player has them. With none, the pack just switches on with the player's own values. |
 | `off` | bool | - | `true`: fade the pack's charted sliders back to the player's, then put it back on or off as they had it. |
 | `fade` | seconds | 0 | How long the change takes. |
 
@@ -220,8 +217,10 @@ setting; at 0 no events are sent.
 
 ## Versioning
 
-- **Format 2** added `performances`. A chart with performances says `"format": 2`, so an older mod refuses it
-  rather than playing it without its recorded actor. Keeping a clip raises the format for you.
+- **Format 2** added `performances`.
+- **Format 3** changed how fields are written: `bpm` is a number with `bpmChanges` beside it, `to` is a point or left
+  out, `facing` moved into `arena.at`, `shiftstones` left out means none, and `projectile.actor` and a shader's `on`
+  are gone. Older charts are not converted by the mod.
 
 
 `format` changes only when an existing chart would be read differently. New optional fields do not

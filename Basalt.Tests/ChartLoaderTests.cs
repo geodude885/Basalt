@@ -23,8 +23,8 @@ public class ChartLoaderTests
           ],
           "events": [
             { "t": 2, "projectile": { "structure": "Disc", "from": { "x": -1, "y": 1.4, "z": 10 },
-                                      "to": { "x": 0.8, "y": 1.2 }, "speed": 12, "telegraph": 0.6, "actor": "dummy" } },
-            { "t": 3, "projectile": { "structure": "Ball", "from": { "x": 1, "y": 1, "z": 11 }, "to": "player", "speed": 10 } },
+                                      "to": { "x": 0.8, "y": 1.2 }, "speed": 12, "telegraph": 0.6 } },
+            { "t": 3, "projectile": { "structure": "Ball", "from": { "x": 1, "y": 1, "z": 11 }, "speed": 10 } },
             { "t": 5, "actor": "add", "move": "Straight" },
             { "t": 8, "at": { "x": -1, "z": 11 } },
             { "t": 20, "actor": "add", "at": { "x": 1, "z": 10 } },
@@ -103,7 +103,7 @@ public class ChartLoaderTests
                 { "t": 0.2, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 10 }, "speed": 10, "telegraph": 1 } },
                 { "t": 3, "move": "Kick", "at": { "x": 0, "z": 5 } },
                 { "t": 4, "actor": "ghost", "move": "Kick" },
-                { "t": 5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 10, "to": "nowhere" } }
+                { "t": 5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 10, "to": { "x": 1 } } }
               ]
             }
             """);
@@ -120,7 +120,7 @@ public class ChartLoaderTests
         Assert.Contains("events[3].projectile would appear before the battle starts", all, StringComparison.Ordinal);
         Assert.Contains("events[4] needs exactly one of projectile, move or at (has 2)", all, StringComparison.Ordinal);
         Assert.Contains("events[5].actor \"ghost\" is not one of the chart's actors", all, StringComparison.Ordinal);
-        Assert.Contains("events[6].projectile.to must be \"player\" or", all, StringComparison.Ordinal);
+        Assert.Contains("events[6].projectile.to needs x and y", all, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -134,30 +134,12 @@ public class ChartLoaderTests
     }
 
     [Fact]
-    public void ASpotOnAPhaseIsAnError()
-    {
-        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "t": 0, "at": { "x": 1, "z": 9 } } ] }""");
-
-        Assert.Contains(result.Errors, e => e.Contains("phases[0].at", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public void BrokenJsonIsAnErrorNotAThrow()
     {
         var result = ChartLoader.Load("{ \"events\": [ ");
 
         Assert.False(result.Ok);
         Assert.StartsWith("not valid chart JSON", result.Errors[0], StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void EveryStarterChartLoads()
-    {
-        foreach ((var file, var json) in StarterCharts.All)
-        {
-            var result = ChartLoader.Load(json);
-            Assert.True(result.Ok, $"{file}: {string.Join("; ", result.Errors)}");
-        }
     }
 
     [Fact]
@@ -190,24 +172,21 @@ public class ChartLoaderTests
               "actors": [ { "id": "boss", "at": { "x": 0, "z": 10 } }, { "id": "add", "at": { "x": 1, "z": 10 } } ],
               "events": [
                 { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } },
-                { "t": 2, "actor": "add", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } },
-                { "t": 3, "actor": "add", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, "actor": "boss" } }
+                { "t": 2, "actor": "add", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } }
               ]
             }
             """).Chart!;
 
-        Assert.Equal(["boss", "add", "boss"], chart.Events.Cast<ProjectileEvent>().Select(p => p.ActorId));
+        Assert.Equal(["boss", "add"], chart.Events.Cast<ProjectileEvent>().Select(p => p.ActorId));
     }
 
     [Fact]
     public void ANamedActorMustExistOnAProjectile() =>
         Assert.Contains(
-            ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, "actor": "nobody" } } ] }""").Errors,
-            e => e.Contains(".projectile.actor", StringComparison.Ordinal));
+            ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 1, "actor": "nobody", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } } ] }""").Errors,
+            e => e.Contains("events[0].actor", StringComparison.Ordinal));
 
     [Fact]
-    public void AnArenaFacingInsideAtIsAnError() =>
-        Assert.Contains(
-            ChartLoader.Load(/*lang=json,strict*/ """{ "arena": { "map": "ring", "at": { "x": 0, "z": -6, "facing": 90 } } }""").Errors,
-            e => e.Contains("arena.at.facing", StringComparison.Ordinal));
+    public void AnArenasFacingIsPartOfItsSpot() =>
+        Assert.Equal(90f, ChartLoader.Load(/*lang=json,strict*/ """{ "arena": { "map": "ring", "at": { "x": 0, "z": -6, "facing": 90 } } }""").Chart!.Arena.Facing);
 }

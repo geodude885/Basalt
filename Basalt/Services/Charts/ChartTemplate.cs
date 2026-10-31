@@ -1,14 +1,8 @@
 namespace Basalt.Services.Charts;
 
-/// <summary>A new chart folder whose <c>chart.json</c> plays as it is and explains each part in comments.</summary>
 public static class ChartTemplate
 {
-    /// <summary>Creates <c>&lt;charts&gt;/&lt;stem&gt;/chart.json</c> in a fresh folder; returns the folder.</summary>
-    /// <param name="chartsFolder">The chart folder to make it in.</param>
-    /// <param name="name">Its name, also its folder's.</param>
-    /// <param name="author">Who made it; null for "you".</param>
-    /// <param name="look">The maker's look string for the boss; null for whoever plays.</param>
-    /// <param name="stones">The maker's equipped stones, for the boss; null for whoever plays.</param>
+    // Creates new chart with player look and shiftstones
     public static string Create(string chartsFolder, string name, string? author, string? look = null, IReadOnlyList<string>? stones = null)
     {
         var stem = ChartFiles.SanitizeFileStem(name).ToLowerInvariant();
@@ -21,59 +15,13 @@ public static class ChartTemplate
 
     public static string Json(string name, string? author, string? look = null, IReadOnlyList<string>? stones = null) => $$"""
         {
-          // A Basalt chart. Save this file and the game reloads it - pick it on the chart picker
-          // and press START. The full format: docs/chart-format.md in the mod's repository.
-          "format": 1,
+          "format": {{ChartLoader.NewestFormat}},
           "name": {{Quote(name)}},
           "author": {{Quote(author ?? "you")}},
-          "difficulty": "Easy",
-          "description": "My first chart.",
-
-          // Where it is played: "gym", "ring" or "pit", standing "at" metres from the map's centre (the Gym:
-          // the world origin), the lane running along "facing" (compass degrees). Starting it takes you there.
-          // Easiest: turn on Chart editing in the settings and press SETUP on the picker - walk the
-          // lane, resize it, and SAVE writes this line (and "lane" and "actors") for you.
-          "arena": { "map": "ring", "at": { "x": 0, "z": -6 }, "facing": 0 },
-
-          // A song and a cover image, put beside this file - uncomment to use them. Songs: MP3 or OGG.
-          // "music": { "file": "song.mp3", "offset": 0, "volume": 1 },
-          // "cover": "cover.png",
-
-          // With a bpm you can time events in beats ("beat": 4) instead of seconds ("t": 2). A song
-          // that changes tempo: "bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ].
-          "bpm": 120,
-
-          // The lane runs from you (z = 0) to the far end (z = length). x is across: negative left.
+          "arena": { "map": "ring", "at": { "x": 0, "z": -6, "facing": 0 } },
           "lane": { "length": 12, "width": 3 },
-
-          // Where the player may go: up to "length" down the lane and "height" up. Without it: 2 m short
-          // of the far end, 3.5 m high. "rules": what they may spawn - "all", "discs" or "none".
-          "playerZone": { "length": 10, "height": 3.5 },
-          "rules": { "playerSpawns": "all" },
-
-          // Who stands in the lane. "look" and "shiftstones" are yours as you made this chart, so
-          // everyone fights the boss you dressed; "you" for either gives it whoever plays.
-          "actors": [ { "id": "boss", "name": "Boss", "at": { "x": 0, "z": 12 }, "look": {{Quote(look ?? "you")}}, "shiftstones": {{(stones == null ? "\"you\"" : "[" + string.Join(", ", stones.Select(Quote)) + "]")}} } ],
-
-          "events": [
-            // A projectile: it comes up out of the floor at "from" "telegraph" seconds before it is
-            // thrown, then flies at "speed" towards "to" - "player" (you) or a point { "x", "y" }.
-            { "beat": 4,  "projectile": { "structure": "Disc", "from": { "x": 0,  "y": 1.4, "z": 10 }, "to": "player", "speed": 8, "telegraph": 1.0, "actor": "boss" } },
-            { "beat": 8,  "projectile": { "structure": "Disc", "from": { "x": -1, "y": 1.2, "z": 10 }, "to": { "x": 0.8, "y": 1.3 }, "speed": 9, "telegraph": 1.0 } },
-            { "beat": 12, "projectile": { "structure": "Ball", "from": { "x": 1,  "y": 1.0, "z": 9 },  "to": "player", "speed": 8, "telegraph": 1.0 } },
-
-            // The boss does one of its own moves...
-            { "beat": 16, "move": "Straight" },
-
-            // ...or walks to another spot. To record the boss's whole performance instead, turn on
-            // Chart editing and press RECORD on the picker.
-            { "beat": 18, "at": { "x": -1, "z": 11 } },
-
-            { "beat": 22, "projectile": { "structure": "Disc", "from": { "x": -1, "y": 1.4, "z": 10 }, "to": "player", "speed": 10, "telegraph": 0.8, "actor": "boss" } }
-          ],
-
-          // You have survived at 16 seconds (32 beats at 120 bpm). Without "end": 3 s after the last event.
-          "end": 16
+          "actors": [ { "id": "boss", "name": "Boss", "at": { "x": 0, "z": 12 }, "look": {{Quote(look ?? "you")}}, "shiftstones": [{{string.Join(", ", (stones ?? []).Select(Quote))}}] } ],
+          "events": []
         }
         """;
 

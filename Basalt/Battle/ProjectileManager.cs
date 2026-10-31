@@ -1,5 +1,6 @@
 using Basalt.Actors;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;

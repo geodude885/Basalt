@@ -1,6 +1,7 @@
 using System.Numerics;
 using Basalt.DevTools.Testing;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Xunit;
 
 namespace Basalt.Tests;
@@ -17,15 +18,16 @@ public class ChartLoaderTests
             { "id": "add", "at": { "x": -1, "z": 10, "facing": 20 }, "look": "default" },
           ],
           "phases": [
-            { "name": "Warm-up", "start": 0 },
-            { "name": "Open", "start": 20, "scoreMultiplier": 2, "actor": "add", "at": { "x": 1, "z": 10 } },
+            { "name": "Warm-up", "t": 0 },
+            { "name": "Open", "t": 20, "scoreMultiplier": 2 },
           ],
           "events": [
             { "t": 2, "projectile": { "structure": "Disc", "from": { "x": -1, "y": 1.4, "z": 10 },
-                                      "to": { "x": 0.8, "y": 1.2 }, "speed": 12, "telegraph": 0.6, "by": "dummy" } },
+                                      "to": { "x": 0.8, "y": 1.2 }, "speed": 12, "telegraph": 0.6, "actor": "dummy" } },
             { "t": 3, "projectile": { "structure": "Ball", "from": { "x": 1, "y": 1, "z": 11 }, "to": "player", "speed": 10 } },
             { "t": 5, "actor": "add", "move": "Straight" },
             { "t": 8, "at": { "x": -1, "z": 11 } },
+            { "t": 20, "actor": "add", "at": { "x": 1, "z": 10 } },
           ],
           "end": 40,
         }
@@ -48,34 +50,32 @@ public class ChartLoaderTests
         Assert.Equal(new ActorSpec("add", "add", new Spot(-1, 10, 20), "default"), chart.Actors[1]);
         Assert.Same(chart.Actors[0], chart.DefaultActor);
 
-        Assert.Equal("add", chart.Phases[1].ActorId);
-        Assert.Equal(new Spot(1, 10), chart.Phases[1].At);
-
         var disc = Assert.IsType<ProjectileEvent>(chart.Events[0]);
         Assert.Equal(new Vector3(-1f, 1.4f, 10f), disc.From);
         Assert.Equal(Aim.Point(0.8f, 1.2f), disc.To);
-        Assert.Equal("dummy", disc.By);
-        Assert.Equal(1.4, disc.SpawnTime, 6);
+        Assert.Equal("dummy", disc.ActorId);
+        Assert.Equal(1.4, disc.Time - disc.Telegraph, 6);
 
         var ball = Assert.IsType<ProjectileEvent>(chart.Events[1]);
         Assert.True(ball.To.AtPlayer);
-        Assert.Null(ball.By);
+        Assert.Equal("dummy", ball.ActorId);
         Assert.Equal(ChartLoader.DefaultTelegraph, ball.Telegraph);
 
         Assert.Equal("add", Assert.IsType<MoveEvent>(chart.Events[2]).ActorId);
         Assert.Equal("dummy", Assert.IsType<PlaceEvent>(chart.Events[3]).ActorId);
+        Assert.Equal(new PlaceEvent(20, 4, "add", new Spot(1, 10)), chart.Events[4]);
     }
 
     [Fact]
     public void BeatsBecomeSecondsAtTheChartsBpm()
     {
         var result = ChartLoader.Load(/*lang=json,strict*/ """
-            { "bpm": 120, "phases": [ { "start": 0 }, { "startBeat": 16 } ], "events": [ { "beat": 8, "move": "Kick" } ] }
+            { "bpm": 120, "phases": [ { "t": 0 }, { "beat": 16 } ], "events": [ { "beat": 8, "move": "Kick" } ] }
             """);
 
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         Assert.Equal(4.0, result.Chart!.Events[0].Time, 6);
-        Assert.Equal(8.0, result.Chart.Phases[1].Start, 6);
+        Assert.Equal(8.0, result.Chart.Phases[1].Time, 6);
     }
 
     [Fact]
@@ -126,11 +126,19 @@ public class ChartLoaderTests
     [Fact]
     public void PhasesMustStartAtZeroAndGoForwards()
     {
-        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 5 }, { "start": 3 } ] }""");
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "t": 5 }, { "t": 3 } ] }""");
 
         var all = string.Join("\n", result.Errors);
         Assert.Contains("phases[0] must start at 0", all, StringComparison.Ordinal);
-        Assert.Contains("phases[1].start (3) must be after phases[0] (5)", all, StringComparison.Ordinal);
+        Assert.Contains("phases[1].t (3) must be after phases[0] (5)", all, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ASpotOnAPhaseIsAnError()
+    {
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "t": 0, "at": { "x": 1, "z": 9 } } ] }""");
+
+        Assert.Contains(result.Errors, e => e.Contains("phases[0].at", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -173,4 +181,33 @@ public class ChartLoaderTests
         Assert.Contains(ChartLoader.Load(/*lang=json,strict*/ """{ "actors": [ { "measurement": { "height": 9 } } ] }""").Errors,
             e => e.StartsWith("actors[0].measurement", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void AProjectilesActorIsItsOwnThenItsEventsThenTheFirst()
+    {
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
+            {
+              "actors": [ { "id": "boss", "at": { "x": 0, "z": 10 } }, { "id": "add", "at": { "x": 1, "z": 10 } } ],
+              "events": [
+                { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } },
+                { "t": 2, "actor": "add", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } },
+                { "t": 3, "actor": "add", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, "actor": "boss" } }
+              ]
+            }
+            """).Chart!;
+
+        Assert.Equal(["boss", "add", "boss"], chart.Events.Cast<ProjectileEvent>().Select(p => p.ActorId));
+    }
+
+    [Fact]
+    public void ANamedActorMustExistOnAProjectile() =>
+        Assert.Contains(
+            ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 1, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, "actor": "nobody" } } ] }""").Errors,
+            e => e.Contains(".projectile.actor", StringComparison.Ordinal));
+
+    [Fact]
+    public void AnArenaFacingInsideAtIsAnError() =>
+        Assert.Contains(
+            ChartLoader.Load(/*lang=json,strict*/ """{ "arena": { "map": "ring", "at": { "x": 0, "z": -6, "facing": 90 } } }""").Errors,
+            e => e.Contains("arena.at.facing", StringComparison.Ordinal));
 }

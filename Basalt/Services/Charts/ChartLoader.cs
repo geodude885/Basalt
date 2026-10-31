@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
+using Basalt.Services.Charts.Model;
 using static Basalt.Services.Charts.ChartLoader;
 
 namespace Basalt.Services.Charts;
@@ -26,8 +27,8 @@ public static class ChartLoader
     /// <summary>The newest chart format this build reads. A chart may say which it was written for with "format".</summary>
     public const int NewestFormat = 2;
 
-    /// <summary>Recorded tracks arrived in format 2: a chart using them says so, so an older mod refuses it rather than playing it without them.</summary>
-    public const int TracksFormat = 2;
+    /// <summary>Recorded performances arrived in format 2: a chart using them says so, so an older mod refuses it rather than playing it without them.</summary>
+    public const int PerformancesFormat = 2;
 
     /// <summary>Song files a chart may name; Unity decodes these.</summary>
     public static readonly IReadOnlyList<string> MusicExtensions = new[] { ".ogg", ".mp3" };
@@ -99,12 +100,12 @@ internal class ChartReader(ChartDto dto)
             Arena = ReadArena(dto.Arena),
             Music = ReadMusic(dto.Music),
             Cover = ReadCover(dto.Cover),
-            Tracks = Tracks(),
-            Zone = ReadZone(dto.Zone),
+            Performances = Performances(),
+            PlayerZone = ReadPlayerZone(dto.PlayerZone),
             Rules = ReadRules(dto.Rules),
             Tempo = _tempo,
-            Visuals = ReadVisuals(dto.Visuals),
-            Colours = ReadColours(dto.Colours ?? dto.Colors, "colours") ?? LaneColours.Default,
+            Shaders = ReadShaders(dto.Shaders),
+            Colours = ReadColours(dto.Colours, "colours") ?? LaneColours.Default,
         };
     }
 
@@ -127,19 +128,21 @@ internal class ChartReader(ChartDto dto)
             return new ArenaSpec(map);
         }
 
+        if (arena.At?.Facing != null) Errors.Add("arena.at.facing is not read - facing goes beside at, in arena.facing");
+
         return new ArenaSpec(map, arena.At?.X ?? 0f, arena.At?.Z ?? 0f, arena.Facing ?? 0f);
     }
 
-    private Zone ReadZone(ZoneDto? zone)
+    private PlayerZone ReadPlayerZone(PlayerZoneDto? zone)
     {
-        var defaults = Zone.For(_lane);
+        var defaults = PlayerZone.For(_lane);
         if (zone == null) return defaults;
 
         var length = zone.Length ?? defaults.Length;
         var height = zone.Height ?? defaults.Height;
-        if (length <= 0f || length > _lane.Length) Errors.Add($"zone.length ({Format(length)}) must be over 0 and up to the lane's length ({Format(_lane.Length)})");
-        if (height < 1f) Errors.Add($"zone.height ({Format(height)}) must be at least 1 m - room to stand");
-        return new Zone(length, height);
+        if (length <= 0f || length > _lane.Length) Errors.Add($"playerZone.length ({Format(length)}) must be over 0 and up to the lane's length ({Format(_lane.Length)})");
+        if (height < 1f) Errors.Add($"playerZone.height ({Format(height)}) must be at least 1 m - room to stand");
+        return new PlayerZone(length, height);
     }
 
     private LaneColours? ReadColours(ColoursDto? colours, string path)
@@ -154,29 +157,29 @@ internal class ChartReader(ChartDto dto)
             return null;
         }
 
-        return new LaneColours(Read(colours.Edges, "edges"), Read(colours.Ends, "ends"), Read(colours.Zone, "zone"), Read(colours.Backstop, "backstop"), Read(colours.Walls, "walls"));
+        return new LaneColours(Read(colours.SideLines, "sideLines"), Read(colours.EndLines, "endLines"), Read(colours.ZoneLine, "zoneLine"), Read(colours.Backstop, "backstop"), Read(colours.Walls, "walls"));
     }
 
-    private List<VisualCue> ReadVisuals(List<VisualDto>? visuals)
+    private List<ShaderCue> ReadShaders(List<ShaderDto>? shaders)
     {
-        var cues = new List<VisualCue>();
-        if (visuals == null) return cues;
+        var cues = new List<ShaderCue>();
+        if (shaders == null) return cues;
 
-        foreach ((var v, var i) in visuals.Select((v, i) => (v, i)))
+        foreach ((var v, var i) in shaders.Select((v, i) => (v, i)))
         {
-            var path = $"visuals[{i}]";
+            var path = $"shaders[{i}]";
             var before = Errors.Count;
 
             var time = Time(v.T, v.Beat, path);
             if (string.IsNullOrWhiteSpace(v.Pack)) Errors.Add($"{path} needs a pack - a RumbleReShaded pack's name, e.g. \"UltraShade\"");
             var off = v.Off ?? false;
-            if (off && v.Set is { Count: > 0 }) Errors.Add($"{path} has both \"off\" and \"set\" - an off fades the pack back to the player's own settings");
-            if (!off && v.Set is not { Count: > 0 } && v.On != true) Errors.Add($"{path} needs \"set\" (parameter values), \"on\": true or \"off\": true");
+            if (off && v.Values is { Count: > 0 }) Errors.Add($"{path} has both \"off\" and \"values\" - an off fades the pack back to the player's own settings");
+            if (!off && v.Values is not { Count: > 0 } && v.On != true) Errors.Add($"{path} needs \"values\" (slider values), \"on\": true or \"off\": true");
             var fade = v.Fade ?? 0;
             if (fade < 0) Errors.Add($"{path}.fade cannot be negative (got {Format(fade)})");
 
             if (Errors.Count == before)
-                cues.Add(new VisualCue(time!.Value, v.Pack!.Trim(), new Dictionary<string, float>(v.Set ?? [], StringComparer.OrdinalIgnoreCase), off, fade));
+                cues.Add(new ShaderCue(time!.Value, v.Pack!.Trim(), new Dictionary<string, float>(v.Values ?? [], StringComparer.OrdinalIgnoreCase), off, fade));
         }
 
         return cues.OrderBy(c => c.Time).ToList();
@@ -187,53 +190,53 @@ internal class ChartReader(ChartDto dto)
         if (rules == null) return Rules.Default;
 
         var spawn = SpawnRule.All;
-        if (rules.Spawn != null && !Enum.TryParse(rules.Spawn, ignoreCase: true, out spawn))
+        if (rules.PlayerSpawns != null && !Enum.TryParse(rules.PlayerSpawns, ignoreCase: true, out spawn))
         {
-            Errors.Add($"rules.spawn \"{rules.Spawn}\" is not one of all, discs, none");
+            Errors.Add($"rules.playerSpawns \"{rules.PlayerSpawns}\" is not one of all, discs, none");
             spawn = SpawnRule.All;
         }
 
-        var cleanup = rules.Cleanup ?? Rules.DefaultCleanupSeconds;
-        if (cleanup < 0) Errors.Add($"rules.cleanup cannot be negative (got {Format(cleanup)}) - 0 turns it off");
-        return new Rules(spawn) { CleanupSeconds = Math.Max(0, cleanup), BreakBehind = rules.BreakBehind ?? false };
+        var breakStillAfter = rules.BreakStillAfter ?? Rules.DefaultBreakStillAfterSeconds;
+        if (breakStillAfter < 0) Errors.Add($"rules.breakStillAfter cannot be negative (got {Format(breakStillAfter)}) - 0 turns it off");
+        return new Rules(spawn) { BreakStillAfterSeconds = Math.Max(0, breakStillAfter), BreakBehind = rules.BreakBehind ?? false };
     }
 
-    private List<Track> Tracks()
+    private List<ActorPerformance> Performances()
     {
-        var tracks = new List<Track>();
-        if (dto.Tracks == null || dto.Tracks.Count == 0) return tracks;
+        var performances = new List<ActorPerformance>();
+        if (dto.Performances == null || dto.Performances.Count == 0) return performances;
 
-        if ((dto.Format ?? 1) < TracksFormat)
-            Errors.Add($"tracks need \"format\": {TracksFormat} or later - set it at the top of the chart");
+        if ((dto.Format ?? 1) < PerformancesFormat)
+            Errors.Add($"performances need \"format\": {PerformancesFormat} or later - set it at the top of the chart");
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach ((var track, var i) in dto.Tracks.Select((t, i) => (t, i)))
+        foreach ((var performance, var i) in dto.Performances.Select((t, i) => (t, i)))
         {
-            var path = $"tracks[{i}]";
-            var actor = track.Actor == null ? _defaultActorId : ActorRef(track.Actor, $"{path}.actor");
-            if (!seen.Add(actor)) Errors.Add($"{path}: \"{actor}\" already has a track - one per actor");
+            var path = $"performances[{i}]";
+            var actor = performance.Actor == null ? _defaultActorId : ActorRef(performance.Actor, $"{path}.actor");
+            if (!seen.Add(actor)) Errors.Add($"{path}: \"{actor}\" already has a performance - one per actor");
 
-            var clips = new List<TrackClip>();
-            foreach ((var clip, var j) in (track.Clips ?? []).Select((t, j) => (t, j)))
+            var clips = new List<PerformanceClip>();
+            foreach ((var clip, var j) in (performance.Clips ?? []).Select((t, j) => (t, j)))
             {
                 var clipPath = $"{path}.clips[{j}]";
 
                 var time = Time(clip.T, clip.Beat, clipPath);
                 if (string.IsNullOrWhiteSpace(clip.Clip)) Errors.Add($"{clipPath}.clip needs the clip's name (a file in clips/)");
-                var from = clip.From ?? 0;
-                if (from < 0) Errors.Add($"{clipPath}.from cannot be negative (got {Format(from)})");
-                if (clip.To is { } to && to <= from) Errors.Add($"{clipPath}.to ({Format(to)}) must be after from ({Format(from)})");
+                var start = clip.Start ?? 0;
+                if (start < 0) Errors.Add($"{clipPath}.start cannot be negative (got {Format(start)})");
+                if (clip.End is { } end && end <= start) Errors.Add($"{clipPath}.end ({Format(end)}) must be after start ({Format(start)})");
                 if (time == null || string.IsNullOrWhiteSpace(clip.Clip)) continue;
 
                 if (clips.Count > 0 && time <= clips[^1].Time)
                     Errors.Add($"{clipPath}.t ({Format(time.Value)}) must be after the clip before it ({Format(clips[^1].Time)})");
-                clips.Add(new TrackClip(time.Value, clip.Clip, from, clip.To) { Mime = clip.Mime ?? false });
+                clips.Add(new PerformanceClip(time.Value, clip.Clip, start, clip.End) { Mime = clip.Mime ?? false });
             }
 
-            tracks.Add(new Track(actor, clips));
+            performances.Add(new ActorPerformance(actor, clips));
         }
 
-        return tracks;
+        return performances;
     }
 
     private string? ReadCover(string? cover)
@@ -267,12 +270,12 @@ internal class ChartReader(ChartDto dto)
         else if (!MusicExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
             Errors.Add($"music.file \"{file}\" must be one of {string.Join(", ", MusicExtensions)}");
 
-        var start = music.Start ?? 0;
+        var offset = music.Offset ?? 0;
 
         var volume = music.Volume ?? 1f;
         if (volume is < 0f or > 1f) Errors.Add($"music.volume must be 0 to 1 (got {Format(volume)})");
 
-        return Errors.Count == before ? new MusicSpec(file, start, volume) : null;
+        return Errors.Count == before ? new MusicSpec(file, offset, volume) : null;
     }
 
     /// <summary><c>"bpm": 120</c>, or tempo changes: <c>"bpm": [ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]</c>.</summary>
@@ -294,7 +297,7 @@ internal class ChartReader(ChartDto dto)
             return null;
         }
 
-        var changes = new List<TempoChange>();
+        var changes = new List<TempoSection>();
         var index = 0;
         foreach (var change in value.EnumerateArray())
         {
@@ -309,7 +312,7 @@ internal class ChartReader(ChartDto dto)
             if (rate <= 0) Errors.Add($"{path}.bpm must be over 0 (got {Format(rate)})");
             else if (changes.Count == 0 && beat != 0) Errors.Add($"{path}.beat must be 0 - the first tempo starts the song");
             else if (changes.Count > 0 && beat <= changes[^1].Beat) Errors.Add($"{path}.beat ({Format(beat)}) must be after the change before it ({Format(changes[^1].Beat)})");
-            else changes.Add(new TempoChange(beat, rate));
+            else changes.Add(new TempoSection(beat, rate));
         }
 
         if (changes.Count == 0)
@@ -390,27 +393,24 @@ internal class ChartReader(ChartDto dto)
 
     private List<Phase> Phases()
     {
-        if (dto.Phases == null || dto.Phases.Count == 0) return [new("Battle", 0, 1, null, null)];
+        if (dto.Phases == null || dto.Phases.Count == 0) return [new("Battle", 0, 1)];
 
         var phases = new List<Phase>();
         foreach ((var phase, var i) in dto.Phases.Select((p, i) => (p, i)))
         {
             var path = $"phases[{i}]";
 
-            var start = Time(phase.Start, phase.StartBeat, path, "start", "startBeat") ?? 0;
-            if (i == 0 && start != 0) Errors.Add($"{path} must start at 0 - the first phase starts the battle");
-            if (i > 0 && start <= phases[^1].Start)
-                Errors.Add($"{path}.start ({Format(start)}) must be after phases[{i - 1}] ({Format(phases[^1].Start)})");
+            var time = Time(phase.T, phase.Beat, path) ?? 0;
+            if (i == 0 && time != 0) Errors.Add($"{path} must start at 0 - the first phase starts the battle");
+            if (i > 0 && time <= phases[^1].Time)
+                Errors.Add($"{path}.t ({Format(time)}) must be after phases[{i - 1}] ({Format(phases[^1].Time)})");
 
             var multiplier = phase.ScoreMultiplier ?? 1;
             if (multiplier <= 0) Errors.Add($"{path}.scoreMultiplier must be over 0 (got {Format(multiplier)})");
 
-            var actor = phase.Actor == null ? null : ActorRef(phase.Actor, $"{path}.actor");
-            Spot? at = phase.At == null ? null : ReadSpot(phase.At, $"{path}.at");
-
-            phases.Add(new Phase(string.IsNullOrWhiteSpace(phase.Name) ? $"Phase {i + 1}" : phase.Name, start, multiplier, actor, at)
+            phases.Add(new Phase(string.IsNullOrWhiteSpace(phase.Name) ? $"Phase {i + 1}" : phase.Name, time, multiplier)
             {
-                Colours = ReadColours(phase.Colours ?? phase.Colors, $"{path}.colours"),
+                Colours = ReadColours(phase.Colours, $"{path}.colours"),
             });
         }
 
@@ -440,7 +440,7 @@ internal class ChartReader(ChartDto dto)
 
             if (e.Projectile != null)
             {
-                var projectile = Projectile(e.Projectile, time.Value, i, $"{path}.projectile");
+                var projectile = Projectile(e.Projectile, time.Value, i, $"{path}.projectile", actor);
                 if (projectile != null) events.Add(projectile);
             }
             else if (e.Move != null)
@@ -457,7 +457,7 @@ internal class ChartReader(ChartDto dto)
         return events;
     }
 
-    private ProjectileEvent? Projectile(ProjectileDto p, double time, int order, string path)
+    private ProjectileEvent? Projectile(ProjectileDto p, double time, int order, string path, string eventActor)
     {
         var before = Errors.Count;
 
@@ -507,9 +507,9 @@ internal class ChartReader(ChartDto dto)
         else if (time - telegraph < 0)
             Errors.Add($"{path} would appear before the battle starts: launch at {Format(time)} with a {Format(telegraph)} s telegraph");
 
-        var by = p.By == null ? null : ActorRef(p.By, $"{path}.by");
+        var actor = p.Actor == null ? eventActor : ActorRef(p.Actor, $"{path}.actor");
 
-        return Errors.Count == before ? new ProjectileEvent(time, order, p.Structure!, from, aim, speed, telegraph, by) { Grounded = p.Grounded } : null;
+        return Errors.Count == before ? new ProjectileEvent(time, order, p.Structure!, from, aim, speed, telegraph, actor) { Grounded = p.Grounded } : null;
     }
 
     private string ActorRef(string id, string path)
@@ -548,7 +548,7 @@ internal class ChartReader(ChartDto dto)
             return null;
         }
 
-        if (beats != null) seconds = _tempo!.Seconds(beats.Value);
+        if (beats != null) seconds = _tempo!.BeatToSeconds(beats.Value);
 
         if (seconds == null)
         {

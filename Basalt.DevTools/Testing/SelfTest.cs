@@ -5,6 +5,7 @@ using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
 using Basalt.Menu;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Scoring;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using MelonLoader;
@@ -490,7 +491,7 @@ internal static partial class SelfTest
             ("right", new Vector2(1f, 0f), 3f, p => p.x <= (lane.Width / 2f) + 0.9f),
             ("left", new Vector2(-1f, 0f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("back", new Vector2(0f, -1f), 3f, p => p.z >= -1.6f),
-            ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Run?.Request.Chart?.Zone.Length ?? lane.Length) + 0.9f),
+            ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Run?.Request.Chart?.PlayerZone.Length ?? lane.Length) + 0.9f),
             ("forward left", new Vector2(-0.7f, 0.7f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("forward right", new Vector2(0.7f, 0.7f), 5f, p => p.x <= (lane.Width / 2f) + 0.9f),
         };

@@ -9,7 +9,7 @@ internal interface IShaderProvider
 
     void PreloadPacks(IEnumerable<string> packNames);
 
-    void ApplyLooksAt(IReadOnlyList<VisualCue> cues, double chartTime);
+    void ApplyLooksAt(IReadOnlyList<ShaderCue> cues, double chartTime);
 
     void ReleaseAllPacks();
 

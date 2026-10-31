@@ -1,3 +1,5 @@
+using Basalt.Services.Charts.Model;
+
 namespace Basalt.Services.Charts;
 
 public abstract record ChartCommand(double Time);
@@ -11,7 +13,7 @@ public record SpawnProjectile(double Time, int Id, ProjectileEvent Projectile) :
 
 public record LaunchProjectile(double Time, int Id, ProjectileEvent Projectile) : ChartCommand(Time);
 
-public record RunMove(double Time, string ActorId, string Stack) : ChartCommand(Time);
+public record RunMove(double Time, string ActorId, string Move) : ChartCommand(Time);
 
 public record PlayClip(double Time, string ActorId, string Clip, double From, double? To) : ChartCommand(Time)
 {

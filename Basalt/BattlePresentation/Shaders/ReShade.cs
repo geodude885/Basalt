@@ -34,7 +34,7 @@ internal class ReShade : IShaderProvider
         foreach (var name in packNames.Distinct(StringComparer.OrdinalIgnoreCase)) RRS.Preload(name);
     }
 
-    public void ApplyLooksAt(IReadOnlyList<VisualCue> cues, double chartTime)
+    public void ApplyLooksAt(IReadOnlyList<ShaderCue> cues, double chartTime)
     {
         if (cues.Count == 0) return;
 

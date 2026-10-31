@@ -36,11 +36,11 @@ internal static partial class SelfTest
         yield return RecordAndKeep(file, "partner", "lead", problems);
 
         var duet = Reloaded(file).Result.Chart;
-        var tracks = duet?.Tracks.Select(t => $"{t.ActorId}: {string.Join(", ", t.Clips.Select(c => c.Clip))}").ToList() ?? [];
-        Logger.Info($"[SelfTest] duet tracks: {string.Join(" | ", tracks)}");
-        if (duet == null || duet.Tracks.Count != 2 || duet.Tracks.Any(t => t.Clips.Count != 1))
+        var performances = duet?.Performances.Select(t => $"{t.ActorId}: {string.Join(", ", t.Clips.Select(c => c.Clip))}").ToList() ?? [];
+        Logger.Info($"[SelfTest] duet performances: {string.Join(" | ", performances)}");
+        if (duet == null || duet.Performances.Count != 2 || duet.Performances.Any(t => t.Clips.Count != 1))
         {
-            problems.Add($"keeping both takes left {tracks.Count} track(s): {string.Join(" | ", tracks)}");
+            problems.Add($"keeping both takes left {performances.Count} performance(s): {string.Join(" | ", performances)}");
             yield break;
         }
 

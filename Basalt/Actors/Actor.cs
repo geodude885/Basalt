@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using Basalt.Battle;
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using MelonLoader;

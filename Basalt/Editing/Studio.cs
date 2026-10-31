@@ -1,6 +1,7 @@
 using Basalt.Battle;
 using Basalt.BattlePresentation;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 
 namespace Basalt.Editing;
@@ -70,11 +71,11 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (NewClip == null || Chart == null || Entry == null) return;
 
-        var whole = TrackWriter.WholeClipTrack(NewClip, _recordingStartedAtChartTime, Mime);
+        var whole = PerformanceWriter.WholeClipPerformance(NewClip, _recordingStartedAtChartTime, Mime);
         var chart = Chart with
         {
-            Tracks = TrackWriter.TracksWithActorTrackReplaced(Chart, _actorId, whole),
-            End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + TrackWriter.EndPadding),
+            Performances = PerformanceWriter.PerformancesWithActorsReplaced(Chart, _actorId, whole),
+            End = Math.Max(Chart.End, _recordingStartedAtChartTime + NewClip.Duration + PerformanceWriter.EndPadding),
         };
         battle.Start(StudioBattle(chart) with { Mode = BattleMode.Review, Lane = _recordedLane, PendingClip = NewClip });
         State = StudioState.Reviewing;
@@ -88,7 +89,7 @@ internal class Studio(BattleController battle, GameAssets assets)
         ChartClips().Save(clip);
 
         var chartText = File.ReadAllText(Entry.File);
-        var keptText = TrackWriter.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
+        var keptText = PerformanceWriter.KeepWhole(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
         if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } playerMeasurement)
         {

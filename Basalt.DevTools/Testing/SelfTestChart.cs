@@ -15,21 +15,22 @@ public static class SelfTestChart
           "author": "Basalt",
           "difficulty": "Test",
           "description": "A few seconds touching every command - what the automated self-test plays.",
-          "zone": { "length": 6, "height": 2.5 },
-          "rules": { "spawn": "discs", "cleanup": 2 },
-          "colours": { "edges": "#33ccff", "ends": "#ff3399", "walls": "#66ccff33" },
+          "playerZone": { "length": 6, "height": 2.5 },
+          "rules": { "playerSpawns": "discs", "breakStillAfter": 2 },
+          "colours": { "sideLines": "#33ccff", "endLines": "#ff3399", "walls": "#66ccff33" },
           "lane": { "length": 10, "width": 3 },
           "actors": [ { "id": "probe", "name": "Self Test", "at": { "x": 0, "z": 10 }, "shiftstones": [ "Vigor", "Flow" ] } ],
-          "phases": [ { "name": "Start", "start": 0 }, { "name": "Moved", "start": 3, "at": { "x": 1, "z": 9 }, "colours": { "edges": "#ffaa00", "walls": "none" } } ],
+          "phases": [ { "name": "Start", "t": 0 }, { "name": "Moved", "t": 3, "colours": { "sideLines": "#ffaa00", "walls": "none" } } ],
           "events": [
-            { "t": 1.5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 8 }, "to": "player", "speed": 10, "telegraph": 0.5, "by": "probe" } },
+            { "t": 1.5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1.4, "z": 8 }, "to": "player", "speed": 10, "telegraph": 0.5, "actor": "probe" } },
             { "t": 2, "projectile": { "structure": "RockCube", "from": { "x": 1.2, "y": 0, "z": 8 }, "to": { "x": 1.4, "y": 1 }, "speed": 8, "telegraph": 0.5 } },
             { "t": 2.5, "projectile": { "structure": "Ball", "from": { "x": -1, "y": 1.2, "z": 8 }, "to": { "x": 0.5, "y": 1.2 }, "speed": 8, "telegraph": 0.5 } },
+            { "t": 3,   "at": { "x": 1, "z": 9 } },
             { "t": 3.2, "projectile": { "structure": "RockCube", "from": { "x": -1.2, "y": 0, "z": 8 }, "to": { "x": -1.4, "y": 1 }, "speed": 8, "telegraph": 0.5 } },
             { "t": 4,   "move": "SpawnCube" },
             { "t": 5,   "at": { "x": 0, "z": 10 } }
           ],
-          "tracks": [ { "actor": "probe", "clips": [ { "t": 5.5, "clip": "selftest-sway" } ] } ],
+          "performances": [ { "actor": "probe", "clips": [ { "t": 5.5, "clip": "selftest-sway" } ] } ],
           "end": 7
         }
         """;

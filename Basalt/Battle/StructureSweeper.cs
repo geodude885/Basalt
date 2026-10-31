@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.MoveSystem;
 using UnityEngine;
 
@@ -45,7 +46,7 @@ internal class StructureSweeper
 
     public void Update(Rules rules, Anchor? lane)
     {
-        var afterSeconds = rules.CleanupSeconds;
+        var afterSeconds = rules.BreakStillAfterSeconds;
         var behind = rules.BreakBehind ? lane : null;
         if ((afterSeconds <= 0 && behind == null) || Time.time < _nextSweep) return;
         _nextSweep = Time.time + 0.25f;

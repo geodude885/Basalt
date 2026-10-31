@@ -23,5 +23,6 @@ public readonly record struct Anchor(Vector3 Position, float Yaw)
 
     public float ToWorldYaw(float localYaw) => AngleHelpers.Wrap(localYaw + Yaw);
 
+    // Actor looks in opposite direction of a lane anchor (lane's 0 degrees is 180 for actor)
     public float ActorYaw(float facing) => ToWorldYaw(180f + facing);
 }

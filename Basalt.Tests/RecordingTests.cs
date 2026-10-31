@@ -2,6 +2,7 @@ using System.Numerics;
 using Basalt.DevTools.Testing;
 using Basalt.Services;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 using Xunit;
 
@@ -64,16 +65,16 @@ public class TrackTests
             {
               "format": 2,
               "actors": [ { "id": "boss" } ],
-              "tracks": [ { "actor": "boss", "clips": [
+              "performances": [ { "actor": "boss", "clips": [
                 { "t": 0, "clip": "boss-clip-1" },
-                { "t": 8, "clip": "boss-clip-2", "from": 8, "to": 12 },
-                { "t": 12, "clip": "boss-clip-1", "from": 12 }
+                { "t": 8, "clip": "boss-clip-2", "start": 8, "end": 12 },
+                { "t": 12, "clip": "boss-clip-1", "start": 12 }
               ] } ]
             }
             """);
 
-        var track = Assert.Single(chart.Tracks);
-        Assert.Equal(3, track.Clips.Count);
+        var performance = Assert.Single(chart.Performances);
+        Assert.Equal(3, performance.Clips.Count);
 
         var plays = new ChartRunner(chart).Schedule.OfType<PlayClip>().ToList();
         Assert.Equal(new PlayClip(0, "boss", "boss-clip-1", 0, 8), plays[0]);
@@ -82,12 +83,12 @@ public class TrackTests
     }
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "tracks": [ { "clips": [ { "t": 0, "clip": "a" } ] } ] }""", "format")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "actor": "nobody", "clips": [] } ] }""", "is not one of the chart's actors")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [ { "t": 0 } ] } ] }""", "needs the clip's name")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [ { "t": 2, "clip": "a" }, { "t": 1, "clip": "b" } ] } ] }""", "must be after the clip before it")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [ { "t": 0, "clip": "a", "from": 3, "to": 2 } ] } ] }""", "must be after from")]
-    [InlineData(/*lang=json,strict*/ """{ "format": 2, "tracks": [ { "clips": [] }, { "clips": [] } ] }""", "one per actor")]
+    [InlineData(/*lang=json,strict*/ """{ "performances": [ { "clips": [ { "t": 0, "clip": "a" } ] } ] }""", "format")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "actor": "nobody", "clips": [] } ] }""", "is not one of the chart's actors")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "clips": [ { "t": 0 } ] } ] }""", "needs the clip's name")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "clips": [ { "t": 2, "clip": "a" }, { "t": 1, "clip": "b" } ] } ] }""", "must be after the clip before it")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "clips": [ { "t": 0, "clip": "a", "start": 3, "end": 2 } ] } ] }""", "must be after start")]
+    [InlineData(/*lang=json,strict*/ """{ "format": 2, "performances": [ { "clips": [] }, { "clips": [] } ] }""", "one per actor")]
     public void BadTracksAreReported(string json, string expected)
     {
         var result = ChartLoader.Load(json);
@@ -111,14 +112,14 @@ public class TrackTests
         var chart = Load(text);
         var clip = Recorded("boss-clip-1", 0f, 9.5f);
 
-        var kept = TrackWriter.KeepWhole(text, chart, "boss", clip, 0);
+        var kept = PerformanceWriter.KeepWhole(text, chart, "boss", clip, 0);
         var after = Load(kept);
 
-        Assert.Equal(new TrackClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
+        Assert.Equal(new PerformanceClip(0, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Performances).Clips));
         Assert.Equal(10.5, after.End);
 
-        var again = TrackWriter.KeepWhole(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
-        Assert.Equal("boss-clip-2", Assert.Single(Assert.Single(Load(again).Tracks).Clips).Clip);
+        var again = PerformanceWriter.KeepWhole(kept, after, "boss", Recorded("boss-clip-2", 0f, 3f), 0);
+        Assert.Equal("boss-clip-2", Assert.Single(Assert.Single(Load(again).Performances).Clips).Clip);
         Assert.Equal(10.5, Load(again).End);
     }
 
@@ -126,9 +127,9 @@ public class TrackTests
     public void AClipRecordedLateStartsAtZeroAndTheTrackPlacesIt()
     {
         const string text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ], "end": 5 }""";
-        var after = Load(TrackWriter.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
+        var after = Load(PerformanceWriter.KeepWhole(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), 40));
 
-        Assert.Equal(new TrackClip(40, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Tracks).Clips));
+        Assert.Equal(new PerformanceClip(40, "boss-clip-1", 0), Assert.Single(Assert.Single(after.Performances).Clips));
         Assert.Equal(45, after.End);
     }
 
@@ -250,11 +251,11 @@ public class TempoTests
     [Fact]
     public void BeatsCrossTempoChanges()
     {
-        var tempo = new TempoMap(new[] { new TempoChange(0, 120), new TempoChange(64, 140) });
+        var tempo = new TempoMap(new[] { new TempoSection(0, 120), new TempoSection(64, 140) });
 
-        Assert.Equal(32, tempo.Seconds(64), 6);
-        Assert.Equal(32 + (6 * 60.0 / 140), tempo.Seconds(70), 6);
-        Assert.Equal(70, tempo.Beat(tempo.Seconds(70)), 6);
+        Assert.Equal(32, tempo.BeatToSeconds(64), 6);
+        Assert.Equal(32 + (6 * 60.0 / 140), tempo.BeatToSeconds(70), 6);
+        Assert.Equal(70, tempo.SecondsToBeat(tempo.BeatToSeconds(70)), 6);
         Assert.Equal(120, tempo.BpmAt(10));
         Assert.Equal(140, tempo.BpmAt(40));
     }
@@ -349,33 +350,33 @@ public class ZoneAndRulesTests
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 } }""").Chart!;
 
-        Assert.Equal(new Zone(10f, Zone.DefaultHeight), chart.Zone);
-        Assert.Equal(SpawnRule.All, chart.Rules.Spawn);
-        Assert.Equal(new Zone(1.5f, Zone.DefaultHeight), ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 3, "width": 3 } }""").Chart!.Zone);
+        Assert.Equal(new PlayerZone(10f, PlayerZone.DefaultHeight), chart.PlayerZone);
+        Assert.Equal(SpawnRule.All, chart.Rules.PlayerSpawns);
+        Assert.Equal(new PlayerZone(1.5f, PlayerZone.DefaultHeight), ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 3, "width": 3 } }""").Chart!.PlayerZone);
     }
 
     [Fact]
     public void AChartSetsItsZoneAndRules()
     {
-        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "zone": { "length": 6, "height": 2.5 }, "rules": { "spawn": "Discs" } }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "playerZone": { "length": 6, "height": 2.5 }, "rules": { "playerSpawns": "Discs" } }""").Chart!;
 
-        Assert.Equal(new Zone(6f, 2.5f), chart.Zone);
-        Assert.Equal(SpawnRule.Discs, chart.Rules.Spawn);
+        Assert.Equal(new PlayerZone(6f, 2.5f), chart.PlayerZone);
+        Assert.Equal(SpawnRule.Discs, chart.Rules.PlayerSpawns);
     }
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "zone": { "length": 20 } }""", "zone.length")]
-    [InlineData(/*lang=json,strict*/ """{ "zone": { "height": 0.5 } }""", "zone.height")]
-    [InlineData(/*lang=json,strict*/ """{ "rules": { "spawn": "some" } }""", "rules.spawn")]
+    [InlineData(/*lang=json,strict*/ """{ "playerZone": { "length": 20 } }""", "playerZone.length")]
+    [InlineData(/*lang=json,strict*/ """{ "playerZone": { "height": 0.5 } }""", "playerZone.height")]
+    [InlineData(/*lang=json,strict*/ """{ "rules": { "playerSpawns": "some" } }""", "rules.playerSpawns")]
     public void BadZonesAndRulesAreReported(string json, string expected) =>
         Assert.Contains(ChartLoader.Load(json).Errors, e => e.Contains(expected, StringComparison.Ordinal));
 
     [Fact]
     public void TheZoneGoesWithTheLane()
     {
-        const string text = /*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 }, "zone": { "length": 8, "height": 3 } }""";
+        const string text = /*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 }, "playerZone": { "length": 8, "height": 3 } }""";
         var scaled = LaneSetupWriter.ScaleDepth(text, 0.75f, 9f);
 
-        Assert.Equal(6f, ChartLoader.Load(scaled).Chart!.Zone.Length);
+        Assert.Equal(6f, ChartLoader.Load(scaled).Chart!.PlayerZone.Length);
     }
 }

@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 
 namespace Basalt.Battle;

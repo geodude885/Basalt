@@ -72,7 +72,7 @@
           "type": "string",
           "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:).+\\.(ogg|mp3)$"
         },
-        "start": {
+        "offset": {
           "type": "number",
           "default": 0
         },
@@ -214,11 +214,11 @@
           "name": {
             "type": "string"
           },
-          "start": {
+          "t": {
             "type": "number",
             "minimum": 0
           },
-          "startBeat": {
+          "beat": {
             "type": "number",
             "minimum": 0
           },
@@ -226,13 +226,13 @@
             "type": "object",
             "description": "The lane's colours from this phase on, over the chart's.",
             "properties": {
-              "edges": {
+              "sideLines": {
                 "$ref": "#/$defs/colour"
               },
-              "ends": {
+              "endLines": {
                 "$ref": "#/$defs/colour"
               },
-              "zone": {
+              "zoneLine": {
                 "$ref": "#/$defs/colour"
               },
               "backstop": {
@@ -247,12 +247,6 @@
             "type": "number",
             "exclusiveMinimum": 0,
             "default": 1
-          },
-          "actor": {
-            "type": "string"
-          },
-          "at": {
-            "$ref": "#/$defs/spot"
           }
         }
       }
@@ -344,7 +338,7 @@
                 "type": "boolean",
                 "description": "Thrown along the floor in the game's grounded state. Default true for Pillar, RockCube and Wall."
               },
-              "by": {
+              "actor": {
                 "type": "string"
               }
             },
@@ -402,7 +396,7 @@
       "type": "number",
       "minimum": 0
     },
-    "tracks": {
+    "performances": {
       "type": "array",
       "description": "Recorded performances, written by RECORD / KEEP. Needs format 2.",
       "items": {
@@ -427,11 +421,11 @@
                 "clip": {
                   "type": "string"
                 },
-                "from": {
+                "start": {
                   "type": "number",
                   "minimum": 0
                 },
-                "to": {
+                "end": {
                   "type": "number"
                 },
                 "mime": {
@@ -446,7 +440,7 @@
         }
       }
     },
-    "zone": {
+    "playerZone": {
       "type": "object",
       "description": "Where you may go: length along the lane from your end, height above the floor.",
       "properties": {
@@ -465,13 +459,13 @@
       "type": "object",
       "description": "The lane's colours, as #RRGGBB or #RRGGBBAA.",
       "properties": {
-        "edges": {
+        "sideLines": {
           "$ref": "#/$defs/colour"
         },
-        "ends": {
+        "endLines": {
           "$ref": "#/$defs/colour"
         },
-        "zone": {
+        "zoneLine": {
           "$ref": "#/$defs/colour"
         },
         "backstop": {
@@ -483,7 +477,7 @@
         }
       }
     },
-    "visuals": {
+    "shaders": {
       "type": "array",
       "description": "Shader looks over time, for players with RumbleReShaded.",
       "items": {
@@ -501,7 +495,7 @@
             "type": "string",
             "description": "An installed RumbleReShaded pack's name, e.g. UltraShade."
           },
-          "set": {
+          "values": {
             "type": "object",
             "additionalProperties": {
               "type": "number"
@@ -533,13 +527,13 @@
           "default": false,
           "description": "Breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you."
         },
-        "cleanup": {
+        "breakStillAfter": {
           "type": "number",
           "minimum": 0,
           "default": 3,
           "description": "Seconds a structure may sit still in a battle before it breaks; 0 never."
         },
-        "spawn": {
+        "playerSpawns": {
           "enum": [
             "all",
             "discs",

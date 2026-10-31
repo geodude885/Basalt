@@ -3,6 +3,7 @@ using Basalt.Actors;
 using Basalt.Battle;
 using Basalt.Editing;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using UnityEngine;
 
 namespace Basalt.Menu;
@@ -140,7 +141,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     {
         try
         {
-            var name = ChartFiles.CreateFileNameAvoidingDuplicates("My Chart", " ", candidate => library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
+            var name = ChartFiles.UniqueFileName("My Chart", " ", candidate => library.Entries.Any(e => string.Equals(e.Name, candidate, StringComparison.OrdinalIgnoreCase)));
 
             var localPlayer = BattlePlayer.Player;
             var look = localPlayer?.Data?.VisualData?.ToPlayfabDataString();

@@ -1,7 +1,7 @@
 using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Services;
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using UnityEngine;
 
 namespace Basalt.Menu;

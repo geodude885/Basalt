@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Basalt.Services.Charts.Model;
 
 namespace Basalt.Services.Charts;
 
@@ -32,17 +33,16 @@ public static class LaneSetupWriter
         return ChartJson.Write(chart);
     }
 
-    // Every "z" in the events and phases, and the zone's length, scaled by `factor`, so the chart keeps its shape on a
+    // Every "z" in the events, and the player zone's length, scaled by `factor`, so the chart keeps its shape on a
     // resized lane.
     public static string ScaleDepth(string chartText, float factor, float length)
     {
         if (Math.Abs(factor - 1f) < 0.001f) return chartText;
 
-        // Projectiles may start past the far end; actor spots stay in the lane, and so does your zone.
+        // Projectiles may start past the far end; your zone stays in the lane.
         var chart = ChartJson.Parse(chartText);
         ScaleNumbersNamed("z", chart["events"], factor, 0, length + ChartLoader.ProjectileReach);
-        ScaleNumbersNamed("z", chart["phases"], factor, 0, length);
-        ScaleNumbersNamed("length", chart["zone"], factor, 0.5, length);
+        ScaleNumbersNamed("length", chart["playerZone"], factor, 0.5, length);
         return ChartJson.Write(chart);
     }
 

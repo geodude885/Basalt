@@ -87,12 +87,12 @@ internal class ArenaVisuals(GameAssets assets)
 
     private static Dictionary<Part, Color> Targets(LaneColours colours)
     {
-        var edge = PickColour(colours.Edges, EdgeColour);
+        var edge = PickColour(colours.SideLines, EdgeColour);
         return new Dictionary<Part, Color>
         {
             [Part.Edge] = edge,
-            [Part.End] = PickColour(colours.Ends, EndColour),
-            [Part.Zone] = PickColour(colours.Zone, ZoneColour),
+            [Part.End] = PickColour(colours.EndLines, EndColour),
+            [Part.Zone] = PickColour(colours.ZoneLine, ZoneColour),
             [Part.Frame] = PickColour(colours.Backstop, edge),
             [Part.Pane] = PickColour(colours.Walls, new Color(0f, 0f, 0f, 0f)),
             [Part.ActorMarker] = ActorMarkerColour,

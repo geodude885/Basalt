@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Xunit;
 
 namespace Basalt.Tests;
@@ -14,28 +15,28 @@ public class VisualsTests
         var chart = Load(/*lang=json,strict*/ """
             {
               "bpm": 120,
-              "visuals": [
-                { "beat": 8, "pack": "Grayscale", "set": { "Strength": 1 }, "fade": 2 },
-                { "t": 1, "pack": "UltraShade", "set": { "Saturation": 0.5, "_Vignette": 0.6 } },
+              "shaders": [
+                { "beat": 8, "pack": "Grayscale", "values": { "Strength": 1 }, "fade": 2 },
+                { "t": 1, "pack": "UltraShade", "values": { "Saturation": 0.5, "_Vignette": 0.6 } },
                 { "t": 10, "pack": "UltraShade", "off": true, "fade": 1 }
               ]
             }
             """);
 
-        Assert.Equal(new[] { 1.0, 4.0, 10.0 }, chart.Visuals.Select(v => v.Time));
-        var first = chart.Visuals[0];
+        Assert.Equal(new[] { 1.0, 4.0, 10.0 }, chart.Shaders.Select(v => v.Time));
+        var first = chart.Shaders[0];
         Assert.Equal("UltraShade", first.Pack);
-        Assert.Equal(0.5f, first.Set["saturation"]);
-        Assert.True(chart.Visuals[2].Off);
-        Assert.Equal(2, chart.Visuals[1].Fade);
+        Assert.Equal(0.5f, first.Values["saturation"]);
+        Assert.True(chart.Shaders[2].Off);
+        Assert.Equal(2, chart.Shaders[1].Fade);
     }
 
     [Theory]
-    [InlineData(/*lang=json,strict*/ """{ "visuals": [ { "t": 1, "set": { "Strength": 1 } } ] }""", "needs a pack")]
-    [InlineData(/*lang=json,strict*/ """{ "visuals": [ { "t": 1, "pack": "Grayscale" } ] }""", "needs \"set\"")]
-    [InlineData(/*lang=json,strict*/ """{ "visuals": [ { "t": 1, "pack": "Grayscale", "off": true, "set": { "Strength": 1 } } ] }""", "both \"off\" and \"set\"")]
-    [InlineData(/*lang=json,strict*/ """{ "visuals": [ { "t": 1, "pack": "Grayscale", "on": true, "fade": -1 } ] }""", "fade cannot be negative")]
-    [InlineData(/*lang=json,strict*/ """{ "visuals": [ { "beat": 1, "pack": "Grayscale", "on": true } ] }""", "needs the chart's bpm")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "values": { "Strength": 1 } } ] }""", "needs a pack")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale" } ] }""", "needs \"values\"")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale", "off": true, "values": { "Strength": 1 } } ] }""", "both \"off\" and \"values\"")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "t": 1, "pack": "Grayscale", "on": true, "fade": -1 } ] }""", "fade cannot be negative")]
+    [InlineData(/*lang=json,strict*/ """{ "shaders": [ { "beat": 1, "pack": "Grayscale", "on": true } ] }""", "needs the chart's bpm")]
     public void RejectsBrokenCues(string json, string expected)
     {
         var result = ChartLoader.Load(json);
@@ -81,7 +82,7 @@ public class VisualsTests
         var cues = new[]
         {
             Cue(0, "Pack", 0, ("Strength", 0f)),
-            new VisualCue(4, "Pack", new Dictionary<string, float>(), Off: true, Fade: 2),
+            new ShaderCue(4, "Pack", new Dictionary<string, float>(), Off: true, Fade: 2),
         };
 
         var fading = LookTimeline.Evaluate(cues, 5, Yours)["Pack"];
@@ -104,7 +105,7 @@ public class VisualsTests
         Assert.Equal(2f, looks["Other"].Values["X"]);
     }
 
-    private static VisualCue Cue(double t, string pack, double fade, params (string Key, float Value)[] set) =>
+    private static ShaderCue Cue(double t, string pack, double fade, params (string Key, float Value)[] set) =>
         new(t, pack, set.ToDictionary(s => s.Key, s => s.Value, StringComparer.OrdinalIgnoreCase), false, fade);
 
     private static Chart Load(string json)
@@ -130,24 +131,23 @@ public class LaneColourTests
     }
 
     [Fact]
-    public void ReadsColoursEitherSpelling()
+    public void ReadsColours()
     {
-        var uk = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "#33ccff", "walls": "#66ccff33" } }""").Chart!;
-        var americanSpelling = ChartLoader.Load(/*lang=json,strict*/ """{ "colors": { "ends": "#ff3399" } }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "sideLines": "#33ccff", "walls": "#66ccff33" } }""").Chart!;
 
-        Assert.Equal(0.2f, uk.Colours.Walls!.Value.A, 3);
-        Assert.Null(uk.Colours.Ends);
-        Assert.NotNull(americanSpelling.Colours.Ends);
+        Assert.Equal(0.2f, chart.Colours.Walls!.Value.A, 3);
+        Assert.NotNull(chart.Colours.SideLines);
+        Assert.Null(chart.Colours.EndLines);
         Assert.Null(ChartLoader.Load("{}").Chart!.Colours.Walls);
     }
 
     [Fact]
     public void RejectsABadColour()
     {
-        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "edges": "orange" } }""");
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "colours": { "sideLines": "orange" } }""");
 
         Assert.False(result.Ok);
-        Assert.Contains(result.Errors, e => e.Contains("colours.edges", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, e => e.Contains("colours.sideLines", StringComparison.Ordinal));
     }
 }
 
@@ -158,36 +158,38 @@ public class PhaseColourTests
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """
             {
-              "colours": { "edges": "#00ff00", "walls": "#66ccff33" },
-              "phases": [ { "name": "A", "start": 0 }, { "name": "B", "start": 5, "colours": { "ends": "#ff0000", "walls": "none" } } ]
+              "colours": { "sideLines": "#00ff00", "walls": "#66ccff33" },
+              "phases": [ { "name": "A", "t": 0 }, { "name": "B", "t": 5, "colours": { "endLines": "#ff0000", "walls": "none" } } ]
             }
             """).Chart!;
 
         var first = chart.ColoursIn(chart.Phases[0]);
         var second = chart.ColoursIn(chart.Phases[1]);
+        var everShowsWalls = chart.Colours.ShowsWalls || chart.Phases.Any(p => p.Colours?.ShowsWalls == true);
 
         Assert.True(first.ShowsWalls);
-        Assert.Equal(chart.Colours.Edges, second.Edges);
-        Assert.Equal(1f, second.Ends!.Value.R);
+        Assert.True(everShowsWalls);
+        Assert.Equal(chart.Colours.SideLines, second.SideLines);
+        Assert.Equal(1f, second.EndLines!.Value.R);
         Assert.False(second.ShowsWalls);
-        Assert.True(chart.EverShowsWalls);
     }
 
     [Fact]
     public void WallsShownOnlyInAPhaseStillGetPanes()
     {
-        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 0 }, { "start": 2, "colors": { "walls": "#ffffff40" } } ] }""").Chart!;
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "t": 0 }, { "t": 2, "colours": { "walls": "#ffffff40" } } ] }""").Chart!;
+        var everShowsWalls = chart.Colours.ShowsWalls || chart.Phases.Any(p => p.Colours?.ShowsWalls == true);
 
         Assert.False(chart.ColoursIn(chart.Phases[0]).ShowsWalls);
-        Assert.True(chart.EverShowsWalls);
+        Assert.True(everShowsWalls);
     }
 
     [Fact]
     public void ABadPhaseColourNamesThePhase()
     {
-        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "start": 0, "colours": { "edges": "blue" } } ] }""");
+        var result = ChartLoader.Load(/*lang=json,strict*/ """{ "phases": [ { "t": 0, "colours": { "sideLines": "blue" } } ] }""");
 
-        Assert.Contains(result.Errors, e => e.Contains("phases[0].colours.edges", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, e => e.Contains("phases[0].colours.sideLines", StringComparison.Ordinal));
     }
 }
 
@@ -263,7 +265,7 @@ public class ProjectileReachTests
     [Fact]
     public void ResizingTheLaneKeepsShotsPastItsEnd()
     {
-        var chart = /*lang=json,strict*/ """{ "events": [ { "t": 1, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 10 }, "speed": 9 } } ], "phases": [ { "start": 0, "at": { "x": 0, "z": 8 } } ] }""";
+        var chart = /*lang=json,strict*/ """{ "events": [ { "t": 1, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 10 }, "speed": 9 } }, { "t": 2, "at": { "x": 0, "z": 8 } } ] }""";
 
         var scaled = LaneSetupWriter.ScaleDepth(chart, 0.5f, 4f);
 
@@ -278,11 +280,11 @@ public class MimeClipTests
     public void AMimedClipIsReadAndPlayedMimed()
     {
         var chart = ChartLoader.Load(/*lang=json,strict*/ """
-            { "format": 2, "tracks": [ { "clips": [ { "t": 0, "clip": "a" }, { "t": 5, "clip": "b", "mime": true } ] } ] }
+            { "format": 2, "performances": [ { "clips": [ { "t": 0, "clip": "a" }, { "t": 5, "clip": "b", "mime": true } ] } ] }
             """).Chart!;
 
-        Assert.False(chart.Tracks[0].Clips[0].Mime);
-        Assert.True(chart.Tracks[0].Clips[1].Mime);
+        Assert.False(chart.Performances[0].Clips[0].Mime);
+        Assert.True(chart.Performances[0].Clips[1].Mime);
 
         var plays = new ChartRunner(chart).Advance(10).OfType<PlayClip>().ToList();
         Assert.False(plays[0].Mime);
@@ -301,8 +303,8 @@ public class MimeClipTests
 
         var clip = new Services.Clips.Clip("boss-clip-1", new[] { Frame(0), Frame(4) });
 
-        var whole = TrackWriter.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
-        Assert.True(ChartLoader.Load(whole).Chart!.Tracks[0].Clips[0].Mime);
+        var whole = PerformanceWriter.KeepWhole(/*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ] }""", chart, "boss", clip, 0, mime: true);
+        Assert.True(ChartLoader.Load(whole).Chart!.Performances[0].Clips[0].Mime);
     }
 }
 
@@ -343,20 +345,20 @@ public class GroundedAndCleanupTests
     [Fact]
     public void CleanupDefaultsToThreeSecondsAndCanBeOff()
     {
-        Assert.Equal(3, ChartLoader.Load("{}").Chart!.Rules.CleanupSeconds);
-        Assert.Equal(0, ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "cleanup": 0 } }""").Chart!.Rules.CleanupSeconds);
-        Assert.Equal(SpawnRule.Discs, ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "spawn": "discs", "cleanup": 5 } }""").Chart!.Rules.Spawn);
-        Assert.False(ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "cleanup": -1 } }""").Ok);
+        Assert.Equal(3, ChartLoader.Load("{}").Chart!.Rules.BreakStillAfterSeconds);
+        Assert.Equal(0, ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "breakStillAfter": 0 } }""").Chart!.Rules.BreakStillAfterSeconds);
+        Assert.Equal(SpawnRule.Discs, ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "playerSpawns": "discs", "breakStillAfter": 5 } }""").Chart!.Rules.PlayerSpawns);
+        Assert.False(ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "breakStillAfter": -1 } }""").Ok);
     }
 
     [Fact]
     public void BreakingBehindIsOffUnlessAsked()
     {
         Assert.False(ChartLoader.Load("{}").Chart!.Rules.BreakBehind);
-        Assert.False(ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "cleanup": 5 } }""").Chart!.Rules.BreakBehind);
+        Assert.False(ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "breakStillAfter": 5 } }""").Chart!.Rules.BreakBehind);
 
         var rules = ChartLoader.Load(/*lang=json,strict*/ """{ "rules": { "breakBehind": true } }""").Chart!.Rules;
         Assert.True(rules.BreakBehind);
-        Assert.Equal(Rules.DefaultCleanupSeconds, rules.CleanupSeconds);
+        Assert.Equal(Rules.DefaultBreakStillAfterSeconds, rules.BreakStillAfterSeconds);
     }
 }

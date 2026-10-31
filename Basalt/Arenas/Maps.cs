@@ -1,5 +1,6 @@
 using Basalt.Services;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppPhoton.Pun;
 using UnityEngine;
 using UnityEngine.SceneManagement;

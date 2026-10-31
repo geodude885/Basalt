@@ -1,5 +1,5 @@
 using Basalt.Battle;
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
 
@@ -15,7 +15,7 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
         set => shaders?.ShaderIntensity = Math.Clamp(value, 0f, 1f);
     }
 
-    public void PreloadChartPacks(Chart chart) => shaders?.PreloadPacks(chart.Visuals.Select(v => v.Pack));
+    public void PreloadChartPacks(Chart chart) => shaders?.PreloadPacks(chart.Shaders.Select(v => v.Pack));
 
     public void Reset() => _lastBeat = -1;
 
@@ -23,7 +23,7 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
     {
         if (shaders == null) return;
 
-        shaders.ApplyLooksAt(chart.Visuals, chartTime);
+        shaders.ApplyLooksAt(chart.Shaders, chartTime);
 
         shaders.SetGlobal("running", 1f);
         shaders.SetGlobal("time", (float)chartTime);
@@ -32,7 +32,7 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
 
         if (chart.Tempo is not { } tempo) return;
 
-        var beat = tempo.Beat(Math.Max(0, chartTime));
+        var beat = tempo.SecondsToBeat(Math.Max(0, chartTime));
         shaders.SetGlobal("beat", (float)(beat - Math.Floor(beat)));
 
         var wholeBeat = (long)Math.Floor(beat);

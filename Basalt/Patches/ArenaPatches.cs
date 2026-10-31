@@ -1,5 +1,5 @@
 using Basalt.Battle;
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using HarmonyLib;
 using Il2CppRUMBLE.Networking.MatchFlow;
 

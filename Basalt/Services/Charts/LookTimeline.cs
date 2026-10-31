@@ -1,10 +1,10 @@
 namespace Basalt.Services.Charts;
 
 /// <summary>
-/// A RumbleReShaded pack turned on at <see cref="Time"/> with the values in <see cref="Set"/>,
+/// A RumbleReShaded pack turned on at <see cref="Time"/> with the values in <see cref="Values"/>,
 /// fading over <see cref="Fade"/> seconds; or, with <see cref="Off"/>, faded back to the player's own.
 /// </summary>
-public record VisualCue(double Time, string Pack, IReadOnlyDictionary<string, float> Set, bool Off, double Fade);
+public record ShaderCue(double Time, string Pack, IReadOnlyDictionary<string, float> Values, bool Off, double Fade);
 
 /// <summary>Where one pack stands at a moment: on or not, and the charted parameters' values.</summary>
 public record PackLook(bool On, IReadOnlyDictionary<string, float> Values);
@@ -15,7 +15,7 @@ public record PackLook(bool On, IReadOnlyDictionary<string, float> Values);
 /// </summary>
 public static class LookTimeline
 {
-    public static Dictionary<string, PackLook> Evaluate(IReadOnlyList<VisualCue> cues, double time, Func<string, string, float> baseline)
+    public static Dictionary<string, PackLook> Evaluate(IReadOnlyList<ShaderCue> cues, double time, Func<string, string, float> baseline)
     {
         var looks = new Dictionary<string, PackLook>(StringComparer.OrdinalIgnoreCase);
         foreach (var pack in cues.Where(c => c.Time <= time).GroupBy(c => c.Pack, StringComparer.OrdinalIgnoreCase))
@@ -31,7 +31,7 @@ public static class LookTimeline
 
                 var targets = cue.Off
                     ? values.Keys.ToDictionary(key => key, key => baseline(pack.Key, key), StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, float>(cue.Set, StringComparer.OrdinalIgnoreCase);
+                    : new Dictionary<string, float>(cue.Values, StringComparer.OrdinalIgnoreCase);
 
                 foreach ((var key, var target) in targets)
                 {

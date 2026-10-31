@@ -18,7 +18,6 @@ internal static class ChartJson
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    // The chart as an object to change; setting "tracks" replaces a "Tracks" already there.
     public static JsonObject Parse(string chartText)
     {
         try
@@ -47,41 +46,40 @@ internal class ChartDto
     public ArenaDto? Arena { get; set; }
     public MusicDto? Music { get; set; }
     public string? Cover { get; set; }
-    public List<TrackDto>? Tracks { get; set; }
-    public ZoneDto? Zone { get; set; }
+    public List<PerformanceDto>? Performances { get; set; }
+    public PlayerZoneDto? PlayerZone { get; set; }
     public RulesDto? Rules { get; set; }
     public LaneDto? Lane { get; set; }
     public JsonElement? Bpm { get; set; }
     public List<ActorDto>? Actors { get; set; }
     public List<PhaseDto>? Phases { get; set; }
     public List<EventDto>? Events { get; set; }
-    public List<VisualDto>? Visuals { get; set; }
+    public List<ShaderDto>? Shaders { get; set; }
     public ColoursDto? Colours { get; set; }
-    public ColoursDto? Colors { get; set; }
     public double? End { get; set; }
 }
 
 internal class ColoursDto
 {
-    public string? Edges { get; set; }
-    public string? Ends { get; set; }
-    public string? Zone { get; set; }
+    public string? SideLines { get; set; }
+    public string? EndLines { get; set; }
+    public string? ZoneLine { get; set; }
     public string? Backstop { get; set; }
     public string? Walls { get; set; }
 }
 
-internal class VisualDto
+internal class ShaderDto
 {
     public double? T { get; set; }
     public double? Beat { get; set; }
     public string? Pack { get; set; }
-    public Dictionary<string, float>? Set { get; set; }
+    public Dictionary<string, float>? Values { get; set; }
     public bool? On { get; set; }
     public bool? Off { get; set; }
     public double? Fade { get; set; }
 }
 
-internal class ZoneDto
+internal class PlayerZoneDto
 {
     public float? Length { get; set; }
     public float? Height { get; set; }
@@ -89,24 +87,24 @@ internal class ZoneDto
 
 internal class RulesDto
 {
-    public string? Spawn { get; set; }
-    public double? Cleanup { get; set; }
+    public string? PlayerSpawns { get; set; }
+    public double? BreakStillAfter { get; set; }
     public bool? BreakBehind { get; set; }
 }
 
-internal class TrackDto
+internal class PerformanceDto
 {
     public string? Actor { get; set; }
-    public List<TrackClipDto>? Clips { get; set; }
+    public List<PerformanceClipDto>? Clips { get; set; }
 }
 
-internal class TrackClipDto
+internal class PerformanceClipDto
 {
     public double? T { get; set; }
     public double? Beat { get; set; }
     public string? Clip { get; set; }
-    public double? From { get; set; }
-    public double? To { get; set; }
+    public double? Start { get; set; }
+    public double? End { get; set; }
     public bool? Mime { get; set; }
 }
 
@@ -120,7 +118,7 @@ internal class ArenaDto
 internal class MusicDto
 {
     public string? File { get; set; }
-    public double? Start { get; set; }
+    public double? Offset { get; set; }
     public float? Volume { get; set; }
 }
 
@@ -149,13 +147,10 @@ internal class MeasurementDto
 internal class PhaseDto
 {
     public string? Name { get; set; }
-    public double? Start { get; set; }
-    public double? StartBeat { get; set; }
+    public double? T { get; set; }
+    public double? Beat { get; set; }
     public double? ScoreMultiplier { get; set; }
-    public string? Actor { get; set; }
-    public PointDto? At { get; set; }
     public ColoursDto? Colours { get; set; }
-    public ColoursDto? Colors { get; set; }
 }
 
 internal class EventDto
@@ -175,7 +170,7 @@ internal class ProjectileDto
     public JsonElement? To { get; set; }
     public float? Speed { get; set; }
     public float? Telegraph { get; set; }
-    public string? By { get; set; }
+    public string? Actor { get; set; }
     public bool? Grounded { get; set; }
 }
 

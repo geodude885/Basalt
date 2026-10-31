@@ -1,4 +1,4 @@
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Players;
 using Stack = Il2CppRUMBLE.MoveSystem.Stack;
 

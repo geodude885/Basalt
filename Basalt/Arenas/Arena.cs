@@ -1,5 +1,6 @@
 using Basalt.BattlePresentation;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using UnityEngine;
 using Part = Basalt.Arenas.ArenaVisuals.Part;
 
@@ -11,7 +12,7 @@ internal class Arena(GameAssets assets)
 
     public ArenaVisuals Visuals { get; } = new(assets);
 
-    public void Create(Anchor origin, Lane lane, bool showBackstop, bool walls = true, Zone? zone = null, LaneColours? colours = null, bool panes = false)
+    public void Create(Anchor origin, Lane lane, bool showBackstop, bool walls = true, PlayerZone? zone = null, LaneColours? colours = null, bool panes = false)
     {
         Destroy();
         colours ??= LaneColours.Default;
@@ -20,7 +21,7 @@ internal class Arena(GameAssets assets)
         Logger.Debug($"[Lane.{(walls ? "Built" : "Preview")}] {lane.Length:F1} m x {lane.Width:F1} m at {origin.Position.ToUnity().Describe()}");
     }
 
-    private void BuildColliders(Anchor origin, Lane lane, Zone? zone)
+    private void BuildColliders(Anchor origin, Lane lane, PlayerZone? zone)
     {
         var along = Quaternion.LookRotation(origin.Forward.ToUnity());
         var layer = GameHelpers.LayerUnder(origin.Position.ToUnity());
@@ -53,7 +54,7 @@ internal class Arena(GameAssets assets)
         Colliders.Wall("Basalt_ZoneCeiling", ceiling, along, new Vector3(across, ArenaCollision.Thickness, depth), layer, zone: true);
     }
 
-    private void BuildVisuals(Anchor origin, Lane lane, LaneColours colours, bool frameBackstop, Zone? zone, bool panes)
+    private void BuildVisuals(Anchor origin, Lane lane, LaneColours colours, bool frameBackstop, PlayerZone? zone, bool panes)
     {
         Visuals.Colour(colours);
         var along = Quaternion.LookRotation(origin.Forward.ToUnity());
@@ -78,7 +79,7 @@ internal class Arena(GameAssets assets)
 
         if (!panes) return;
 
-        var height = zone?.Height ?? Zone.DefaultHeight;
+        var height = zone?.Height ?? PlayerZone.DefaultHeight;
         var paneX = halfWidth + ArenaCollision.SideGap;
         var near = -ArenaCollision.EndGap;
         var far = lane.Length + ArenaCollision.EndGap;

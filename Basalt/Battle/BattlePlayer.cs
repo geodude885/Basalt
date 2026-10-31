@@ -1,5 +1,6 @@
 using System.Collections;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Players.Subsystems;
@@ -36,15 +37,15 @@ internal class BattlePlayer
         var rig = PlayerRig.From(playerController);
         var at = frame.ToLocal(rig.Feet);
         float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
-        var far = zoned ? chart.Zone.Length + 0.3f : chart.Lane.Length + 0.75f;
+        var far = zoned ? chart.PlayerZone.Length + 0.3f : chart.Lane.Length + 0.75f;
         var above = rig.Vr.position.y - frame.Position.Y;
-        var tooHigh = zoned && above > chart.Zone.Height + 0.8f;
+        var tooHigh = zoned && above > chart.PlayerZone.Height + 0.8f;
         if (!tooHigh && Math.Abs(at.x) <= side + 0.3f && at.z >= back - 0.3f && at.z <= far + 0.3f) return;
 
         var inside = frame.ToWorld(Math.Clamp(at.x, -side + 0.2f, side - 0.2f), 0f, Math.Clamp(at.z, back + 0.2f, far - 0.2f));
         var floor = rig.Feet;
         var shift = new Vector3(inside.x - floor.x, 0f, inside.z - floor.z);
-        if (tooHigh) shift.y = -(above - chart.Zone.Height);
+        if (tooHigh) shift.y = -(above - chart.PlayerZone.Height);
         var physics = playerController.PlayerPhysics;
         foreach (var body in new[] { physics.PhysicsRigidbody, physics.VRrigidbody })
         {

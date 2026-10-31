@@ -4,6 +4,7 @@ using System.Text;
 using Basalt.Actors;
 using Basalt.Battle;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 using Il2CppRUMBLE.MoveSystem;
 using MelonLoader.Utils;
@@ -42,10 +43,10 @@ internal static partial class SelfTest
         var clips = new ClipLibrary(Path.Combine(entry.AssetFolder, "clips"));
         clips.Reload();
         var recorded = new List<(double Time, string Move)>();
-        foreach (var track in chart.Tracks)
+        foreach (var performance in chart.Performances)
         {
-            var nextStarts = track.Clips.Skip(1).Select(t => t.Time).Append(double.MaxValue);
-            foreach ((var placed, var until) in track.Clips.Zip(nextStarts))
+            var nextStarts = performance.Clips.Skip(1).Select(t => t.Time).Append(double.MaxValue);
+            foreach ((var placed, var until) in performance.Clips.Zip(nextStarts))
             {
                 var clip = clips.Find(placed.Clip);
                 if (clip == null)
@@ -55,8 +56,8 @@ internal static partial class SelfTest
                 }
 
                 recorded.AddRange(clip.Moves
-                    .Where(move => move.Time >= placed.From && (placed.To == null || move.Time <= placed.To))
-                    .Select(move => (Time: placed.Time + (move.Time - placed.From), move.Move))
+                    .Where(move => move.Time >= placed.Start && (placed.End == null || move.Time <= placed.End))
+                    .Select(move => (Time: placed.Time + (move.Time - placed.Start), move.Move))
                     .Where(r => r.Time < until && r.Time <= chart.End));
             }
         }

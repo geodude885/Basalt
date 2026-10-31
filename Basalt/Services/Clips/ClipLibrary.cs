@@ -55,7 +55,7 @@ public class ClipLibrary(string folder)
     {
         Directory.CreateDirectory(folder);
 
-        var stem = ChartFiles.CreateFileNameAvoidingDuplicates(ChartFiles.SanitizeFileStem(clip.Name), "-", candidate => File.Exists(Path.Combine(folder, $"{candidate}.json")));
+        var stem = ChartFiles.UniqueFileName(ChartFiles.SanitizeFileStem(clip.Name), "-", candidate => File.Exists(Path.Combine(folder, $"{candidate}.json")));
         var path = Path.Combine(folder, $"{stem}.json");
         File.WriteAllText(path, ClipFile.Write(clip));
         _clips[clip.Name] = clip;

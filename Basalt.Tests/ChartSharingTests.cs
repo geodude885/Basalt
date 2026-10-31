@@ -2,6 +2,7 @@ using System.IO.Compression;
 using Basalt.DevTools.Testing;
 using Basalt.Services;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 using Basalt.Services.Scoring;
 using Xunit;
@@ -17,7 +18,7 @@ public class ChartHeaderTests
             {
               "format": 1, "name": "Song", "author": "someone", "difficulty": "Hard", "description": "A song.",
               "arena": { "map": "Ring", "at": { "x": 1.5, "z": -6 }, "facing": 90 },
-              "music": { "file": "music/song.ogg", "start": 2.5, "volume": 0.7 }
+              "music": { "file": "music/song.ogg", "offset": 2.5, "volume": 0.7 }
             }
             """);
 
@@ -28,7 +29,7 @@ public class ChartHeaderTests
 
     [Fact]
     public void ANegativeMusicStartIsSilenceBeforeTheSong() =>
-        Assert.Equal(new MusicSpec("song.ogg", -1.5), Load(/*lang=json,strict*/ """{ "music": { "file": "song.ogg", "start": -1.5 } }""").Music);
+        Assert.Equal(new MusicSpec("song.ogg", -1.5), Load(/*lang=json,strict*/ """{ "music": { "file": "song.ogg", "offset": -1.5 } }""").Music);
 
     [Fact]
     public void ReadsACover() => Assert.Equal("art/cover.png", Load(/*lang=json,strict*/ """{ "cover": "art/cover.png" }""").Cover);
@@ -67,7 +68,7 @@ public class ChartHeaderTests
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "moon" } }""", "arena.map \"moon\"")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "ring", "at": { "x": 1 } } }""", "arena.at needs x and z")]
     [InlineData(/*lang=json,strict*/ """{ "arena": { "map": "here" } }""", "arena.map \"here\" is not one of gym, ring, pit")]
-    [InlineData(/*lang=json,strict*/ """{ "music": { "start": 1 } }""", "music.file is required")]
+    [InlineData(/*lang=json,strict*/ """{ "music": { "offset": 1 } }""", "music.file is required")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "../../secret.ogg" } }""", "inside the chart's folder")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "C:/music/song.ogg" } }""", "inside the chart's folder")]
     [InlineData(/*lang=json,strict*/ """{ "music": { "file": "song.flac" } }""", "must be one of")]
@@ -280,7 +281,7 @@ public sealed class ChartPackageTests : IDisposable
               "music": { "file": "song.ogg" },
               "cover": "cover.png",
               "format": 2,
-              "tracks": [ { "clips": [ { "t": 1, "clip": "wave" } ] } ]
+              "performances": [ { "clips": [ { "t": 1, "clip": "wave" } ] } ]
             }
             """);
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "tone.ogg"), Path.Combine(folder, "song.ogg"));

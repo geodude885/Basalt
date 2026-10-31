@@ -11,7 +11,7 @@ public static class ChartFiles
         return stem.Length == 0 ? "chart" : stem;
     }
 
-    public static string CreateFileNameAvoidingDuplicates(string name, string separator, Func<string, bool> taken) =>
+    public static string UniqueFileName(string name, string separator, Func<string, bool> taken) =>
         Enumerable.Range(1, int.MaxValue).Select(n => n == 1 ? name : $"{name}{separator}{n}").First(candidate => !taken(candidate));
 
     public static bool IsSafeRelative(string path)

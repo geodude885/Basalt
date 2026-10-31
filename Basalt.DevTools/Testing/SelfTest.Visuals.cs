@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Basalt.Battle;
 using Basalt.BattlePresentation.Shaders;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using MelonLoader;
 using RumbleReShaded.Api;
 using UnityEngine;
@@ -27,9 +28,9 @@ internal static partial class SelfTest
             return chart;
         }
 
-        var cue = new VisualCue(0.5, LookPack, new Dictionary<string, float> { [LookParameter] = LookStrength }, Off: false, Fade: 0.5);
+        var cue = new ShaderCue(0.5, LookPack, new Dictionary<string, float> { [LookParameter] = LookStrength }, Off: false, Fade: 0.5);
         MelonCoroutines.Start(CheckLook());
-        return chart with { Visuals = new[] { cue } };
+        return chart with { Shaders = new[] { cue } };
     }
 
     // Kept apart from WithLook so RumbleReShaded's types are only touched once it is known to be loaded.

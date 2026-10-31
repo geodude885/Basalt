@@ -29,13 +29,13 @@ public readonly record struct Rgba(float R, float G, float B, float A = 1f)
 }
 
 /// <summary>The lane's colours; null keeps the mod's own, and a wall colour shows the walls as see-through panes.</summary>
-public record LaneColours(Rgba? Edges = null, Rgba? Ends = null, Rgba? Zone = null, Rgba? Backstop = null, Rgba? Walls = null)
+public record LaneColours(Rgba? SideLines = null, Rgba? EndLines = null, Rgba? ZoneLine = null, Rgba? Backstop = null, Rgba? Walls = null)
 {
     public static LaneColours Default { get; } = new();
 
     /// <summary>These colours laid over <paramref name="under"/>: anything not set here is taken from it.</summary>
     public LaneColours Over(LaneColours under) =>
-        new(Edges ?? under.Edges, Ends ?? under.Ends, Zone ?? under.Zone, Backstop ?? under.Backstop, Walls ?? under.Walls);
+        new(SideLines ?? under.SideLines, EndLines ?? under.EndLines, ZoneLine ?? under.ZoneLine, Backstop ?? under.Backstop, Walls ?? under.Walls);
 
     /// <summary>Whether the walls are shown - a wall colour that is not "none".</summary>
     public bool ShowsWalls => Walls is { A: > 0f };

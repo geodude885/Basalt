@@ -2,6 +2,7 @@ using System.Collections;
 using Basalt.Battle;
 using Basalt.DevTools.Flatscreen;
 using Basalt.Editing;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Charts;
 using Basalt.Services.Clips;
 using Il2CppRUMBLE.Players;
@@ -168,7 +169,7 @@ internal static partial class SelfTest
 
         var text = File.ReadAllText(file);
         var saved = ChartLoader.Load(text).Chart;
-        Logger.Info($"[SelfTest] lane setup saved: {saved?.Lane.Length:0.#} x {saved?.Lane.Width:0.#} m, actor at z {saved?.Actors[0].At.Z:0.#}, {saved?.Tracks.Count} track(s)");
+        Logger.Info($"[SelfTest] lane setup saved: {saved?.Lane.Length:0.#} x {saved?.Lane.Width:0.#} m, actor at z {saved?.Actors[0].At.Z:0.#}, {saved?.Performances.Count} performance(s)");
         if (saved == null)
         {
             problems.Add("the chart does not load after lane setup");
@@ -177,7 +178,7 @@ internal static partial class SelfTest
         {
             if (saved.Lane != new Lane(before.Length + 2f, before.Width + 0.5f)) problems.Add($"lane setup saved {saved.Lane.Length} x {saved.Lane.Width}, not {before.Length + 2} x {before.Width + 0.5}");
             if (Math.Abs(saved.Actors[0].At.Z - saved.Lane.Length) > 0.01f) problems.Add("the actor at the far end did not move with it");
-            if (saved.Tracks.Count != 1) problems.Add("lane setup lost the chart's track");
+            if (saved.Performances.Count != 1) problems.Add("lane setup lost the chart's performance");
         }
     }
 
@@ -202,8 +203,8 @@ internal static partial class SelfTest
             return;
         }
 
-        var segment = kept.Chart.Tracks.SingleOrDefault()?.Clips.SingleOrDefault();
-        if (segment?.Clip != clip.Name) problems.Add($"the chart's track does not play {clip.Name}");
+        var segment = kept.Chart.Performances.SingleOrDefault()?.Clips.SingleOrDefault();
+        if (segment?.Clip != clip.Name) problems.Add($"the chart's performance does not play {clip.Name}");
         if (kept.Chart.End < clip.Duration) problems.Add($"the chart ends at {kept.Chart.End:0.0}s, before the clip ({clip.Duration:0.0}s)");
 
         var clipFile = Path.Combine(Path.GetDirectoryName(file)!, ChartPackage.ClipsFolder, $"{clip.Name}.json");

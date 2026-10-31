@@ -42,7 +42,7 @@ Recorded clips are kept in the chart's own `clips/`.
 - **Arena:** `x`/`z` metres from the arena's centre - the Gym: world coordinates. `facing` is a
   compass bearing in degrees: 0 = world +Z, 90 = world +X. Lane setup's *LANE HERE* writes your own
   spot in exactly this form.
-- **Time:** seconds from GO (`t`, phase `start`), or beats (`beat`, `startBeat`) when the chart
+- **Time:** seconds from GO (`t`), or beats (`beat`) when the chart
   has a `bpm`. With a song, time follows the song: chart time 0 is `music.start` seconds into it.
 
 ## Top level
@@ -57,16 +57,16 @@ Recorded clips are kept in the chart's own `clips/`.
 | `arena` | object | the Ring, at `{ x: 0, z: -6 }` facing north | Where it is played - below. |
 | `music` | object | - | A song - below. |
 | `cover` | path | - | A PNG or JPG beside the chart, shown on the menu (square looks best; up to 16 MB, though 512 px is plenty). |
-| `bpm` | number or list | - | Beats per minute, for `beat` / `startBeat` times - or tempo changes: `[ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]` (the first at beat 0; each holds until the next). |
+| `bpm` | number or list | - | Beats per minute, for `beat` times - or tempo changes: `[ { "beat": 0, "bpm": 120 }, { "beat": 64, "bpm": 140 } ]` (the first at beat 0; each holds until the next). |
 | `lane` | object | 12 x 3 | `length` (over 2) and `width` in metres. |
-| `zone` | object | 2 m short of the far end, 3.5 m high | Where you may go: `length` along the lane from your end, `height` above the floor. Invisible walls stop you - not structures, not actors. |
-| `rules` | object | everything allowed | `spawn`: `all`, `discs` (discs only - for moving) or `none` (moves only). `cleanup`: seconds a structure may sit still in a battle before it breaks (default 3; 0 never) - a wall grounded in front of you does not soak up a whole section. `breakBehind`: `true` breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you (default `false`; one you spawn behind yourself goes too). |
+| `playerZone` | object | 2 m short of the far end, 3.5 m high | Where you may go: `length` along the lane from your end, `height` above the floor. Invisible walls stop you - not structures, not actors. |
+| `rules` | object | everything allowed | `playerSpawns`: `all`, `discs` (discs only - for moving) or `none` (moves only). `breakStillAfter`: seconds a structure may sit still in a battle before it breaks (default 3; 0 never) - a wall grounded in front of you does not soak up a whole section. `breakBehind`: `true` breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you (default `false`; one you spawn behind yourself goes too). |
 | `actors` | array | one at the far end | Below. |
 | `phases` | array | one, "Battle" | Below. |
 | `events` | array | none | Below. |
-| `tracks` | array | none | Recorded performances - below. Needs `"format": 2`. |
-| `colours` | object | the mod's own | The lane's colours (`colors` works too) - below. |
-| `visuals` | array | none | Shader looks over time, with [RumbleReShaded](https://github.com/Pepuldope/RumbleReShaded) - below. |
+| `performances` | array | none | Recorded performances - below. Needs `"format": 2`. |
+| `colours` | object | the mod's own | The lane's colours - below. |
+| `shaders` | array | none | Shader looks over time, with [RumbleReShaded](https://github.com/Pepuldope/RumbleReShaded) - below. |
 | `end` | number | last event + 3 s | When you have survived. |
 
 ### `arena`
@@ -85,7 +85,7 @@ Lane setup in game saves an `at` and `facing` for you.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `file` | path | required | A song in the chart's folder or package - a path inside it, no `..`. |
-| `start` | seconds | 0 | How far into the song chart time 0 is: skip an intro, or put beat 0 on the first downbeat. Negative starts the song that many seconds after chart time 0, with silence before it. |
+| `offset` | seconds | 0 | How far into the song chart time 0 is: skip an intro, or put beat 0 on the first downbeat. Negative starts the song that many seconds after chart time 0, with silence before it. |
 | `volume` | 0-1 | 1 | The chart's own level; the game's music volume applies too. |
 
 Songs can be **MP3 or OGG Vorbis** (a WAV can be converted with any audio tool, e.g.
@@ -97,7 +97,7 @@ and shows how far it has got.
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `id` | string | `actor`, `actor2`... | What events, phases and `by` refer to. The first is the default. |
+| `id` | string | `actor`, `actor2`... | What events refer to. The first is the default. |
 | `name` | string | the id | Shown over its head. |
 | `at` | `{ x, z, facing }` | far end, centre | Its lane spot; `facing` in degrees, 0 = looking down the lane at you. |
 | `look` | string | `you` | `you` (whoever plays), `default`, `defaultMale`, `defaultFemale`, or a character string as the game stores it. A chart made in game stores its maker's, so everyone fights the boss as it was dressed. |
@@ -109,10 +109,9 @@ and shows how far it has got.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `name` | string | "Phase n" | Shown as it starts. |
-| `start` / `startBeat` | time | required (first must be 0) | Strictly increasing. |
+| `t` / `beat` | time | required (first must be 0) | Strictly increasing. |
 | `scoreMultiplier` | number | 1 | Multiplies the points for damage on actors. |
 | `colours` | object | the chart's | The lane's colours from this phase on, over the chart's own (fields as in [`colours`](#colours); any left out stay as the chart has them). The lane fades to them over a second. `"walls": "none"` hides walls the chart shows. |
-| `actor`, `at` | id, spot | - | Moves one actor as the phase starts. |
 
 ### `events[]`
 
@@ -134,9 +133,9 @@ Each has a time (`t` or `beat`), optionally `actor` (default: the first), and ex
 | `speed` | m/s | required | Sets the flight time; the arc is chosen so it still arrives where aimed. |
 | `telegraph` | seconds | 0.5 | How long before the throw it is spawned: it comes up out of the floor at `from` like a player's spawn (with the spawn move's sound and dust), waits there, and at `t` flies with the punch's sound. |
 | `grounded` | bool | Pillar, RockCube, Wall: true | Thrown grounded: it rests on the floor in the game's grounded state - more damage - and is driven along the floor at its target (only the target's `x` matters), as a player's straight sends a grounded structure. `false` throws a Pillar, cube or Wall through the air instead; `true` grounds any other structure. A grounded one ignores `from.y`. |
-| `by` | actor id | - | Credits it to an actor. |
+| `actor` | actor id | the event's, else the first | Who throws it. |
 
-### `tracks[]`
+### `performances[]`
 
 Written by RECORD / KEEP; one per actor. Each clip plays until the next clip starts, or its own end.
 
@@ -145,8 +144,8 @@ Written by RECORD / KEEP; one per actor. Each clip plays until the next clip sta
 | `actor` | id | the first actor | Whose performance. |
 | `clips[].t` / `clips[].beat` | time | required | When the clip starts, in chart time; strictly increasing. |
 | `clips[].clip` | name | required | The recording, in the chart's `clips/`. |
-| `clips[].from` | seconds | 0 | Where in the recording to start - clips keep chart time, so a whole clip is `from` = `t`. |
-| `clips[].to` | seconds | its end | Where in the recording to stop. |
+| `clips[].start` | seconds | 0 | Where in the recording to start - clips keep chart time, so a whole clip is `start` = `t`. |
+| `clips[].end` | seconds | its end | Where in the recording to stop. |
 | `clips[].mime` | bool | false | Mimed: the actor moves as recorded but runs none of its moves, so nothing spawns - a performance over the chart's own projectiles. Recorded with MIME on the menu: the chart's projectiles fly while you perform at the boss's end, and your own moves stay off. |
 
 A clip holds the performer's head, hands and fingers, path (`"p": [x, z]` per frame, lane
@@ -162,13 +161,13 @@ change them as the battle goes - see `phases[].colours`.
 
 | Field | Default | Meaning |
 |---|---|---|
-| `edges` | orange | The lines down both sides of the lane. |
-| `ends` | yellow | The lines across both ends. |
-| `zone` | off-white | The line across the lane where your zone ends. |
-| `backstop` | as `edges` | The frame drawn where the wall behind you stands. |
+| `sideLines` | orange | The lines down both sides of the lane. |
+| `endLines` | yellow | The lines across both ends. |
+| `zoneLine` | off-white | The line across the lane where your zone ends. |
+| `backstop` | as `sideLines` | The frame drawn where the wall behind you stands. |
 | `walls` | unseen | `"none"` hides them (for a phase). Otherwise shows the invisible walls: a see-through pane on each one's inner face - down both sides, across both ends and over your zone (not across the lane at your zone's end - the floor line marks that) - as high as your zone. Give it an opacity, e.g. `"#66ccff33"` (20%). |
 
-### `visuals[]`
+### `shaders[]`
 
 Shader looks, for players with [RumbleReShaded](https://github.com/Pepuldope/RumbleReShaded) (RRS)
 installed - everyone else plays the chart as it is. Each cue names an installed RRS **pack** and sets
@@ -177,9 +176,9 @@ are temporary overrides: the player's own pack settings are never changed, and e
 again when the battle ends or stops.
 
 ```json
-"visuals": [
-  { "t": 0,     "pack": "UltraShade", "set": { "Saturation": 0.6, "Vignette": 0.5 }, "fade": 1 },
-  { "beat": 64, "pack": "Grayscale",  "set": { "Strength": 1 }, "fade": 2 },
+"shaders": [
+  { "t": 0,     "pack": "UltraShade", "values": { "Saturation": 0.6, "Vignette": 0.5 }, "fade": 1 },
+  { "beat": 64, "pack": "Grayscale",  "values": { "Strength": 1 }, "fade": 2 },
   { "beat": 96, "pack": "Grayscale",  "off": true, "fade": 2 }
 ]
 ```
@@ -188,7 +187,7 @@ again when the battle ends or stops.
 |---|---|---|---|
 | `t` / `beat` | time | required | When the cue starts. |
 | `pack` | name | required | An RRS pack's name, as in its menu (`UltraShade`, `Grayscale`, ...). Not installed: skipped. |
-| `set` | `{ name: value }` | - | Slider values. A name is the slider's label (`"Chromatic Aberration"`) or property (`"_ChromAb"`, `"ChromAb"`); values are kept within the slider's range. Sliders not named stay as the player has them. |
+| `values` | `{ name: value }` | - | Slider values. A name is the slider's label (`"Chromatic Aberration"`) or property (`"_ChromAb"`, `"ChromAb"`); values are kept within the slider's range. Sliders not named stay as the player has them. |
 | `on` | bool | - | `true`: just switch the pack on, with the player's own values. |
 | `off` | bool | - | `true`: fade the pack's charted sliders back to the player's, then put it back on or off as they had it. |
 | `fade` | seconds | 0 | How long the change takes. |
@@ -198,7 +197,7 @@ full): it scales how far each slider moves from their own value. RRS's own maste
 respected - with it off, charts change nothing. RRS draws only in VR.
 
 **Signals for pack authors.** A Basalt battle also tells RRS packs what is happening, whatever
-the chart's `visuals`:
+the chart's `shaders`:
 
 | Signal | Kind | When |
 |---|---|---|
@@ -221,7 +220,7 @@ setting; at 0 no events are sent.
 
 ## Versioning
 
-- **Format 2** added `tracks`. A chart with tracks says `"format": 2`, so an older mod refuses it
+- **Format 2** added `performances`. A chart with performances says `"format": 2`, so an older mod refuses it
   rather than playing it without its recorded actor. Keeping a clip raises the format for you.
 
 

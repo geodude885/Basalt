@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Xunit;
 
 namespace Basalt.Tests;
@@ -64,8 +65,8 @@ public class ChartRunnerTests
             c => Assert.IsType<EnterPhase>(c),
             c => Assert.Equal(new Spot(0, 12), Assert.IsType<PlaceActor>(c).At),
             c => Assert.Equal(new Spot(1, 10), Assert.IsType<PlaceActor>(c).At),
-            c => Assert.Equal("Straight", Assert.IsType<RunMove>(c).Stack),
-            c => Assert.Equal("Kick", Assert.IsType<RunMove>(c).Stack));
+            c => Assert.Equal("Straight", Assert.IsType<RunMove>(c).Move),
+            c => Assert.Equal("Kick", Assert.IsType<RunMove>(c).Move));
     }
 
     [Fact]
@@ -80,10 +81,10 @@ public class ChartRunnerTests
     }
 
     [Fact]
-    public void APhasesSpotIsAppliedWhenThePhaseStarts()
+    public void AMoveAtAPhasesStartComesAfterEnteringIt()
     {
         var runner = new ChartRunner(Load(/*lang=json,strict*/ """
-            { "phases": [ { "start": 0 }, { "name": "Open", "start": 10, "at": { "x": 1, "z": 9 } } ], "end": 20 }
+            { "phases": [ { "t": 0 }, { "name": "Open", "t": 10 } ], "events": [ { "t": 10, "at": { "x": 1, "z": 9 } } ], "end": 20 }
             """));
 
         runner.Advance(9);
@@ -97,8 +98,8 @@ public class ChartRunnerTests
                 Assert.Equal(new Spot(1, 9), place.At);
             });
 
-        Assert.Equal("Open", runner.Chart.Phases.Last(p => p.Start <= 15).Name);
-        Assert.Equal("Phase 1", runner.Chart.Phases.Last(p => p.Start <= 9.99).Name);
+        Assert.Equal("Open", runner.Chart.Phases.Last(p => p.Time <= 15).Name);
+        Assert.Equal("Phase 1", runner.Chart.Phases.Last(p => p.Time <= 9.99).Name);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using Basalt.Services.Charts.Model;
+
 namespace Basalt.Services.Charts;
 
 /// <summary>
@@ -48,10 +50,7 @@ public class ChartRunner
         entries.AddRange(chart.Actors.Select((actor, i) => ((ChartCommand)new PlaceActor(0, actor.Id, actor.At), RankPlace, -chart.Actors.Count + i)));
 
         foreach ((var phase, var i) in chart.Phases.Select((p, i) => (p, i)))
-        {
-            entries.Add((new EnterPhase(phase.Start, phase), RankPhase, i));
-            if (phase.At is Spot spot) entries.Add((new PlaceActor(phase.Start, phase.ActorId ?? chart.DefaultActor.Id, spot), RankPlace, i));
-        }
+            entries.Add((new EnterPhase(phase.Time, phase), RankPhase, i));
 
         var projectileId = 0;
         foreach (var chartEvent in chart.Events)
@@ -60,11 +59,11 @@ public class ChartRunner
             {
                 case ProjectileEvent projectile:
                     projectileId++;
-                    entries.Add((new SpawnProjectile(projectile.SpawnTime, projectileId, projectile), RankSpawn, projectile.Order));
+                    entries.Add((new SpawnProjectile(projectile.Time - projectile.Telegraph, projectileId, projectile), RankSpawn, projectile.Order));
                     entries.Add((new LaunchProjectile(projectile.Time, projectileId, projectile), RankLaunch, projectile.Order));
                     break;
                 case MoveEvent move:
-                    entries.Add((new RunMove(move.Time, move.ActorId, move.Stack), RankMove, move.Order));
+                    entries.Add((new RunMove(move.Time, move.ActorId, move.Move), RankMove, move.Order));
                     break;
                 case PlaceEvent place:
                     entries.Add((new PlaceActor(place.Time, place.ActorId, place.At), RankPlace, place.Order));
@@ -72,15 +71,15 @@ public class ChartRunner
             }
         }
 
-        foreach (var track in chart.Tracks)
+        foreach (var performance in chart.Performances)
         {
             // Each clip plays until its own end or the next clip, whichever is first.
-            var nextStarts = track.Clips.Skip(1).Select(t => (double?)t.Time).Append(null);
-            foreach ((var clip, var next) in track.Clips.Zip(nextStarts))
+            var nextStarts = performance.Clips.Skip(1).Select(t => (double?)t.Time).Append(null);
+            foreach ((var clip, var next) in performance.Clips.Zip(nextStarts))
             {
-                var to = clip.To;
-                if (next != null) to = Math.Min(to ?? double.MaxValue, clip.From + (next.Value - clip.Time));
-                entries.Add((new PlayClip(clip.Time, track.ActorId, clip.Clip, clip.From, to) { Mime = clip.Mime }, RankMove, -1));
+                var to = clip.End;
+                if (next != null) to = Math.Min(to ?? double.MaxValue, clip.Start + (next.Value - clip.Time));
+                entries.Add((new PlayClip(clip.Time, performance.ActorId, clip.Clip, clip.Start, to) { Mime = clip.Mime }, RankMove, -1));
             }
         }
 

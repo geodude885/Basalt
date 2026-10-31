@@ -5,6 +5,7 @@ using Basalt.BattlePresentation;
 using Basalt.BattlePresentation.Shaders;
 using Basalt.Services;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
 using Basalt.Services.Scoring;
 using MelonLoader;
@@ -232,8 +233,11 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                 _player.Place(Run.Frame.Position.ToUnity(), Quaternion.LookRotation(Run.Frame.Forward.ToUnity()));
             }
 
-            _arena.Create(Run.Frame, chart.Lane, showBackstop: true, walls: true, zone: request.Mode == BattleMode.Record ? null : chart.Zone,
-                colours: chart.ColoursIn(chart.Phases.LastOrDefault(p => p.Start <= 0)), panes: chart.EverShowsWalls);
+            var everShowsWalls = chart.Colours.ShowsWalls || chart.Phases.Any(p => p.Colours?.ShowsWalls == true);
+
+            _arena.Create(Run.Frame, chart.Lane, showBackstop: true, walls: true, zone: request.Mode == BattleMode.Record ? null : chart.PlayerZone,
+                colours: chart.ColoursIn(chart.Phases.LastOrDefault(p => p.Time <= 0)), panes: everShowsWalls);
+
             if (request.Mode == BattleMode.Record)
             {
                 _board.SetPosition(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
@@ -306,7 +310,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
             ? chart with
             {
                 Events = request.Mode == BattleMode.Record && request.Mime ? chart.Events.OfType<ProjectileEvent>().ToArray() : [],
-                Tracks = chart.Tracks
+                Performances = chart.Performances
                     .Where(t => t.ActorId != request.Performer.Id)
                     .Select(t => t with { Clips = t.Clips.Select(c => c with { Mime = true }).ToList() })
                     .ToList(),
@@ -317,7 +321,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
         Run.StartedAt = Time.time;
 
         if (Music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicDecodeTimeoutSeconds}s - playing without music");
-        if (chart.Music != null) Music.Play(chart.Music.Start, chart.Music.Volume);
+        if (chart.Music != null) Music.Play(chart.Music.Offset, chart.Music.Volume);
         _board.Show("GO", 1f);
         foreach (var actor in actors.Actors) actor.FullHeal();
         _sweeper.Reset();
@@ -329,7 +333,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
             _player.KeepVulnerable();
         }
 
-        if (request.Mode != BattleMode.Record || !request.Mime) _moves.AllowMoves(request.Mode == BattleMode.Record ? SpawnRule.All : chart.Rules.Spawn);
+        if (request.Mode != BattleMode.Record || !request.Mime) _moves.AllowMoves(request.Mode == BattleMode.Record ? SpawnRule.All : chart.Rules.PlayerSpawns);
         Run.State = BattleState.Running;
     }
 
@@ -369,7 +373,7 @@ internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> score
                     break;
 
                 case RunMove move:
-                    ActorById(move.ActorId)?.RunMove(move.Stack);
+                    ActorById(move.ActorId)?.RunMove(move.Move);
                     break;
 
                 case PlayClip play:

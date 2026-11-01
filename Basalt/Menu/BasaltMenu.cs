@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Basalt.Menu;
 
-internal class BasaltMenu(PageSwitcher screens, JsonBook<SavedSpot> spots, GameAssets assets)
+internal class BasaltMenu(PageSwitcher screens, JsonFileRepository<SavedSpot> spots, GameAssets assets)
 {
     public GameObject? Root { get; private set; }
     public ChartDescriptionCard? SelectedChartDescription { get; private set; }

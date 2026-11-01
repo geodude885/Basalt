@@ -1,10 +1,9 @@
 using System.Text.Json;
+using Basalt.Services.Charts.Files;
 
 namespace Basalt.Services;
 
-// Entries by name in a JSON file, saved whenever one is set. An unreadable file starts an empty book,
-// and is left alone until the next save overwrites it.
-public class JsonBook<T>(string file)
+public class JsonFileRepository<T>(string file)
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 
@@ -35,6 +34,13 @@ public class JsonBook<T>(string file)
     {
         _entries[name] = entry;
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
-        File.WriteAllText(file, JsonSerializer.Serialize(_entries, Options));
+        if (LoadError != null) KeepUnreadableFile();
+        SafeFile.WriteAllText(file, JsonSerializer.Serialize(_entries, Options));
+    }
+
+    private void KeepUnreadableFile()
+    {
+        if (File.Exists(file)) File.Move(file, ChartFiles.UniqueFileName(file + ".bad", "-", File.Exists));
+        LoadError = null;
     }
 }

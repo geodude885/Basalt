@@ -31,6 +31,19 @@ public class LaneSetupTests
     }
 
     [Fact]
+    public void LaneSetupMovesActorsButKeepsEditsMadeSinceItOpened()
+    {
+        var opened = new ActorSpec("boss", "Boss", new Spot(0, 12), "you");
+        var moved = opened with { At = new Spot(1, 8) };
+        var edited = new[] { opened with { Name = "Renamed" }, new ActorSpec("add", "Add", new Spot(2, 6), "you") };
+
+        var saved = ChartWriter.WithSpotsFrom(edited, [moved]);
+
+        Assert.Equal(edited[0] with { At = new Spot(1, 8) }, saved[0]);
+        Assert.Equal(edited[1], saved[1]);
+    }
+
+    [Fact]
     public void ResizingIsClampedAndLeavesMidLaneActors()
     {
         var actors = new[] { new ActorSpec("a", "A", new Spot(0, 12), "you"), new ActorSpec("b", "B", new Spot(1, 6), "you") };

@@ -37,7 +37,6 @@ public static class ClipFile
         return JsonSerializer.Serialize(dto, Options);
     }
 
-    /// <summary>A clip, or the reason the text is not one.</summary>
     public static (Clip? Clip, string? Error) Read(string json, string fallbackName)
     {
         ClipDto? dto;

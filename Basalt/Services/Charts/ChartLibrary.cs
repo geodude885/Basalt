@@ -7,7 +7,7 @@ public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source
     public string AssetFolder => Folder ?? Path.GetDirectoryName(File) ?? "";
     public string? Difficulty => Result.Chart?.Info.Difficulty;
     public bool CanEdit => Result.Chart != null && Source != ChartSource.Package;
-    public string ScoreKey => $"{Name}|{Result.Chart?.Info.Author}";
+    public string ScoreKey => $"{Name}|{Result.Chart?.Info.Author}|{Difficulty?.ToLowerInvariant()}";
 
     public string Name => Result.Chart?.Name ?? Stem;
     public string Stem => Source == ChartSource.Folder

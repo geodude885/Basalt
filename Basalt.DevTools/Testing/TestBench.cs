@@ -1,5 +1,6 @@
 using Basalt.Actors;
 using Basalt.Battle;
+using Basalt.DevTools.Flatscreen;
 using UnityEngine;
 
 namespace Basalt.DevTools.Testing;
@@ -14,22 +15,6 @@ internal static class TestBench
     private const float FacingCheckInterval = 0.25f;
     private const float FacingTolerance = 15f;
     private static readonly float[] KnockbackSteps = { 1f, 0.5f, 0.2f, 0f };
-
-    private static readonly (KeyCode Key, string Stack)[] Moves =
-    {
-        (KeyCode.Space, "Jump"),
-        (KeyCode.LeftShift, "RockSlide"),
-        (KeyCode.Alpha1, "SpawnCube"),
-        (KeyCode.Alpha2, "SpawnPillar"),
-        (KeyCode.Alpha3, "SpawnWall"),
-        (KeyCode.Alpha4, "SpawnBall"),
-        (KeyCode.Z, "Straight"),
-        (KeyCode.X, "Uppercut"),
-        (KeyCode.C, "Kick"),
-        (KeyCode.V, "Stomp"),
-        (KeyCode.T, "Disc"),
-        (KeyCode.G, "Explode"),
-    };
 
     private static Actor? _actor;
     private static bool _mirroring;
@@ -101,19 +86,13 @@ internal static class TestBench
             return;
         }
 
-        if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
-        {
-            Sticks = (Vector2.zero, Vector2.zero);
-            return;
-        }
+        Sticks = (FlatscreenKeys.Walk, FlatscreenKeys.Turn);
+        if (FlatscreenKeys.CtrlHeld) return;
 
-        var turn = new Vector2(Axis(KeyCode.E, KeyCode.Q), 0f);
-        Sticks = (new Vector2(Axis(KeyCode.D, KeyCode.A), Axis(KeyCode.W, KeyCode.S)), turn);
-
-        if (turn != Vector2.zero) _facingPlayer = false;
+        if (FlatscreenKeys.Turn != Vector2.zero) _facingPlayer = false;
         if (Input.GetKeyDown(KeyCode.F)) _facingPlayer = !_facingPlayer;
 
-        foreach ((_, var stack) in Moves.Where(m => Input.GetKeyDown(m.Key)))
+        foreach (var stack in FlatscreenKeys.PressedMoves)
         {
             actor.RunMove(stack);
         }
@@ -137,7 +116,4 @@ internal static class TestBench
         Sticks = null;
         _facingPlayer = false;
     }
-
-    private static float Axis(KeyCode positive, KeyCode negative) =>
-        (Input.GetKey(positive) ? 1f : 0f) - (Input.GetKey(negative) ? 1f : 0f);
 }

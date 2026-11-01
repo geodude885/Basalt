@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Basalt.Menu;
 
-internal class MenuMover(JsonBook<SavedSpot> spots)
+internal class MenuMover(JsonFileRepository<SavedSpot> spots)
 {
     private const float DistanceAhead = 0.75f;
     private const float HeightAboveEyes = -0.35f;

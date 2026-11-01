@@ -54,7 +54,10 @@ packaged. It adds:
 | Ctrl+Shift+P | The test actor plays the newest clip |
 | (bot) WASD, Q/E, F | Walk, turn, face you on/off |
 | (bot) Space, Shift, 1-4, Z/X/C/V, T/G | Jump, dash, spawn cube/pillar/wall/ball, straight/uppercut/kick/stomp, disc/explode |
-| Numpad 8/2/4/6, 7/9 | No headset: walk and turn your own player |
+| Left click | Pushes the game button in the crosshair, or under a free cursor (offline) |
+| Mouse, WASD, Q/E | No headset: look, walk and snap-turn your own player |
+| Space, Shift, 1-4, Z/X/C/V, T/G | No headset: the same moves as the bot, on your own player (offline) |
+| Alt | No headset: frees the cursor and the keys for a window, again to take them back |
 
 **Self-tests** run with Steam open (launching `RUMBLE.exe` directly gets no sign-in), write
 `SELFTEST PASS` or the problems to `UserData/Basalt/selftest.txt`, and quit:
@@ -69,6 +72,7 @@ steam.exe -applaunch 890550 --basalt-selftest=ring --basalt-shots
 | `=record` | Records, reviews and keeps a clip |
 | `=look` | A new chart's boss wears your look and stones, and an edited look |
 | `=measure` | Writes structure sizes to `SelfTest/structures.json` for the editor |
+| `=flatscreen` | Looking, walking where you look, a click pushing a button, and the moves' keys route |
 | `=chart:<name>` | Plays one of your charts and measures its clips |
 | `--basalt-shots` | Adds screenshots to `UserData/Basalt/SelfTestShots` |
 

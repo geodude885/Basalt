@@ -65,6 +65,8 @@ internal static partial class SelfTest
         ["look"] = RunLookTest,
         // Each throwable structure's size, for the editor.
         ["measure"] = RunMeasure,
+        // Looking, walking where you look, a click pushing the menu's button, and the move keys' moves.
+        ["flatscreen"] = RunFlatscreenTest,
     };
 
     private static readonly Dictionary<string, string[]> Presets = new(StringComparer.OrdinalIgnoreCase)

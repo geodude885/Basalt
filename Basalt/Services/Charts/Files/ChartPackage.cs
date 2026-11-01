@@ -25,7 +25,8 @@ public static class ChartPackage
             if (File.Exists(Path.Combine(target, CompleteMarker))) return (target, null);
 
             Directory.CreateDirectory(cacheRoot);
-            foreach (var stale in Directory.EnumerateDirectories(cacheRoot).Where(folder => IsUnpackOf(stem, folder))) TryDelete(stale, cacheRoot);
+            foreach (var stale in Directory.EnumerateDirectories(cacheRoot).Where(folder => IsOldUnpack(package, stem, folder)))
+                TryDelete(stale, cacheRoot);
 
             using var zip = ZipFile.OpenRead(package);
             var error = ValidatePackage(zip, out var prefix);
@@ -85,6 +86,14 @@ public static class ChartPackage
 
     private static bool IsUnpackOf(string stem, string folder) =>
         Regex.IsMatch(Path.GetFileName(folder), $"^{Regex.Escape(stem)}-[0-9a-f]{{{HashLength}}}({Regex.Escape(PartialSuffix)})?$", RegexOptions.None, TimeSpan.FromSeconds(1));
+
+    private static bool IsOldUnpack(string package, string stem, string folder)
+    {
+        if (!IsUnpackOf(stem, folder)) return false;
+
+        var marker = Path.Combine(folder, CompleteMarker);
+        return !File.Exists(marker) || File.ReadAllText(marker) == package;
+    }
 
     private static void TryDelete(string folder, string cacheRoot)
     {

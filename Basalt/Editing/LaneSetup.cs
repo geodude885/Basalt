@@ -69,7 +69,8 @@ internal class LaneSetup(GameAssets assets)
     {
         // Scales all chart move z lengths
         var lengthScale = chartBefore.Lane.Length > 0 ? Lane.Length / chartBefore.Lane.Length : 1f;
-        return ChartWriter.ScaleChartOnLaneLengthChange(ChartWriter.WriteLaneSetup(chartText, ArenaSpecification, Lane, Actors), lengthScale, Lane.Length);
+        var actors = ChartWriter.WithSpotsFrom(chartBefore.Actors, Actors);
+        return ChartWriter.ScaleChartOnLaneLengthChange(ChartWriter.WriteLaneSetup(chartText, ArenaSpecification, Lane, actors), lengthScale, Lane.Length);
     }
 
     public void RebuildPreviewIfOutOfDate()

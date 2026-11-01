@@ -38,7 +38,7 @@ internal class Studio(BattleController battle, GameAssets assets)
 
     public static bool CanUndo(ChartEntry? entry) => entry is { CanEdit: true } && ChartFiles.HasBackup(entry.File);
     public static string Undo(ChartEntry entry) =>
-        ChartFiles.RestoreBackup(entry.File) ? $"undid the last save to {entry.Name}" : $"{entry.Name} has nothing to undo";
+        ChartFiles.RestoreBackup(entry.File) ? $"undid the last change to {entry.Name}" : $"{entry.Name} has nothing to undo";
 
     public void StartRecording(ChartEntry entry, string? actorId = null, bool mime = false)
     {
@@ -86,16 +86,20 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (NewClip == null || Chart == null || Entry == null) return "no clip to keep";
 
+        // From the file as it is now: it may have been edited since the recording started
+        var chartText = File.ReadAllText(Entry.File);
+        if (ChartLoader.Load(chartText).Chart is not { } current) return $"{Entry.Name} has errors - fix them, then keep the clip";
+        if (current.Actors.All(a => a.Id != _actorId)) return $"{Entry.Name} no longer has the actor {_actorId}";
+
         var clip = NewClip;
         ChartClips().Save(clip);
 
-        var chartText = File.ReadAllText(Entry.File);
-        var keptText = ChartWriter.WritePerformances(chartText, Chart, _actorId, clip, _recordingStartedAtChartTime, Mime);
+        var keptText = ChartWriter.WritePerformances(chartText, current, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
         if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } playerMeasurement)
         {
             var size = new BodySize(playerMeasurement.Length, playerMeasurement.ArmSpan);
-            keptText = ChartWriter.WriteActors(keptText, Chart.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
+            keptText = ChartWriter.WriteActors(keptText, current.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
         }
 
         ChartFiles.BackupAndSave(Entry.File, chartText, keptText);
@@ -132,7 +136,9 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (Entry == null || Chart == null || State != StudioState.Setup) return "no lane setup to save";
 
         var chartText = File.ReadAllText(Entry.File);
-        ChartFiles.BackupAndSave(Entry.File, chartText, LaneSetup.WriteIntoChartText(chartText, Chart));
+        if (ChartLoader.Load(chartText).Chart is not { } current) return $"{Entry.Name} has errors - fix them, then save the lane";
+
+        ChartFiles.BackupAndSave(Entry.File, chartText, LaneSetup.WriteIntoChartText(chartText, current));
         ExitChartOptions();
         return $"saved {Entry.Name}'s lane";
     }

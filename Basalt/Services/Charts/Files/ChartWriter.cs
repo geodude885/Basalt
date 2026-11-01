@@ -21,6 +21,9 @@ public static class ChartWriter
         return ChartJson.Write(chart);
     }
 
+    public static List<ActorSpec> WithSpotsFrom(IReadOnlyList<ActorSpec> actors, IReadOnlyList<ActorSpec> moved) =>
+        actors.Select(actor => moved.FirstOrDefault(m => m.Id == actor.Id) is { } spot ? actor with { At = spot.At } : actor).ToList();
+
     public static string WriteActors(string chartText, IReadOnlyList<ActorSpec> actors)
     {
         var chart = ChartJson.Parse(chartText);

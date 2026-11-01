@@ -10,7 +10,7 @@ using static Basalt.Menu.MenuColours;
 
 namespace Basalt.Menu.Pages;
 
-internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio) : IMenuScreen
+internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileRepository<BestScore> scores, Settings settings, BattleController battle, Studio studio) : IMenuScreen
 {
     public IReadOnlyList<MenuButton> Buttons
     {

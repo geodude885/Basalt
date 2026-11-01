@@ -43,6 +43,29 @@ public class ChartPathTests
     }
 
     [Fact]
+    public void UndoCanBeUndoneSoNewerEditsSurviveIt()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"Basalt-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(file, "old");
+            ChartFiles.BackupAndSave(file, "old", "new");
+            File.WriteAllText(file, "edited outside the game");
+
+            Assert.True(ChartFiles.RestoreBackup(file));
+            Assert.Equal("old", File.ReadAllText(file));
+
+            Assert.True(ChartFiles.RestoreBackup(file));
+            Assert.Equal("edited outside the game", File.ReadAllText(file));
+        }
+        finally
+        {
+            File.Delete(file);
+            File.Delete(file + ".bak");
+        }
+    }
+
+    [Fact]
     public void IsInsideFolderRefusesAnotherDrive() =>
         Assert.False(ChartFiles.IsInsideFolder(@"C:\Game\Cache", @"D:\Game\Cache\song-abc"));
 }

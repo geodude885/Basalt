@@ -5,7 +5,6 @@ using Il2CppRUMBLE.Players.Subsystems;
 using MelonLoader;
 using MelonLoader.Utils;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 [assembly: MelonInfo(typeof(Basalt.DevTools.DevToolsEntry), "Basalt.DevTools", "1.0.0", "ACutiePi")]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
@@ -19,7 +18,7 @@ public class DevToolsEntry : MelonMod
 {
     private const string Keys =
         "Ctrl+W watch charts from above the lane, invincible | Ctrl+F desktop camera | Ctrl+T test actor | Ctrl+9 test actor mirror/bot | Ctrl+P plant | " +
-        "Ctrl+K knockback. Click presses picker buttons. No headset: numpad 8/2/4/6 walk, 7/9 turn.";
+        "Ctrl+K knockback. Click pushes game buttons. No headset: mouse looks, WASD walks, Q/E turn, Alt frees the cursor.";
 
     /// <summary>Orbits the battle's first actor, the test actor, or you.</summary>
     private readonly DesktopCamera _camera = new(
@@ -55,11 +54,10 @@ public class DevToolsEntry : MelonMod
         try
         {
             HandleKeys();
-            HandleClick();
             KeepInvincibleInCharts();
             _watcher.Update();
             TestBench.Update();
-            FlatscreenControls.Update();
+            FlatscreenControls.Update(_camera.Camera);
             SelfTest.Update();
         }
         catch (Exception e)
@@ -86,28 +84,9 @@ public class DevToolsEntry : MelonMod
         SelfTest.OnSceneLoaded(sceneName);
     }
 
-    // A mouse click presses the picker button under the cursor, through the desktop camera when it shows. A click on
-    // a window drawn over the game (UIFramework's settings) is that window's, and must not reach the picker behind it.
-    private void HandleClick()
-    {
-        if (!Input.GetMouseButtonDown(0) || EventSystem.current?.IsPointerOverGameObject() == true) return;
-        if (Mod.Menu is not { Root.activeSelf: true, ButtonRow: { } buttons } || (_camera.Camera ?? Camera.main) is not { } camera) return;
-
-        var ray = camera.ScreenPointToRay(Input.mousePosition);
-        var unitBox = new Bounds(Vector3.zero, Vector3.one);
-        var hit = buttons.Buttons
-            .Select(b => (b.Spec.Id, Hit: unitBox.IntersectRay(new Ray(b.Face.transform.InverseTransformPoint(ray.origin), b.Face.transform.InverseTransformVector(ray.direction)), out var distance), Distance: distance))
-            .Where(b => b.Hit)
-            .OrderBy(b => b.Distance)
-            .Select(b => b.Id)
-            .FirstOrDefault();
-
-        if (hit != null) buttons.Press(hit);
-    }
-
     private void HandleKeys()
     {
-        if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) return;
+        if (!FlatscreenKeys.CtrlHeld) return;
 
         if (Input.GetKeyDown(KeyCode.W)) _watcher.Toggle();
         else if (Input.GetKeyDown(KeyCode.F)) _camera.Toggle();

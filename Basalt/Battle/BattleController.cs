@@ -30,7 +30,7 @@ public enum BattleMode
     Review,
 }
 
-internal class BattleController(ActorsRegistry actors, JsonBook<BestScore> scores, GameAssets assets, Settings settings)
+internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestScore> scores, GameAssets assets, Settings settings)
 {
     public BattleRun? Run { get; private set; }
     public BattleVisualEvents Visuals { get; } = new(ReShade.CreateIfLoaded());

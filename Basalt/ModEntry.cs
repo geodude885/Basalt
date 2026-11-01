@@ -39,10 +39,10 @@ public class ModEntry : MelonMod
         var folder = Path.Combine(MelonEnvironment.UserDataDirectory, "Basalt");
 
         var library = new ChartLibrary(Path.Combine(folder, "Charts"));
-        var scores = new JsonBook<BestScore>(Path.Combine(folder, "scores.json"));
+        var scores = new JsonFileRepository<BestScore>(Path.Combine(folder, "scores.json"));
         scores.Load();
         if (scores.LoadError != null) Logger.Info($"scores.json could not be read ({scores.LoadError}) - starting a fresh book");
-        var menuSpots = new JsonBook<SavedSpot>(Path.Combine(folder, "places.json"));
+        var menuSpots = new JsonFileRepository<SavedSpot>(Path.Combine(folder, "places.json"));
         menuSpots.Load();
 
         _assets = new GameAssets();
@@ -51,6 +51,7 @@ public class ModEntry : MelonMod
         _studio = new Studio(_battle, _assets);
         _charts = new ChartSelection(library, _settings, _battle, _studio);
         _menu = new BasaltMenu(new PageSwitcher(_charts, library, scores, _settings, _battle, _studio), menuSpots, _assets);
+
         Mod.Share(_actors, _battle, _studio, _charts, _menu);
 
         _settings.Create();

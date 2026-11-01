@@ -5,8 +5,8 @@ namespace Basalt.Services.Charts;
 // A relative position and direction
 public readonly record struct Anchor(Vector3 Position, float Yaw)
 {
-    public Vector3 Forward => AngleHelpers.Direction(Yaw);
-    public Vector3 Right => AngleHelpers.Direction(Yaw + 90f);
+    public Vector3 Forward => AngleHelpers.VectorFromBearing(Yaw);
+    public Vector3 Right => AngleHelpers.VectorFromBearing(Yaw + 90f);
 
     public static Anchor CreateFacingDirection(Vector3 position, Vector3 direction) =>
         new(position, AngleHelpers.Bearing(direction.X, direction.Z));

@@ -36,8 +36,8 @@ public static class ChartFiles
 
     public static void BackupAndSave(string chartFile, string previousText, string newText)
     {
-        File.WriteAllText(chartFile + BackupExtension, previousText);
-        File.WriteAllText(chartFile, newText);
+        SafeFile.WriteAllText(chartFile + BackupExtension, previousText);
+        SafeFile.WriteAllText(chartFile, newText);
     }
 
     public static bool HasBackup(string chartFile) => File.Exists(chartFile + BackupExtension);
@@ -47,8 +47,7 @@ public static class ChartFiles
         var backup = chartFile + BackupExtension;
         if (!File.Exists(backup)) return false;
 
-        File.Copy(backup, chartFile, overwrite: true);
-        File.Delete(backup);
+        BackupAndSave(chartFile, File.ReadAllText(chartFile), File.ReadAllText(backup));
         return true;
     }
 

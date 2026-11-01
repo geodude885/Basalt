@@ -44,6 +44,9 @@
 		<Reference Include="UnityEngine.UI">
 			<HintPath>$(Il2CppPath)\UnityEngine.UI.dll</HintPath>
 		</Reference>
+		<Reference Include="UnityEngine.UIModule">
+			<HintPath>$(Il2CppPath)\UnityEngine.UIModule.dll</HintPath>
+		</Reference>
 		<Reference Include="UnityEngine.ImageConversionModule">
 			<HintPath>$(Il2CppPath)\UnityEngine.ImageConversionModule.dll</HintPath>
 		</Reference>

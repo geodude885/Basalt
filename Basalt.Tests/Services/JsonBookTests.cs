@@ -10,18 +10,35 @@ public sealed class JsonBookTests : IDisposable
     [Fact]
     public void ASpotSurvivesARestartAndABrokenFileStartsEmpty()
     {
-        var book = new JsonBook<SavedSpot>(_file);
+        var book = new JsonFileRepository<SavedSpot>(_file);
         book.Load();
         Assert.Null(book.Get("Gym"));
 
         book.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
-        var again = new JsonBook<SavedSpot>(_file);
+        var again = new JsonFileRepository<SavedSpot>(_file);
         again.Load();
         Assert.Equal(new SavedSpot(1f, 2f, 3f, 90f), again.Get("Gym"));
 
         File.WriteAllText(_file, "{ broken");
         again.Load();
         Assert.Null(again.Get("Gym"));
+    }
+
+    [Fact]
+    public void ABrokenFileIsKeptAsideNotOverwritten()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
+        File.WriteAllText(_file, "{ broken");
+
+        var book = new JsonFileRepository<SavedSpot>(_file);
+        book.Load();
+        book.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
+
+        Assert.Equal("{ broken", File.ReadAllText(_file + ".bad"));
+        var again = new JsonFileRepository<SavedSpot>(_file);
+        again.Load();
+        Assert.Null(again.LoadError);
+        Assert.Equal(new SavedSpot(1f, 2f, 3f, 90f), again.Get("Gym"));
     }
 
     public void Dispose()

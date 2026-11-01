@@ -7,7 +7,7 @@ using Basalt.Services.Scoring;
 
 namespace Basalt.Menu.Pages;
 
-internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonBook<BestScore> scores, Settings settings, BattleController battle, Studio studio)
+internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonFileRepository<BestScore> scores, Settings settings, BattleController battle, Studio studio)
 {
     private readonly ChartsPage _charts = new(charts, library, scores, settings, battle, studio);
     private readonly RecordingPage _recording = new(studio);

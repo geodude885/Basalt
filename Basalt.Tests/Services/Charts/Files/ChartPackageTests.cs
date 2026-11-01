@@ -153,6 +153,20 @@ public sealed class ChartPackageTests : IDisposable
     }
 
     [Fact]
+    public void AZipAndAPackageOfTheSameNameKeepTheirOwnUnpacks()
+    {
+        var package = WritePackage("song", "Package");
+        var zip = Path.Combine(Charts, "song.zip");
+        File.Copy(WritePackage("other", "Zip"), zip);
+
+        (var first, _) = ChartPackage.Unpack(package, Cache);
+        (var second, _) = ChartPackage.Unpack(zip, Cache);
+
+        Assert.True(Directory.Exists(first));
+        Assert.True(Directory.Exists(second));
+    }
+
+    [Fact]
     public void AChangedPackageReplacesItsOldUnpack()
     {
         (var before, _) = ChartPackage.Unpack(WritePackage("song", "Before"), Cache);

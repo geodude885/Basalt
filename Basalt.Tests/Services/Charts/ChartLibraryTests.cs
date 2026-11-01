@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Files;
 using Xunit;
 
 namespace Basalt.Tests.Services.Charts;
@@ -59,6 +60,17 @@ public sealed class ChartLibraryTests : IDisposable
         Assert.False(entry.Result.Ok);
         Assert.Empty(library.Playable);
     }
+
+    [Fact]
+    public void EachDifficultyHasItsOwnBest()
+    {
+        var easy = Entry(/*lang=json,strict*/ """{ "name": "Song", "author": "me", "difficulty": "Easy" }""");
+        var hard = Entry(/*lang=json,strict*/ """{ "name": "Song", "author": "me", "difficulty": "Hard" }""");
+
+        Assert.NotEqual(easy.ScoreKey, hard.ScoreKey);
+    }
+
+    private static ChartEntry Entry(string json) => new("chart.json", ChartLoader.Load(json), ChartSource.Folder);
 
     private void WriteChart(string name, string json)
     {

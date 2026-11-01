@@ -98,7 +98,7 @@ and shows how far it has got.
 |---|---|---|---|
 | `id` | string | `actor`, `actor2`... | What events refer to. The first is the default. |
 | `name` | string | the id | Shown over its head. |
-| `at` | `{ x, z, facing }` | far end, centre | Its lane spot; `facing` in degrees, 0 = looking down the lane at you. |
+| `at` | `{ x, z, facing }` | far end, centre | Its spot, which may be outside the lane; `facing` in degrees, 0 = looking down the lane at you. |
 | `look` | string | `you` | `you` (whoever plays), `default`, `defaultMale`, `defaultFemale`, or a character string as the game stores it. A chart made in game stores its maker's, so everyone fights the boss as it was dressed. |
 | `shiftstones` | list | none | The stones it wears, up to two names - `Adamant`, `Charge`, `Flow`, `Guard`, `Stubborn`, `Surge`, `Vigor`, `Volatile` (`"VigorStone"` works too). A chart made in game stores its maker's. |
 | `measurement` | `{ height, armSpan }` | yours | The body's size in metres. KEEPing a clip stores the recorder's, so recorded poses fit the body whoever plays. |
@@ -127,7 +127,7 @@ Each has a time (`t` or `beat`), optionally `actor` (default: the first), and ex
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `structure` | pool name | required | `Disc`, `Ball`, `Pillar`, `Wall`, `RockCube`, `BoulderBall`, `SmallRock`, `LargeRock`. |
-| `from` | `{ x, y, z }` | required | Where it appears: `z` over 0, in the lane or up to 6 m past its far end; `x` up to 6 m outside its sides - shots can come from beyond the boss or across from the side. A grounded one (Disc, cube, Pillar, Wall) needs floor under it there. |
+| `from` | `{ x, y, z }` | required | Where it appears: `z` over 0, and it may be outside the lane - shots can come from beyond the boss or across from the side. A grounded one (Disc, cube, Pillar, Wall) needs floor under it there. |
 | `to` | `{ x, y }` | at you | Where it arrives, on your end of the lane. |
 | `speed` | m/s | required | Sets the flight time; the arc is chosen so it still arrives where aimed. |
 | `telegraph` | seconds | 0.5 | How long before the throw it is spawned: it comes up out of the floor at `from` like a player's spawn (with the spawn move's sound and dust), waits there, and at `t` flies with the punch's sound. |

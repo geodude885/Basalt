@@ -1,3 +1,5 @@
+using Basalt.Services.Charts.Files;
+
 namespace Basalt.Services.Charts.Model;
 
 // Loaded and validated chart, see ChartJson for json format
@@ -27,13 +29,39 @@ public record Chart(
 
 
     public LaneColours Colours { get; init; } = LaneColours.Default;
-    public LaneColours ColoursIn(Phase? phase) => phase?.Colours?.Over(Colours) ?? Colours;
+    public LaneColours ColoursIn(Phase? phase) => phase?.Colours.Over(Colours) ?? Colours;
     public IReadOnlyList<ShaderCue> Shaders { get; init; } = Array.Empty<ShaderCue>();
+
+
+    internal static Chart From(ChartDto dto)
+    {
+        var lane = dto.ToLane();
+        var tempo = dto.ToTempo();
+        var defaultActorId = dto.ActorIds()[0];
+
+        var events = ChartEvent.AllFrom(dto, tempo, defaultActorId);
+        var lastEvent = events.Count == 0 ? 0 : events.Max(e => e.Time);
+        var name = string.IsNullOrWhiteSpace(dto.Name) ? "Untitled" : dto.Name;
+
+        return new Chart(name,
+            lane,
+            ActorSpec.AllFrom(dto, lane),
+            Phase.AllFrom(dto, tempo),
+            events,
+            dto.End ?? (lastEvent + DefaultEndPadding))
+        {
+            Info = ChartInfo.From(dto),
+            Arena = ArenaSpec.From(dto),
+            Music = MusicSpec.From(dto),
+            Cover = dto.Cover?.Trim(),
+            PlayerZone = PlayerZone.From(dto, lane),
+            Rules = Rules.From(dto),
+            Performances = ActorPerformance.AllFrom(dto, defaultActorId, tempo),
+            Tempo = tempo,
+            Shaders = ShaderCue.AllFrom(dto, tempo),
+            Colours = LaneColours.From(dto),
+        };
+    }
 }
 
 public readonly record struct Spot(float X, float Z, float Facing = 0f);
-
-public record Phase(string Name, double Time, double ScoreMultiplier)
-{
-    public LaneColours? Colours { get; init; }
-}

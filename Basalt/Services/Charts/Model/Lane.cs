@@ -9,8 +9,6 @@ public readonly record struct Lane(float Length, float Width)
     public const float MinWidth = 1f;
     public const float MaxWidth = 8f;
 
-    public const float ProjectileReach = 6f;
-
     public (Lane Lane, IReadOnlyList<ActorSpec> Actors) Resize(IReadOnlyList<ActorSpec> actors, float length, float width)
     {
         var oldLength = Length;

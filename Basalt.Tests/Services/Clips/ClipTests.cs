@@ -3,7 +3,7 @@ using Basalt.DevTools.Testing;
 using Basalt.Services.Clips;
 using Xunit;
 
-namespace Basalt.Tests;
+namespace Basalt.Tests.Services.Clips;
 
 public class ClipTests
 {
@@ -23,7 +23,7 @@ public class ClipTests
     [Fact]
     public void PosesInterpolateBetweenFrames()
     {
-        var mid = Sample().Sample(0.5f);
+        var mid = Sample().GetClipFrameAt(0.5f);
 
         Assert.Equal(1f, mid.Head.Position.X, 4);
         var yaw = 2f * MathF.Atan2(mid.Head.Rotation.Y, mid.Head.Rotation.W) * 180f / MathF.PI;
@@ -35,8 +35,8 @@ public class ClipTests
     {
         var clip = Sample();
 
-        Assert.Equal(0f, clip.Sample(-1f).Head.Position.X);
-        Assert.Equal(4f, clip.Sample(99f).Head.Position.X);
+        Assert.Equal(0f, clip.GetClipFrameAt(-1f).Head.Position.X);
+        Assert.Equal(4f, clip.GetClipFrameAt(99f).Head.Position.X);
         Assert.Equal(2f, clip.Duration);
     }
 
@@ -74,7 +74,7 @@ public class ClipTests
             Frame(1f, 0f) with { LeftFingers = fist, RightFingers = fist },
         });
 
-        Assert.Equal(new ClipFingers(0.5f, 0.5f, 0.5f, 0.25f), clip.Sample(0.5f).LeftFingers);
+        Assert.Equal(new ClipFingers(0.5f, 0.5f, 0.5f, 0.25f), clip.GetClipFrameAt(0.5f).LeftFingers);
 
         (var read, _) = ClipFile.Read(ClipFile.Write(clip), "x");
         Assert.Equal(fist, read!.Frames[0].RightFingers);

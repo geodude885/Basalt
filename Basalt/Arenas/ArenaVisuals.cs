@@ -1,5 +1,6 @@
 using Basalt.BattlePresentation;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using UnityEngine;
 
 namespace Basalt.Arenas;

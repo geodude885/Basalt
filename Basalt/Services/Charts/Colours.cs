@@ -2,13 +2,12 @@ using System.Globalization;
 
 namespace Basalt.Services.Charts;
 
-/// <summary>A colour from a chart: red, green, blue and opacity, each 0 to 1.</summary>
+// Colours are 0f to 1f
 public readonly record struct Rgba(float R, float G, float B, float A = 1f)
 {
-    /// <summary>Nothing at all - "none", which hides walls a chart shows.</summary>
     public static Rgba None => new(0f, 0f, 0f, 0f);
 
-    /// <summary>"#RRGGBB" or "#RRGGBBAA" (the # optional), as a colour picker writes it, or "none".</summary>
+    /// "#RRGGBB" or "#RRGGBBAA" or "none"
     public static bool TryParse(string? text, out Rgba colour)
     {
         colour = default;
@@ -26,17 +25,4 @@ public readonly record struct Rgba(float R, float G, float B, float A = 1f)
         colour = new Rgba(((value >> 24) & 0xFF) / 255f, ((value >> 16) & 0xFF) / 255f, ((value >> 8) & 0xFF) / 255f, (value & 0xFF) / 255f);
         return true;
     }
-}
-
-/// <summary>The lane's colours; null keeps the mod's own, and a wall colour shows the walls as see-through panes.</summary>
-public record LaneColours(Rgba? SideLines = null, Rgba? EndLines = null, Rgba? ZoneLine = null, Rgba? Backstop = null, Rgba? Walls = null)
-{
-    public static LaneColours Default { get; } = new();
-
-    /// <summary>These colours laid over <paramref name="under"/>: anything not set here is taken from it.</summary>
-    public LaneColours Over(LaneColours under) =>
-        new(SideLines ?? under.SideLines, EndLines ?? under.EndLines, ZoneLine ?? under.ZoneLine, Backstop ?? under.Backstop, Walls ?? under.Walls);
-
-    /// <summary>Whether the walls are shown - a wall colour that is not "none".</summary>
-    public bool ShowsWalls => Walls is { A: > 0f };
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Basalt.Services.Charts;
 using Xunit;
 
 namespace Basalt.Tests;
@@ -25,7 +26,7 @@ public class ArchitectureTests
     {
         var offenders = new List<string>();
 
-        foreach (var type in typeof(Services.Charts.ChartRunner).Assembly.GetTypes())
+        foreach (var type in typeof(ChartRunner).Assembly.GetTypes())
         {
             if (type.Namespace is null) continue;
             if (!type.Namespace.StartsWith(ServicesNamespace, StringComparison.Ordinal)) continue;

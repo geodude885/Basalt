@@ -2,7 +2,7 @@ using Basalt.DevTools.Testing;
 using Basalt.Services.Audio;
 using Xunit;
 
-namespace Basalt.Tests;
+namespace Basalt.Tests.Services.Audio;
 
 public class AudioDecoderTests
 {

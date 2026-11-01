@@ -4,7 +4,7 @@ using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Xunit;
 
-namespace Basalt.Tests;
+namespace Basalt.Tests.Services.Charts.Files;
 
 public class ChartLoaderTests
 {
@@ -103,7 +103,8 @@ public class ChartLoaderTests
                 { "t": 0.2, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 10 }, "speed": 10, "telegraph": 1 } },
                 { "t": 3, "move": "Kick", "at": { "x": 0, "z": 5 } },
                 { "t": 4, "actor": "ghost", "move": "Kick" },
-                { "t": 5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 10, "to": { "x": 1 } } }
+                { "t": 5, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 5 }, "speed": 10, "to": { "x": 1 } } },
+                { "t": 6, "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": -1 }, "speed": 0 } }
               ]
             }
             """);
@@ -113,12 +114,13 @@ public class ChartLoaderTests
 
         Assert.Contains("actors[1].id \"a\" is used twice", all, StringComparison.Ordinal);
         Assert.Contains("events[0].projectile.structure is required", all, StringComparison.Ordinal);
-        Assert.Contains("events[0].projectile.from.z (30) must be in front of you and within the lane", all, StringComparison.Ordinal);
         Assert.Contains("events[0].projectile.speed must be over 0", all, StringComparison.Ordinal);
-        Assert.Contains("events[1] needs exactly one of projectile, move or at (has 0)", all, StringComparison.Ordinal);
+        Assert.Contains("events[7].projectile.from.z must be", all, StringComparison.Ordinal);
+        Assert.Contains("events[7].projectile.speed must be over 0", all, StringComparison.Ordinal);
+        Assert.Contains("events[1] needs exactly one event type", all, StringComparison.Ordinal);
         Assert.Contains("events[2].beat needs the chart's bpm", all, StringComparison.Ordinal);
         Assert.Contains("events[3].projectile would appear before the battle starts", all, StringComparison.Ordinal);
-        Assert.Contains("events[4] needs exactly one of projectile, move or at (has 2)", all, StringComparison.Ordinal);
+        Assert.Contains("events[4] needs exactly one event type", all, StringComparison.Ordinal);
         Assert.Contains("events[5].actor \"ghost\" is not one of the chart's actors", all, StringComparison.Ordinal);
         Assert.Contains("events[6].projectile.to needs x and y", all, StringComparison.Ordinal);
     }
@@ -130,7 +132,7 @@ public class ChartLoaderTests
 
         var all = string.Join("\n", result.Errors);
         Assert.Contains("phases[0] must start at 0", all, StringComparison.Ordinal);
-        Assert.Contains("phases[1].t (3) must be after phases[0] (5)", all, StringComparison.Ordinal);
+        Assert.Contains("phases[1].t (3) must be after phases[0]", all, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -185,6 +187,10 @@ public class ChartLoaderTests
         Assert.Contains(
             ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 1, "actor": "nobody", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } } ] }""").Errors,
             e => e.Contains("events[0].actor", StringComparison.Ordinal));
+
+    [Fact]
+    public void ActorsMayStandOutsideTheLane() =>
+        Assert.True(ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 8, "width": 3 }, "actors": [ { "id": "boss", "at": { "x": 9, "z": 20 } } ], "events": [ { "t": 1, "at": { "x": 0, "z": -2 } } ] }""").Ok);
 
     [Fact]
     public void AnArenasFacingIsPartOfItsSpot() =>

@@ -1,4 +1,4 @@
-using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using UnityEngine;
 
 namespace Basalt.BattlePresentation.Shaders;

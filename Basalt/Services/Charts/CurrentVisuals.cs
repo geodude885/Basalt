@@ -1,30 +1,22 @@
+using Basalt.Services.Charts.Model;
+
 namespace Basalt.Services.Charts;
 
-/// <summary>
-/// A RumbleReShaded pack turned on at <see cref="Time"/> with the values in <see cref="Values"/>,
-/// fading over <see cref="Fade"/> seconds; or, with <see cref="Off"/>, faded back to the player's own.
-/// </summary>
-public record ShaderCue(double Time, string Pack, IReadOnlyDictionary<string, float> Values, bool Off, double Fade);
-
-/// <summary>Where one pack stands at a moment: on or not, and the charted parameters' values.</summary>
 public record PackLook(bool On, IReadOnlyDictionary<string, float> Values);
 
-/// <summary>
-/// Every pack's look at a chart time, stateless so a run started part way looks as it would have.
-/// <c>baseline</c> gives the player's own value, which cues fade from and "off" fades back to.
-/// </summary>
-public static class LookTimeline
+public static class CurrentVisuals
 {
     public static Dictionary<string, PackLook> Evaluate(IReadOnlyList<ShaderCue> cues, double time, Func<string, string, float> baseline)
     {
         var looks = new Dictionary<string, PackLook>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var pack in cues.Where(c => c.Time <= time).GroupBy(c => c.Pack, StringComparer.OrdinalIgnoreCase))
         {
             var packCues = pack.OrderBy(c => c.Time).ToList();
             var values = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             var on = false;
 
-            // Each cue fades from the look so far, frozen where the next cue cut in.
+            // Either get value based of fading between cue changes, or stay frozen
             foreach ((var cue, var cueEnd) in packCues.Zip(packCues.Skip(1).Select(c => c.Time).Append(time)))
             {
                 var k = cue.Fade <= 0 ? 1 : Math.Clamp((cueEnd - cue.Time) / cue.Fade, 0, 1);
@@ -39,7 +31,6 @@ public static class LookTimeline
                     values[key] = (float)(from + ((target - from) * k));
                 }
 
-                // On at once; off only once the fade back is over.
                 on = !cue.Off || k < 1;
                 if (cue.Off && k >= 1) values.Clear();
             }

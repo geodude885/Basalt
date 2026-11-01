@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Basalt.Services.Charts.Files;
 
 public static class ChartTemplate
@@ -25,5 +27,5 @@ public static class ChartTemplate
         }
         """;
 
-    private static string Quote(string text) => System.Text.Json.JsonSerializer.Serialize(text);
+    private static string Quote(string text) => JsonSerializer.Serialize(text);
 }

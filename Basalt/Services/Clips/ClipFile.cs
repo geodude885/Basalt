@@ -1,16 +1,9 @@
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Basalt.Services.Clips;
 
-/// <summary>
-/// Clips on disk: JSON, one compact row per frame. Poses are <c>[px, py, pz, qx, qy, qz, qw]</c>,
-/// with the lane spot <c>"p"</c>, facing <c>"a"</c> and moves.
-/// <code>
-/// { "name": "boss-clip-1", "moves": [ { "t": 2.1, "move": "Straight" } ],
-///   "frames": [ { "t": 0, "h": [...], "l": [...], "r": [...], "p": [0, 12], "a": 0 }, ... ] }
-/// </code>
-/// </summary>
 public static class ClipFile
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -18,7 +11,7 @@ public static class ClipFile
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
     public static string Write(Clip clip)

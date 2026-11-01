@@ -2,7 +2,26 @@ using System.Numerics;
 
 namespace Basalt.Services.Charts.Model;
 
-public abstract record ChartEvent(double Time, int Order); // Order is tie breaker for same time events
+public abstract record ChartEvent(double Time, int Order, string ActorId) // Order is tie breaker for same time events
+{
+    internal static List<ChartEvent> AllFrom(ChartDto dto, TempoMap? tempo, string defaultActorId)
+        => (dto.Events ?? []).Select((e, ord) => From(e, ord, tempo, defaultActorId)).ToList();
+
+    private static ChartEvent From(EventDto e, int order, TempoMap? tempo, string defaultActorId)
+    {
+        var time = tempo is { } && e.Beat is { } beats ? tempo.BeatToSeconds(beats) : e.T ?? 0;
+        var actor = e.Actor ?? defaultActorId;
+
+        return e switch
+        {
+            { Projectile: { } projectile } => ProjectileEvent.FromDto(projectile, time, order, actor),
+            { Move: { } move } => new MoveEvent(time, order, actor, move),
+            _ => new PlaceEvent(time, order, actor, new(e.At!.X!.Value, e.At!.Z!.Value, e.At!.Facing ?? 0f)),
+        };
+    }
+
+}
+
 
 public record ProjectileEvent(
     double Time,
@@ -12,7 +31,7 @@ public record ProjectileEvent(
     Aim To,
     float Speed,
     float Telegraph,
-    string ActorId) : ChartEvent(Time, Order)
+    string ActorId) : ChartEvent(Time, Order, ActorId)
 {
     public const float DefaultTelegraph = 0.5f;
 
@@ -28,6 +47,15 @@ public record ProjectileEvent(
     public bool SpawnsFromFloor => FloorSpawned.Contains(Structure, StringComparer.OrdinalIgnoreCase);
     public bool RestsOnFloor => SpawnsFromFloor || IsGrounded;
     private static readonly string[] FloorSpawned = ["Disc", "Pillar", "RockCube", "Wall"];
+
+    internal static ProjectileEvent FromDto(ProjectileDto projectile, double time, int order, string actor)
+    {
+        var from = new Vector3(projectile.From!.X!.Value, projectile.From.Y!.Value, projectile.From.Z!.Value);
+        var to = projectile.To == null ? Aim.Player : Aim.Point(projectile.To.X!.Value, projectile.To.Y!.Value);
+        var telegraph = projectile.Telegraph ?? DefaultTelegraph;
+
+        return new ProjectileEvent(time, order, projectile.Structure!, from, to, projectile.Speed!.Value, telegraph, actor) { Grounded = projectile.Grounded };
+    }
 }
 
 public readonly record struct Aim(bool AtPlayer, float X, float Y)
@@ -36,6 +64,6 @@ public readonly record struct Aim(bool AtPlayer, float X, float Y)
     public static Aim Point(float x, float y) => new(false, x, y);
 }
 
-public record MoveEvent(double Time, int Order, string ActorId, string Move) : ChartEvent(Time, Order);
+public record MoveEvent(double Time, int Order, string ActorId, string Move) : ChartEvent(Time, Order, ActorId);
 
-public record PlaceEvent(double Time, int Order, string ActorId, Spot At) : ChartEvent(Time, Order);
+public record PlaceEvent(double Time, int Order, string ActorId, Spot At) : ChartEvent(Time, Order, ActorId);

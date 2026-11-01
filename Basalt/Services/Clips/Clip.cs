@@ -3,10 +3,8 @@ using Il2CppRUMBLE.Players.Subsystems;
 
 namespace Basalt.Services.Clips;
 
-/// <summary>A local pose inside a player's rig: what a headset or controller reports.</summary>
 public readonly record struct ClipPose(Vector3 Position, Quaternion Rotation)
 {
-
     public static ClipPose From(UnityEngine.Transform part) => new(
         new Vector3(part.localPosition.x, part.localPosition.y, part.localPosition.z),
         new Quaternion(part.localRotation.x, part.localRotation.y, part.localRotation.z, part.localRotation.w));
@@ -15,7 +13,6 @@ public readonly record struct ClipPose(Vector3 Position, Quaternion Rotation)
         new(Vector3.Lerp(a.Position, b.Position, t), Quaternion.Slerp(a.Rotation, b.Rotation, t));
 }
 
-/// <summary>How a hand's fingers are held: the controller's index, grip, thumb and sway, 0..1, as the game animates them.</summary>
 public readonly record struct ClipFingers(float Index, float Grip, float Thumb, float Sway)
 {
     public static ClipFingers From(PlayerHandPresence.HandPresenceInput input) =>
@@ -28,11 +25,6 @@ public readonly record struct ClipFingers(float Index, float Grip, float Thumb, 
         a.Sway + ((b.Sway - a.Sway) * t));
 }
 
-/// <summary>
-/// One sample of a performance: head and hands inside the rig, and for a clip recorded in a lane, where the
-/// performer stood (<see cref="Offset"/>: x, z from the lane's start) and faced (<see cref="Yaw"/>: degrees from
-/// down the lane, clockwise from above).
-/// </summary>
 public record ClipFrame(
     float Time,
     ClipPose Head,
@@ -43,24 +35,17 @@ public record ClipFrame(
     ClipFingers? LeftFingers = null,
     ClipFingers? RightFingers = null);
 
-/// <summary>A move the game recognised from the performer, by its stack name, at a clip time.</summary>
 public readonly record struct ClipMove(float Time, string Move);
 
-/// <summary>
-/// A recorded performance, rig-local so it plays anywhere.
-/// </summary>
 public record Clip(string Name, IReadOnlyList<ClipFrame> Frames)
 {
     public float Duration => Frames.Count == 0 ? 0f : Frames[^1].Time;
 
-    /// <summary>The moves made during it, in time order - playback runs these itself rather than trusting gestures.</summary>
     public IReadOnlyList<ClipMove> Moves { get; init; } = Array.Empty<ClipMove>();
 
-    /// <summary>The time of its first frame: 0, except in clips recorded before clips kept their own time.</summary>
     public float Start => Frames.Count == 0 ? 0f : Frames[0].Time;
 
-    /// <summary>The frame at <paramref name="time"/>: poses, spot, facing and fingers interpolated.</summary>
-    public ClipFrame Sample(float time)
+    public ClipFrame GetClipFrameAt(float time)
     {
         if (Frames.Count == 0) throw new InvalidOperationException($"clip \"{Name}\" has no frames");
         if (time <= Frames[0].Time) return Frames[0];
@@ -82,9 +67,7 @@ public record Clip(string Name, IReadOnlyList<ClipFrame> Frames)
             a.RightFingers is { } ra && b.RightFingers is { } rb ? ClipFingers.Lerp(ra, rb, t) : a.RightFingers ?? b.RightFingers);
     }
 
-
-    /// <summary>Index of the first frame later than <paramref name="time"/> - binary search; frames are time-ordered.</summary>
-    private int FirstAfter(float time)
+    private int FirstAfter(float time) // Manually implement a binary search, why the hell not
     {
         var low = 0;
         var high = Frames.Count - 1;

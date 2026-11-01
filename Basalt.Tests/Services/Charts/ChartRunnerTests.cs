@@ -3,7 +3,7 @@ using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Xunit;
 
-namespace Basalt.Tests;
+namespace Basalt.Tests.Services.Charts;
 
 public class ChartRunnerTests
 {

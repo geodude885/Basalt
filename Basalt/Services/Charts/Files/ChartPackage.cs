@@ -1,11 +1,9 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace Basalt.Services.Charts.Files;
 
-// The sharing format: a .bbchart is a zip of a chart folder, made by Basalt Editor and unpacked here into a cache
-// keyed by its contents. Packages are other people's files, so entries outside the folder, too many entries or too
-// many bytes are refused.
 public static class ChartPackage
 {
     public const string Extension = ".bbchart";
@@ -14,25 +12,27 @@ public static class ChartPackage
     public const long MaxUnpackedBytes = 256L * 1024 * 1024;
 
     private const string CompleteMarker = ".unpacked";
+    private const string PartialSuffix = ".partial";
+    private const int HashLength = 12;
 
-    /// <summary>Unpacks a package into <paramref name="cacheRoot"/> (once per distinct content); returns the folder or why not.</summary>
     public static (string? Folder, string? Error) Unpack(string package, string cacheRoot)
     {
         try
         {
             var stem = Path.GetFileNameWithoutExtension(package);
             var target = Path.Combine(cacheRoot, $"{stem}-{Hash(package)}");
+
             if (File.Exists(Path.Combine(target, CompleteMarker))) return (target, null);
 
             Directory.CreateDirectory(cacheRoot);
-            foreach (var stale in Directory.EnumerateDirectories(cacheRoot, $"{stem}-*")) TryDelete(stale);
+            foreach (var stale in Directory.EnumerateDirectories(cacheRoot).Where(folder => IsUnpackOf(stem, folder))) TryDelete(stale, cacheRoot);
 
             using var zip = ZipFile.OpenRead(package);
-            var error = Check(zip, out var prefix);
+            var error = ValidatePackage(zip, out var prefix);
             if (error != null) return (null, error);
 
-            var partial = target + ".partial";
-            TryDelete(partial);
+            var partial = target + PartialSuffix;
+            TryDelete(partial, cacheRoot);
             Directory.CreateDirectory(partial);
 
             foreach (var entry in zip.Entries)
@@ -57,11 +57,10 @@ public static class ChartPackage
         }
     }
 
-    /// <summary>chart.json at the top, or inside one top-level folder (a zipped folder) - which then becomes the prefix to strip.</summary>
-    private static string? Check(ZipArchive zip, out string prefix)
+    private static string? ValidatePackage(ZipArchive zip, out string prefix)
     {
         prefix = "";
-        if (zip.Entries.Count > MaxEntries) return $"has {zip.Entries.Count} entries - more than {MaxEntries}";
+        if (zip.Entries.Count > MaxEntries) return $"has {zip.Entries.Count} entries more than {MaxEntries}";
         if (zip.Entries.Sum(e => e.Length) > MaxUnpackedBytes) return $"unpacks to more than {MaxUnpackedBytes / (1024 * 1024)} MB";
 
         var names = zip.Entries.Select(e => e.FullName.Replace('\\', '/')).ToList();
@@ -81,22 +80,23 @@ public static class ChartPackage
     {
         using var stream = File.OpenRead(file);
         using var sha = SHA256.Create();
-        return Convert.ToHexString(sha.ComputeHash(stream))[..12].ToLowerInvariant();
+        return Convert.ToHexString(sha.ComputeHash(stream))[..HashLength].ToLowerInvariant();
     }
 
-    private static void TryDelete(string folder)
+    private static bool IsUnpackOf(string stem, string folder) =>
+        Regex.IsMatch(Path.GetFileName(folder), $"^{Regex.Escape(stem)}-[0-9a-f]{{{HashLength}}}({Regex.Escape(PartialSuffix)})?$", RegexOptions.None, TimeSpan.FromSeconds(1));
+
+    private static void TryDelete(string folder, string cacheRoot)
     {
+        if (!ChartFiles.IsInsideFolder(cacheRoot, folder)) return;
+
         try
         {
             if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
         }
-        catch (IOException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // In use (a song still loaded): left for the next unpack.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Likewise.
+            // Leave for next delete
         }
     }
 }

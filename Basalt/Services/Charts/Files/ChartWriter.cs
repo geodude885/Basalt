@@ -54,7 +54,7 @@ public static class ChartWriter
         if (Math.Abs(factor - 1f) < 0.001f) return chartText;
 
         var chart = ChartJson.Parse(chartText);
-        ScaleAllNumbersByName("z", chart["events"], factor, 0, length + Lane.ProjectileReach);
+        ScaleAllNumbersByName("z", chart["events"], factor, double.MinValue, double.MaxValue);
         ScaleAllNumbersByName("length", chart["playerZone"], factor, 0.5, length);
         return ChartJson.Write(chart);
     }

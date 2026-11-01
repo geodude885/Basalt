@@ -31,6 +31,9 @@ public static class ChartFiles
         return full.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ? full : null;
     }
 
+    public static bool IsInsideFolder(string folder, string path) =>
+        EnsureInsideFolder(folder, Path.GetRelativePath(folder, path)) != null;
+
     public static void BackupAndSave(string chartFile, string previousText, string newText)
     {
         File.WriteAllText(chartFile + BackupExtension, previousText);

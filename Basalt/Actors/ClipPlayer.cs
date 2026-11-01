@@ -75,7 +75,7 @@ internal class ClipPlayer(Actor actor, PlayerController controller, PlayerRig ri
             return;
         }
 
-        var frame = playing.Clip.Sample((float)clipTime);
+        var frame = playing.Clip.GetClipFrameAt((float)clipTime);
         ApplyPose(frame);
         _fingers = frame.LeftFingers is { } left && frame.RightFingers is { } right ? (left, right) : null;
 

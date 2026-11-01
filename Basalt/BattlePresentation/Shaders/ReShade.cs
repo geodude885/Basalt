@@ -1,4 +1,5 @@
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
 using MelonLoader;
 using RumbleReShaded.Api;
 using Semver;
@@ -38,7 +39,7 @@ internal class ReShade : IShaderProvider
     {
         if (cues.Count == 0) return;
 
-        foreach ((var packName, var look) in LookTimeline.Evaluate(cues, chartTime, PlayerValue))
+        foreach ((var packName, var look) in CurrentVisuals.Evaluate(cues, chartTime, PlayerValue))
         {
             if (!_overridesByPack.TryGetValue(packName, out var packOverride))
                 _overridesByPack[packName] = packOverride = RRS.Override(ModId, packName);

@@ -96,7 +96,7 @@ public class ScoreKeeper
     {
         if (survived && damageTaken == 0) return Hitless;
 
-        var taken = survived ? damageTaken : Math.Max(damageTaken, MaximumDamageCountedAgainstScore);
+        var taken = survived ? Math.Min(damageTaken, MaximumDamageCountedAgainstScore) : MaximumDamageCountedAgainstScore;
 
         var boosted = Math.Max(
             Position(taken - (actorDamage * ActorDamagePoints / DamageTakenPoints)),

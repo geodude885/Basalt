@@ -1,15 +1,15 @@
 using Basalt.Services.Audio;
 
-namespace Basalt.DevTools.Testing;
+namespace Basalt.Tests;
 
 /// <summary>Decoded PCM audio: interleaved samples in -1..1.</summary>
-public record PcmAudio(float[] Samples, int Channels, int SampleRate)
+internal sealed record PcmAudio(float[] Samples, int Channels, int SampleRate)
 {
     public double Seconds => Samples.Length / (double)(Channels * SampleRate);
 }
 
 /// <summary>Audio decoded whole, for the unit tests.</summary>
-public static class TestAudio
+internal static class TestAudio
 {
     /// <summary>A whole song decoded; the game streams instead.</summary>
     public static PcmAudio DecodeAll(IPcmSource source)

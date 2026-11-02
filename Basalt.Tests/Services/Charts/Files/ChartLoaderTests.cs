@@ -1,5 +1,4 @@
 using System.Numerics;
-using Basalt.DevTools.Testing;
 using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Xunit;
@@ -142,13 +141,6 @@ public class ChartLoaderTests
 
         Assert.False(result.Ok);
         Assert.StartsWith("not valid chart JSON", result.Errors[0], StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void TheSelfTestChartLoads()
-    {
-        var result = ChartLoader.Load(SelfTestChart.Json);
-        Assert.True(result.Ok, string.Join("; ", result.Errors));
     }
 
     [Fact]

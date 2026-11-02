@@ -2,10 +2,10 @@ using System.Numerics;
 
 using Basalt.Services.Clips;
 
-namespace Basalt.DevTools.Testing;
+namespace Basalt.Tests;
 
 /// <summary>Clips made in code, for tests that must not depend on files.</summary>
-public static class SyntheticClips
+internal static class SyntheticClips
 {
     private const float SampleRate = 30f;
     private const float EyeHeight = 1.6f;

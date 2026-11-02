@@ -32,7 +32,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Basalt\Basalt.csproj" />
-		<ProjectReference Include="..\Basalt.DevTools\Basalt.DevTools.csproj" />
 	</ItemGroup>
 
 </Project>

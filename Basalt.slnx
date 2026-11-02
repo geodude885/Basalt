@@ -8,5 +8,4 @@
   </Folder>
   <Project Path="Basalt.Tests/Basalt.Tests.csproj" />
   <Project Path="Basalt/Basalt.csproj" />
-  <Project Path="Basalt.DevTools/Basalt.DevTools.csproj" />
 </Solution>

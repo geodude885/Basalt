@@ -1,5 +1,4 @@
 using System.Reflection;
-using Basalt.DevTools.Flatscreen;
 using Basalt.Patches;
 using HarmonyLib;
 using Xunit;
@@ -15,7 +14,7 @@ public class PatchTargetTests
     public static TheoryData<Type> Patches()
     {
         var data = new TheoryData<Type>();
-        foreach (var group in new[] { typeof(ActorPatches), typeof(ArenaPatches), typeof(FlatscreenControls) })
+        foreach (var group in new[] { typeof(ActorPatches), typeof(ArenaPatches) })
         {
             foreach (var patch in group.GetNestedTypes(BindingFlags.Public)) data.Add(patch);
         }

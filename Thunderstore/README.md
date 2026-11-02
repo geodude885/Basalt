@@ -30,8 +30,10 @@ shader looks apply.
 - **Music** plays through the game's music volume. The chart
   follows the song's clock, so it stays on the beat.
 - **Scoring.** Surviving is worth 1000; damage on the boss scores 10 a point, times the section's
-  multiplier; each point of damage you take costs 25. Rank: S untouched, A up to
-  3 damage, B up to 8, C any survival, D defeated. Best scores are kept per chart.
+  multiplier; each point of damage you take costs 25. Rank: SS+ is never being hit, then by
+  damage taken: SS up to 2, S 4, A+ 6, A 10, B+ 13, B 16, C+ 18, C any survival. D+ is defeated past
+  halfway, D sooner. Each point dealt to the boss takes 0.4 off the damage counted, and a defeat
+  counts as 20, but that can only lift a rank as far as A. Best scores are kept per chart.
 
 ## Charts
 

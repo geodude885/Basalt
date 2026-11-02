@@ -42,7 +42,8 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
     private readonly Arena _arena = new(assets);
     private readonly ProjectileManager _projectiles = new(actors);
-    private readonly BattleInfoBoard _board = new(assets);
+
+    internal BattleInfoBoard Board { get; } = new(assets);
     private readonly MoveLock _moves = new();
     private readonly StructureSweeper _sweeper = new();
     private readonly BattlePlayer _player = new();
@@ -124,7 +125,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         actors.DespawnAll();
         _projectiles.Clear();
         _arena.Destroy();
-        _board.Hide();
+        Board.Hide();
         Music.Clear();
         _moves.AllowMoves();
         _moves.Reset();
@@ -145,7 +146,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         _moves.Forget();
         _projectiles.Forget();
         _arena.Forget();
-        _board.Forget();
+        Board.Forget();
         InChartArena = false;
         CanPickChartsHere = false;
         if (Run == null) return;
@@ -163,7 +164,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
     public void Update()
     {
-        _board.Update();
+        Board.Update();
         if (Run is not { } run) return;
 
         switch (run.State)
@@ -175,8 +176,8 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
             case BattleState.Countdown:
                 KeepLane();
                 var left = run.CountdownEnds - Time.time;
-                if (left > 0f) _board.Show($"{run.Request.Chart.Name}\n{Mathf.CeilToInt(left)}");
-                else if (Music.Loading && Time.time < run.MusicDeadline) _board.Show($"{run.Request.Chart.Name}\nloading music {Music.Progress * 100:0}%");
+                if (left > 0f) Board.Show($"{run.Request.Chart.Name}\n{Mathf.CeilToInt(left)}");
+                else if (Music.Loading && Time.time < run.MusicDeadline) Board.Show($"{run.Request.Chart.Name}\nloading music {Music.Progress * 100:0}%");
                 else BeginRunning();
                 break;
 
@@ -256,13 +257,13 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
             if (request.Mode == BattleMode.Record)
             {
-                _board.SetPosition(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
-                _board.Show($"Recording {performer.Name}\nget ready");
+                Board.SetPosition(World(performer.At.X, 2.6f, Math.Max(0f, performer.At.Z - 3f)), World(performer.At.X, 0f, performer.At.Z));
+                Board.Show($"Recording {performer.Name}");
             }
             else
             {
-                _board.SetPosition(World(0f, 2.6f, Math.Min(3f, chart.Lane.Length / 2f)), Run.Frame.Position.ToUnity());
-                _board.Show($"{chart.Name}\n{(request.Mode == BattleMode.Review ? "clip review" : "get ready")}");
+                Board.SetPosition(World(0f, 2.6f, Math.Min(3f, chart.Lane.Length / 2f)), Run.Frame.Position.ToUnity());
+                Board.Show($"{chart.Name}\n{(request.Mode == BattleMode.Review ? "clip review" : "get ready")}");
             }
 
             // Recording, the others are there as guides: everyone but the actor you take the place of.
@@ -337,7 +338,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
         if (Music.Loading) Logger.Warning($"[Music.Late] still loading after {MusicDecodeTimeoutSeconds}s - playing without music");
         if (chart.Music != null) Music.Play(chart.Music.Offset, chart.Music.Volume);
-        _board.Show("GO", 1f);
+        Board.Show("GO", 1f);
         foreach (var actor in actors.Actors) actor.FullHeal();
         _sweeper.Reset();
         Visuals.Reset();
@@ -361,7 +362,8 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
             {
                 case EnterPhase enter:
                     Run.Phase = enter.Phase;
-                    if (enter.Time > 0 && settings.ShowPhaseBanners.Value) _board.Show($"{enter.Phase.Name}{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
+                    if (enter.Time > 0 && settings.ShowPhaseBanners.Value)
+                        Board.Show($"{enter.Phase.Name}{(enter.Phase.ScoreMultiplier != 1 ? $"\nx{enter.Phase.ScoreMultiplier:0.#} damage" : "")}", PhaseBannerSeconds);
                     Logger.Debug($"[Battle.Phase] {enter.Phase.Name} at {enter.Time:0.0}s");
                     if (enter.Time > 0) Visuals.FireEvent("phase", World(0f, 0f, 0f), 1f, 1.5f);
                     _arena.Visuals.Recolour(Run.Request.Chart.ColoursIn(enter.Phase), enter.Time > 0 ? PhaseColourFadeSeconds : 0f);
@@ -442,7 +444,8 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
             Logger.Error($"[Scores.SaveFailed] {e.Message}");
         }
 
-        _board.ShowResult(result, isNewBest ? "NEW BEST" : previousBest == null ? null : $"best {previousBest.Rank} {previousBest.Score}");
+        Board.ShowResult(result, isNewBest ? "New Best" : previousBest == null ? null : $"best {RankLook.Markup(previousBest.Rank)} {previousBest.Score}");
+
         Logger.Info(
             $"[Battle] {result.Chart}: {(result.Survived ? "survived" : "defeated")} - rank {result.Rank}, score {result.Score}; " +
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +

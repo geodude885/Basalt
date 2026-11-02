@@ -67,6 +67,8 @@ internal static partial class SelfTest
         ["measure"] = RunMeasure,
         // Looking, walking where you look, a click pushing the menu's button, and the move keys' moves.
         ["flatscreen"] = RunFlatscreenTest,
+        // Screenshots of the results board at each look of rank.
+        ["ranks"] = RunRanksTest,
     };
 
     private static readonly Dictionary<string, string[]> Presets = new(StringComparer.OrdinalIgnoreCase)

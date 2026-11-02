@@ -15,7 +15,7 @@ internal class BattleInfoBoard(GameAssets assets)
     private TextMeshPro? _text;
     private GameObject? _slab;
     private float _hideAt = float.PositiveInfinity;
-
+    private Func<float, string>? _animated;
 
     public void SetPosition(Vector3 position, Vector3 lookingFrom)
     {
@@ -30,6 +30,7 @@ internal class BattleInfoBoard(GameAssets assets)
     {
         if (!EnsureExists()) return;
 
+        _animated = null;
         _text!.text = text;
         FitSlabToText();
         GameObject!.SetActive(true);
@@ -39,23 +40,33 @@ internal class BattleInfoBoard(GameAssets assets)
     public void ShowResult(BattleResult result, string? best = null)
     {
         var outcome = result.Survived ? "SURVIVED" : "DEFEATED";
-        Show(
-            $"{result.Chart}\n" +
-            $"{outcome}   rank {result.Rank}\n" +
-            $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +
-            $"<size=70%>damage taken {result.DamageTaken} ({result.HitsTaken} hits)  |  " +
-            $"boss damage {result.ActorDamage:0.#}  |  {result.Seconds:0.0}s</size>");
+        string Text(float time)
+        {
+            return $"{result.Chart}\n" +
+                $"{outcome}   rank {RankLook.Markup(result.Rank, time)}\n" +
+                $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +
+                $"<size=70%>damage taken {result.DamageTaken} ({result.HitsTaken} hits)  |  " +
+                $"boss damage {result.ActorDamage:0.#}  |  {result.Seconds:0.0}s</size>";
+        }
+
+        Show(Text(0f));
+        if (RankLook.IsAnimated(result.Rank)) _animated = Text;
     }
 
     public void Hide()
     {
         GameObject?.SetActive(false);
+        _animated = null;
         _hideAt = float.PositiveInfinity;
     }
 
     public void Update()
     {
-        if (GameObject != null && Time.time >= _hideAt) Hide();
+        if (GameObject != null && Time.time >= _hideAt)
+            Hide();
+
+        if (_animated != null && GameObject != null && GameObject.activeSelf)
+            _text!.text = _animated(Time.time);
     }
 
     private bool EnsureExists()
@@ -92,6 +103,7 @@ internal class BattleInfoBoard(GameAssets assets)
         GameObject = null;
         _text = null;
         _slab = null;
+        _animated = null;
         _hideAt = float.PositiveInfinity;
     }
 }

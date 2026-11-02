@@ -87,7 +87,7 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
                 (by.Length > 0 ? $"<size=55%>{by}</size>\n" : "") +
                 $"<size=50%>{length}</size>\n" +
                 (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "") +
-                $"<size=55%>{(best == null ? "no best yet" : $"best: {best.Rank} {best.Score}")}</size>" +
+                $"<size=55%>{(best == null ? "no best yet" : $"best: {RankLook.Markup(best.Rank)} {best.Score}")}</size>" +
                 (settings.Editing.Value && chart.Actors.Count > 1 ? $"\n<size=45%>Selected recording actor: {charts.ActorToRecord?.Name}</size>" : ""),
                 chart.Cover == null ? null : ChartFiles.EnsureInsideFolder(entry.AssetFolder, chart.Cover));
         }

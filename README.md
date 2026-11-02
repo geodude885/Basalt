@@ -9,7 +9,7 @@ Survive scripted boss battles down a single lane against game-simulated actors: 
 
 ```
 Basalt/                 the mod
-  ModEntry.cs           builds the services, hands each what it needs, and passes MelonLoader's calls on
+  BasaltMod.cs          builds the services, hands each what it needs, and passes MelonLoader's calls on
   Mod.cs, Logger.cs     the services for DevTools, and the logger with its log level
   Settings.cs           the MelonPreferences, shown by UIFramework
   Actors/               Actor (simulated player): lifecycle, playback, body; rig; the actor registry
@@ -19,7 +19,7 @@ Basalt/                 the mod
   Editing/              the studio (recording, lane setup) and the clip recorder
   Patches/              ActorPatches (health, knockback, input, sounds), ArenaPatches
   Menu/                 the Basalt menu: its screens, components (card, buttons, slider) and chart selection
-  Services/             game-free and unit tested: charts, clips, audio, scoring, JSON books
+  Services/             game-free and unit tested: charts, clips, audio, scoring, JSON storage
 Basalt.DevTools/        a second mod for development: self-tests, test actor, flatscreen play
 Basalt.Tests/           xUnit: services, patch targets against the interop
 tools/                  song analysis, cpp2il-isil.py
@@ -71,6 +71,7 @@ steam.exe -applaunch 890550 --basalt-selftest=ring --basalt-shots
 | `--basalt-selftest` (`=ring`, `=pit`) | The self-test chart, in place, in the Ring from a chart spot, or the Pit laid out automatically |
 | `=record` | Records, reviews and keeps a clip |
 | `=look` | A new chart's boss wears your look and stones, and an edited look |
+| `=ranks` | Screenshots of the results board at each look of rank |
 | `=measure` | Writes structure sizes to `SelfTest/structures.json` for the editor |
 | `=flatscreen` | Looking, walking where you look, a click pushing a button, and the moves' keys route |
 | `=chart:<name>` | Plays one of your charts and measures its clips |

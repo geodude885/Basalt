@@ -20,7 +20,6 @@ Basalt/                 the mod
   Patches/              ActorPatches (health, knockback, input, sounds), ArenaPatches
   Menu/                 the Basalt menu: its screens, components (card, buttons, slider) and chart selection
   Services/             game-free and unit tested: charts, clips, audio, scoring, JSON storage
-Basalt.DevTools/        a second mod for development: self-tests, test actor, flatscreen play
 Basalt.Tests/           xUnit: services, patch targets against the interop
 tools/                  song analysis, cpp2il-isil.py
 ```
@@ -39,45 +38,6 @@ players", has the findings behind this.
 
 Actors must never be taken into a room with other players: a Local actor would report health
 changes as you.
-
-## Dev tools
-
-`Basalt.DevTools.dll` is built beside the mod and copied into `RUMBLE\Mods`; it is never
-packaged. It adds:
-
-| Keys | Does |
-|---|---|
-| Ctrl+F | Desktop camera: right drag orbits, scroll zooms, middle drag pans |
-| Ctrl+T | Spawn / despawn a test actor 3 m in front of you |
-| Ctrl+9 | Test actor: mirror (copies you) / bot (keys drive it) |
-| Ctrl+P / Ctrl+K | Plant / unplant it; cycle the knockback it takes |
-| Ctrl+Shift+P | The test actor plays the newest clip |
-| (bot) WASD, Q/E, F | Walk, turn, face you on/off |
-| (bot) Space, Shift, 1-4, Z/X/C/V, T/G | Jump, dash, spawn cube/pillar/wall/ball, straight/uppercut/kick/stomp, disc/explode |
-| Left click | Pushes the game button in the crosshair, or under a free cursor (offline) |
-| Mouse, WASD, Q/E | No headset: look, walk and snap-turn your own player |
-| Space, Shift, 1-4, Z/X/C/V, T/G | No headset: the same moves as the bot, on your own player (offline) |
-| Alt | No headset: frees the cursor and the keys for a window, again to take them back |
-
-**Self-tests** run with Steam open (launching `RUMBLE.exe` directly gets no sign-in), write
-`SELFTEST PASS` or the problems to `UserData/Basalt/selftest.txt`, and quit:
-
-```sh
-steam.exe -applaunch 890550 --basalt-selftest=ring --basalt-shots
-```
-
-| Argument | Runs |
-|---|---|
-| `--basalt-selftest` (`=ring`, `=pit`) | The self-test chart, in place, in the Ring from a chart spot, or the Pit laid out automatically |
-| `=record` | Records, reviews and keeps a clip |
-| `=look` | A new chart's boss wears your look and stones, and an edited look |
-| `=ranks` | Screenshots of the results board at each look of rank |
-| `=measure` | Writes structure sizes to `SelfTest/structures.json` for the editor |
-| `=flatscreen` | Looking, walking where you look, a click pushing a button, and the moves' keys route |
-| `=chart:<name>` | Plays one of your charts and measures its clips |
-| `--basalt-shots` | Adds screenshots to `UserData/Basalt/SelfTestShots` |
-
-The game sometimes closes at the loading screen before the Gym is up; run it again.
 
 ## Building
 

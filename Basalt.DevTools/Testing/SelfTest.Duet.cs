@@ -1,13 +1,18 @@
 using System.Collections;
+using Basalt.Actors;
+using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Editing;
 using Basalt.Services.Charts;
+using Basalt.Services.Charts.Model;
+using Il2CppRUMBLE.Networking.MatchFlow;
 using MelonLoader.Utils;
 using UnityEngine;
 
 namespace Basalt.DevTools.Testing;
 
 // duet: one actor recorded, then the other recorded with the first there as a guide, then both played together.
+// Then you die mid-clip, and go back to the Gym with no match error for it to show.
 internal static partial class SelfTest
 {
     private const string DuetChart = /*lang=json*/ """
@@ -53,7 +58,22 @@ internal static partial class SelfTest
         var performing = Mod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
         Logger.Info($"[SelfTest] duet playback: {string.Join(", ", performing)} performing");
         if (performing.Count != 2) problems.Add($"played back, {performing.Count} of 2 actors performed ({string.Join(", ", performing)})");
+
+        Mod.Battle.OnPlayerDamaged(Actor.MaxHealth, 0);
+        if (Mod.Battle.Run?.State != BattleState.Finished) problems.Add("dying did not finish the battle");
+        var stillPerforming = Mod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
+        if (stillPerforming.Count > 0) problems.Add($"after you died, {string.Join(", ", stillPerforming)} kept performing");
+
         Mod.Battle.Stop("duet checked");
+        if (!Mod.Battle.CanPickChartsHere) problems.Add("no chart menu in the arena a chart brought you to");
+        if (MatchHandler.CurrentMatchError != MatchHandler.MatchError.None) problems.Add($"leaving a chart's arena with the match error {MatchHandler.CurrentMatchError}");
+
+        Mod.Battle.ReturnToGym();
+        if (Mod.Battle.CanPickChartsHere) problems.Add("the chart menu stayed up while fading out to the Gym");
+
+        deadline = Time.realtimeSinceStartup + TimeoutSeconds;
+        while (!ArenaKind.Gym.IsLoaded() && Time.realtimeSinceStartup < deadline) yield return null;
+        if (MatchHandler.CurrentMatchError != MatchHandler.MatchError.None) problems.Add($"arrived in the Gym with the match error {MatchHandler.CurrentMatchError}");
     }
 
     // Records the actor `actorId` walking, and keeps it; with `guideId`, that actor must be there performing, mimed.

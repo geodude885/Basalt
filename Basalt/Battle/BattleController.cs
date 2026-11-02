@@ -33,6 +33,10 @@ public enum BattleMode
 internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestScore> scores, GameAssets assets, Settings settings)
 {
     public BattleRun? Run { get; private set; }
+
+    // In the Ring or Pit because a chart brought you here, not a match or another mod.
+    public bool InChartArena { get; private set; }
+    public bool CanPickChartsHere { get => ArenaKind.Gym.IsLoaded() || (InChartArena && !field); private set; }
     public BattleVisualEvents Visuals { get; } = new(ReShade.CreateIfLoaded());
     public MusicController Music { get; } = new();
 
@@ -98,8 +102,15 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         Logger.Info($"[Battle] {chart.Name} in the {arena}{(chart.Music != null ? $" to {chart.Music.File}" : "")}: {chart.Actors.Count} actor(s), {chart.Events.Count} events, {chart.End:0.#}s");
 
         Run = new BattleRun(request, chartClips);
-        if (arena.IsLoaded()) SetupArena();
-        else arena.Load();
+        if (arena.IsLoaded())
+        {
+            InChartArena = arena != ArenaKind.Gym;
+            SetupArena();
+        }
+        else
+        {
+            arena.Load();
+        }
     }
 
     public void Stop(string reason)
@@ -123,6 +134,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
     public void ReturnToGym()
     {
         Stop("returning to the Gym");
+        CanPickChartsHere = true;
         Maps.Load(ArenaKind.Gym);
     }
 
@@ -134,10 +146,13 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         _projectiles.Forget();
         _arena.Forget();
         _board.Forget();
+        InChartArena = false;
+        CanPickChartsHere = false;
         if (Run == null) return;
 
         if (Run.State == BattleState.LoadingArena && string.Equals(scene, Run.Request.Chart.Arena.Map.Scene(), StringComparison.Ordinal))
         {
+            InChartArena = Run.Request.Chart.Arena.Map != ArenaKind.Gym;
             MelonCoroutines.Start(PrepareAfterSettling(Run));
             return;
         }
@@ -436,8 +451,12 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
         foreach (var actor in actors.Actors)
         {
-            if (actor.Ready) actor.Body.Footing.AllowFreePlacement();
+            if (!actor.Ready) continue;
+
+            actor.Body.Clips.End();
+            actor.Body.Footing.AllowFreePlacement();
         }
+
         Finished?.Invoke(result);
     }
 

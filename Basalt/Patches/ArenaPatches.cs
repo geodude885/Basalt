@@ -1,5 +1,4 @@
 using Basalt.Battle;
-using Basalt.Services.Charts.Model;
 using HarmonyLib;
 using Il2CppRUMBLE.Networking.MatchFlow;
 
@@ -7,7 +6,8 @@ namespace Basalt.Patches;
 
 /// <summary>
 /// The match handler force-quits a solo player from the Ring or Pit back to the Gym; blocked only
-/// while a battle holds the arena, so real matches and MultiplayerMapsInSinglePlayer are unaffected.
+/// in an arena a chart brought you to, so real matches and MultiplayerMapsInSinglePlayer are unaffected.
+/// It sets its match error first, and the Gym would show that as a slab on your way back.
 /// </summary>
 public static class ArenaPatches
 {
@@ -28,10 +28,11 @@ public static class ArenaPatches
 
             PatchGuard.Run(nameof(NoForceQuitDuringBattle), () =>
             {
-                if (_battle.Run?.Request.Chart.Arena.Map is not (ArenaKind.Pit or ArenaKind.Ring)) return;
+                if (!_battle.InChartArena) return;
 
                 runOriginal = false;
-                Logger.Debug("[Arena.ForceQuitBlocked] the match handler tried to send you back to the Gym mid-battle");
+                MatchHandler.CurrentMatchError = MatchHandler.MatchError.None;
+                Logger.Debug("[Arena.ForceQuitBlocked] the match handler tried to send you back to the Gym from a chart's arena");
             });
 
             return runOriginal;

@@ -20,6 +20,6 @@ internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonFil
         StudioState.Setup => _laneSetup,
         StudioState.Reviewing => null,
         StudioState.Deciding => battle.Run?.State is null or BattleState.Finished ? _review : null,
-        _ => !Maps.IsCurrentlyOnline && battle.Run?.State is null or BattleState.Finished ? _charts : null,
+        _ => !Maps.IsCurrentlyOnline && battle.CanPickChartsHere && battle.Run?.State is null or BattleState.Finished ? _charts : null,
     };
 }

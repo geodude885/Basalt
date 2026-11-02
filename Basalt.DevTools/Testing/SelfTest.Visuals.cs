@@ -53,10 +53,10 @@ internal static partial class SelfTest
         var playerBefore = PlayerSetting();
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while ((Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
+        while ((BasaltMod.Battle.Run?.State != BattleState.Running || BasaltMod.Battle.ChartTime < 1.5) && Time.realtimeSinceStartup < deadline) yield return null;
 
         var midRun = InUse();
-        var expected = playerBefore.Value + ((LookStrength - playerBefore.Value) * Mod.Battle.Visuals.ShaderIntensity);
+        var expected = playerBefore.Value + ((LookStrength - playerBefore.Value) * BasaltMod.Battle.Visuals.ShaderIntensity);
         if (!midRun.Enabled || Math.Abs(midRun.Value - expected) > 0.01f)
             _visualsProblem = $"chart look: {LookPack} was {(midRun.Enabled ? "on" : "off")} at {LookParameter} {midRun.Value:0.00} mid-run, not on at {expected:0.00}";
         else if (PlayerSetting() != playerBefore)
@@ -64,7 +64,7 @@ internal static partial class SelfTest
         else
             Logger.Info($"[SelfTest] chart look on: {LookPack} at {midRun.Value:0.00} (yours {playerBefore.Value:0.00}, {(playerBefore.Enabled ? "on" : "off")}, untouched)");
 
-        while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return null;
 
         var afterRun = InUse();

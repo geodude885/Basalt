@@ -2,10 +2,6 @@ namespace Basalt.Patches;
 
 internal static class PatchGroup
 {
-    /// <summary>
-    /// Patches each nested class of a group on its own (<c>PatchAll</c> on the container patches
-    /// nothing), logging before each so a native crash while patching names the patch.
-    /// </summary>
     public static int Apply(HarmonyLib.Harmony harmony, Type group)
     {
         var total = 0;

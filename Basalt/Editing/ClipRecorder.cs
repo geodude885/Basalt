@@ -7,7 +7,6 @@ using Il2CppRUMBLE.Players;
 
 namespace Basalt.Editing;
 
-// Records both player motion and moves
 internal class ClipRecorder
 {
     public bool Recording { get; private set; }

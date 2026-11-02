@@ -11,10 +11,10 @@ public sealed class BestScoreTests : IDisposable
     [Fact]
     public void KeepsOnlyTheBestAndSurvivesARestart()
     {
-        var book = new JsonFileRepository<BestScore>(_file);
-        book.Load();
+        var store = new JsonFileRepository<BestScore>(_file);
+        store.Load();
         var best = BestScore.From(Result(900, "A"), new DateTime(2026, 1, 1));
-        book.Set("Song|me", best);
+        store.Set("Song|me", best);
 
         Assert.False(best.IsBeatenBy(Result(500, "C")));
         Assert.True(best.IsBeatenBy(Result(1000, "S")));
@@ -26,16 +26,16 @@ public sealed class BestScoreTests : IDisposable
     }
 
     [Fact]
-    public void AnUnreadableFileStartsAFreshBook()
+    public void AnUnreadableFileStartsAFreshStore()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
         File.WriteAllText(_file, "{ not json");
 
-        var book = new JsonFileRepository<BestScore>(_file);
-        book.Load();
+        var store = new JsonFileRepository<BestScore>(_file);
+        store.Load();
 
-        Assert.NotNull(book.LoadError);
-        Assert.Null(book.Get("Song|me"));
+        Assert.NotNull(store.LoadError);
+        Assert.Null(store.Get("Song|me"));
     }
 
     public void Dispose()

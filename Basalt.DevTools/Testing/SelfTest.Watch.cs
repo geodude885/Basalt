@@ -14,7 +14,7 @@ internal static partial class SelfTest
         _watcher!.Toggle();
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         if (!_watcher.Watching)
         {
             problems.Add("turning watch mode on did not start the chosen chart");
@@ -30,13 +30,13 @@ internal static partial class SelfTest
             problems.Add("watching, the desktop camera was not at the overview");
 
         var health = BattlePlayer.Player?.Data.HealthPoints ?? 0;
-        Logger.Info($"[SelfTest] watching {Mod.Battle.Run?.Request.Chart.Name}: {health} HP, {Mod.Battle.Run?.Score.DamageTaken} damage taken");
+        Logger.Info($"[SelfTest] watching {BasaltMod.Battle.Run?.Request.Chart.Name}: {health} HP, {BasaltMod.Battle.Run?.Score.DamageTaken} damage taken");
         if (health < PlayerHealth.MAX_PLAYER_HEALTH) problems.Add($"watching, you were on {health} HP, not kept full");
         Shoot(ShotFolder(), "0-watch");
 
         _watcher.Toggle();
         yield return null;
         if (_desktopCamera.Active) problems.Add("turning watch mode off left the desktop camera on");
-        Mod.Battle.Stop("watch checked");
+        BasaltMod.Battle.Stop("watch checked");
     }
 }

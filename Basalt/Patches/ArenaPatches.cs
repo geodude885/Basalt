@@ -4,11 +4,6 @@ using Il2CppRUMBLE.Networking.MatchFlow;
 
 namespace Basalt.Patches;
 
-/// <summary>
-/// The match handler force-quits a solo player from the Ring or Pit back to the Gym; blocked only
-/// in an arena a chart brought you to, so real matches and MultiplayerMapsInSinglePlayer are unaffected.
-/// It sets its match error first, and the Gym would show that as a slab on your way back.
-/// </summary>
 public static class ArenaPatches
 {
     private static BattleController _battle = null!;

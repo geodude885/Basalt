@@ -10,8 +10,6 @@ internal class BattleRun(BattleRequest request, ClipLibrary? chartClips)
     public BattleRequest Request => request;
     public BattleState State { get; set; } = BattleState.LoadingArena;
     public Anchor Frame { get; set; }
-
-    // The lane's frame once it is laid out; null while the arena loads.
     public Anchor? Lane => State == BattleState.LoadingArena ? null : Frame;
     public ChartRunner? Runner { get; set; }
     public ScoreKeeper Score { get; } = new(request.Chart.Name);

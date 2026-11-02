@@ -205,7 +205,6 @@ internal class ProjectileManager(ActorsRegistry actors)
         // A hold, or the game settling it.
         if (state is not null and not Structure.PhysicsState.FreeGrounded) return SlideCheck.LetGo;
 
-        // Knocked off course - parried, punched, hit - once the physics has had a step to act on the throw.
         var knocked = Time.time - slide.DrivenSince > 0.05f && Vector3.Dot(slide.Body.linearVelocity, slide.Velocity) < 0.5f * slide.Velocity.sqrMagnitude;
         return knocked ? SlideCheck.LetGo : SlideCheck.Drive;
     }

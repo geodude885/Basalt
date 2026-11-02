@@ -139,7 +139,7 @@ internal static partial class SelfTest
     public static void Update()
     {
         if (!Enabled) return;
-        if (!_sawSimulatedActor && Mod.Actors.Actors.Any(a => a.Ready)) _sawSimulatedActor = true;
+        if (!_sawSimulatedActor && BasaltMod.Actors.Actors.Any(a => a.Ready)) _sawSimulatedActor = true;
         KeepPlayerAlive();
 
         if (!_listening || _running || Time.frameCount % 30 != 0) return;
@@ -217,10 +217,10 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
         while (!_gymSeen && Time.realtimeSinceStartup < deadline) yield return null;
 
-        if (!ArenaKind.Gym.IsLoaded() || Mod.Battle.Run != null)
+        if (!ArenaKind.Gym.IsLoaded() || BasaltMod.Battle.Run != null)
         {
-            Mod.Battle.Stop("self-test: next test");
-            if (!ArenaKind.Gym.IsLoaded()) Mod.Battle.ReturnToGym();
+            BasaltMod.Battle.Stop("self-test: next test");
+            if (!ArenaKind.Gym.IsLoaded()) BasaltMod.Battle.ReturnToGym();
         }
 
         deadline = Time.realtimeSinceStartup + PlayerTimeoutSeconds;
@@ -251,7 +251,7 @@ internal static partial class SelfTest
 
     private static IEnumerator RunWallsTest(List<string> problems)
     {
-        if (Mod.Battle.Run?.Lane == null)
+        if (BasaltMod.Battle.Run?.Lane == null)
         {
             problems.Add("walls needs a battle just before it, still laid out - run battle,walls");
             yield break;
@@ -319,12 +319,12 @@ internal static partial class SelfTest
             }
         }
 
-        Mod.Battle.Finished += OnFinished;
+        BasaltMod.Battle.Finished += OnFinished;
         // Something to clear: a battle starts on a clear floor.
         Perform(playerController, "SpawnCube");
         yield return new WaitForSeconds(1f);
 
-        Mod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f), Lane = gymLane });
+        BasaltMod.Battle.Start(new BattleRequest(WithLook(chart)) { AssetFolder = assets, PendingClip = SyntheticClips.Sway(SelfTestChart.Clip, 1.5f), Lane = gymLane });
         MelonCoroutines.Start(CheckRules());
         if (_arena != ArenaKind.Gym) MelonCoroutines.Start(CheckActorHitbox());
         MelonCoroutines.Start(CheckSlides());
@@ -334,7 +334,7 @@ internal static partial class SelfTest
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (result == null && Time.realtimeSinceStartup < deadline) yield return null;
 
-        Mod.Battle.Finished -= OnFinished;
+        BasaltMod.Battle.Finished -= OnFinished;
         problems.AddRange(Judge(chart, result));
     }
 
@@ -342,12 +342,12 @@ internal static partial class SelfTest
     private static IEnumerator CheckPicker()
     {
         var deadline = Time.realtimeSinceStartup + 5f;
-        while (Mod.Menu.Root?.activeSelf != true && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Menu.Root?.activeSelf != true && Time.realtimeSinceStartup < deadline) yield return null;
 
         // Its buttons wait a second after it appears - it can land where a hand is.
         yield return new WaitForSeconds(1.2f);
 
-        if (Mod.Menu.Root?.activeSelf != true)
+        if (BasaltMod.Menu.Root?.activeSelf != true)
         {
             _pickerProblem = "the chart picker never appeared";
             yield break;
@@ -360,9 +360,9 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.5f);
         var after = CardText;
 
-        if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-picker");
+        if (_shots && BasaltMod.Menu.Root is { } card) ShootPanel(card.transform, "0-picker");
 
-        Mod.Menu.ButtonRow?.Press("prev");
+        BasaltMod.Menu.ButtonRow?.Press("prev");
         if (string.IsNullOrWhiteSpace(before) || before == after) _pickerProblem = $"pressing next did not change the picker's card (\"{before}\")";
         if (!pushed) _pickerProblem = "the menu had no game NEXT button to push";
         Logger.Info($"[SelfTest] menu: {Regex.Replace(before, "<[^>]+>", "").Replace('\n', ' ')} -> {Regex.Replace(after, "<[^>]+>", "").Replace('\n', ' ')}");
@@ -374,26 +374,26 @@ internal static partial class SelfTest
     private static IEnumerator CheckDifficulties()
     {
         var songsTried = 0;
-        foreach (var _ in Mod.Charts.Library.Songs)
+        foreach (var _ in BasaltMod.Charts.Library.Songs)
         {
             yield return new WaitForSeconds(0.4f);
-            if (Mod.Menu.StepSlider?.Spec?.Labels.Count > 1 && Mod.Charts.CurrentlyChosen is { } startedOn)
+            if (BasaltMod.Menu.StepSlider?.Spec?.Labels.Count > 1 && BasaltMod.Charts.CurrentlyChosen is { } startedOn)
             {
                 songsTried++;
-                var difficulties = Mod.Charts.Library.DifficultiesOf(startedOn);
+                var difficulties = BasaltMod.Charts.Library.DifficultiesOf(startedOn);
                 foreach (var step in Enumerable.Range(0, difficulties.Count))
                 {
-                    Mod.Menu.StepSlider.Root?.GetComponentInChildren<InteractionSlider>(true)?.SetStep(step, false, false);
+                    BasaltMod.Menu.StepSlider.Root?.GetComponentInChildren<InteractionSlider>(true)?.SetStep(step, false, false);
                     yield return new WaitForSeconds(0.4f);
-                    if (Mod.Charts.CurrentlyChosen != difficulties[step]) _pickerProblem = $"step {step} of {startedOn.Name}'s slider chose {Mod.Charts.CurrentlyChosen?.Stem}, not {difficulties[step].Stem}";
+                    if (BasaltMod.Charts.CurrentlyChosen != difficulties[step]) _pickerProblem = $"step {step} of {startedOn.Name}'s slider chose {BasaltMod.Charts.CurrentlyChosen?.Stem}, not {difficulties[step].Stem}";
                 }
 
-                if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-difficulties");
-                Mod.Charts.ChooseDifficulty(startedOn);
+                if (_shots && BasaltMod.Menu.Root is { } card) ShootPanel(card.transform, "0-difficulties");
+                BasaltMod.Charts.ChooseDifficulty(startedOn);
                 Logger.Info($"[SelfTest] difficulties of {startedOn.Name}: {string.Join(", ", difficulties.Select(d => d.Stem))}");
             }
 
-            Mod.Charts.StepSong(1);
+            BasaltMod.Charts.StepSong(1);
         }
 
         Logger.Info($"[SelfTest] songs with difficulties: {songsTried}");
@@ -417,10 +417,10 @@ internal static partial class SelfTest
         UnityEngine.Object.Destroy(image);
 
         // Shown and judged in one frame: the menu's next refresh puts the screen's own card back.
-        Mod.Menu.SelectedChartDescription?.Show(new MenuCard("Cover test<\n<size=50%>a chart with a cover</size>", path));
-        if (Mod.Menu.SelectedChartDescription?.Cover.activeSelf != true) _pickerProblem = "a chart's cover image did not show on the picker";
+        BasaltMod.Menu.SelectedChartDescription?.Show(new MenuCard("Cover test<\n<size=50%>a chart with a cover</size>", path));
+        if (BasaltMod.Menu.SelectedChartDescription?.Cover.activeSelf != true) _pickerProblem = "a chart's cover image did not show on the picker";
 
-        if (_shots && Mod.Menu.Root is { } card) ShootPanel(card.transform, "0-cover");
+        if (_shots && BasaltMod.Menu.Root is { } card) ShootPanel(card.transform, "0-cover");
 
         yield return new WaitForSeconds(0.4f);
     }
@@ -429,7 +429,7 @@ internal static partial class SelfTest
     private static IEnumerator CheckRules()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.3f);
 
         // Only in place: loading the Ring or Pit takes the Gym's structures with it anyway.
@@ -443,7 +443,7 @@ internal static partial class SelfTest
         else if (HasGesture("SpawnCube"))
             _rulesProblem = "a discs-only chart left the cube's spawn gesture working";
 
-        while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.3f);
         if (!Available("SpawnCube")) _rulesProblem = "the spawn moves were not given back after the battle";
         if (hadGestures && !HasGesture("SpawnCube")) _rulesProblem = "the cube's spawn gesture was not given back after the battle";
@@ -457,17 +457,17 @@ internal static partial class SelfTest
     private static IEnumerator CheckPlacement()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
-        if (LaneOrigin is not { } origin || Mod.Battle.Run?.Request.Chart is not { } chart || BattlePlayer.Player?.Controller is not { } playerController) yield break;
+        if (LaneOrigin is not { } origin || BasaltMod.Battle.Run?.Request.Chart is not { } chart || BattlePlayer.Player?.Controller is not { } playerController) yield break;
 
         var feet = PlayerRig.From(playerController).Feet;
         var off = new Vector2(feet.x - origin.x, feet.z - origin.z).magnitude;
         Logger.Info($"[SelfTest] you are {off:0.00} m from the lane's start {origin.Describe()}");
         if (off > 0.75f) _laneProblem = $"you were {off:0.0} m from the lane's start - not moved onto it";
 
-        foreach (var actor in Mod.Actors.Actors)
+        foreach (var actor in BasaltMod.Actors.Actors)
         {
             if (!actor.Ready) continue;
             var spec = chart.Actors.FirstOrDefault(s => s.Id == actor.Id);
@@ -475,7 +475,7 @@ internal static partial class SelfTest
 
             // Across and along the lane only: on uneven ground an actor settles on the real floor.
             var floor = actor.Body.Rig.Feet;
-            var lane = Mod.Battle.ToLane(floor);
+            var lane = BasaltMod.Battle.ToLane(floor);
             var away = new Vector2(lane.x - spec.At.X, lane.z - spec.At.Z).magnitude;
             var sunk = origin.y - floor.y;
             Logger.Info($"[SelfTest] {actor} is {away:0.00} m from its spot, {floor.y - origin.y:+0.00;-0.00} m from the lane's height");
@@ -486,7 +486,7 @@ internal static partial class SelfTest
     /// <summary>After the battle, walking and dashing into each wall and the zone's front corners must leave you inside the lane, on its floor.</summary>
     private static IEnumerator CheckWalls()
     {
-        if (!FlatscreenControls.IsFlatscreen || Mod.Battle.Run?.Request.Chart?.Lane is not { } lane) yield break;
+        if (!FlatscreenControls.IsFlatscreen || BasaltMod.Battle.Run?.Request.Chart?.Lane is not { } lane) yield break;
 
         var problems = new List<string>();
         (string Name, Vector2 Stick, float Seconds, Func<Vector3, bool> Inside)[] walks =
@@ -494,7 +494,7 @@ internal static partial class SelfTest
             ("right", new Vector2(1f, 0f), 3f, p => p.x <= (lane.Width / 2f) + 0.9f),
             ("left", new Vector2(-1f, 0f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("back", new Vector2(0f, -1f), 3f, p => p.z >= -1.6f),
-            ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (Mod.Battle.Run?.Request.Chart?.PlayerZone.Length ?? lane.Length) + 0.9f),
+            ("forward", new Vector2(0f, 1f), 9f, p => p.z <= (BasaltMod.Battle.Run?.Request.Chart?.PlayerZone.Length ?? lane.Length) + 0.9f),
             ("forward left", new Vector2(-0.7f, 0.7f), 5f, p => p.x >= -(lane.Width / 2f) - 0.9f),
             ("forward right", new Vector2(0.7f, 0.7f), 5f, p => p.x <= (lane.Width / 2f) + 0.9f),
         };
@@ -515,7 +515,7 @@ internal static partial class SelfTest
             yield return new WaitForSeconds(0.3f);
 
             if (BattlePlayer.Player?.Controller is not { } playerController) break;
-            var at = Mod.Battle.ToLane(PlayerRig.From(playerController).Feet);
+            var at = BasaltMod.Battle.ToLane(PlayerRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] walked and dashed {name}: at lane x {at.x:0.00}, y {at.y:0.00}, z {at.z:0.00}");
             if (!inside(at)) problems.Add($"walking {name} left the lane: x {at.x:0.0}, z {at.z:0.0}");
             if (at.y < -0.3f) problems.Add($"walking {name} sank {-at.y:0.0} m through the floor");
@@ -541,7 +541,7 @@ internal static partial class SelfTest
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
 
-        while (Mod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         ShowOverview();
         yield return new WaitForSeconds(0.4f);
         Shoot(folder, "1-lane");
@@ -556,7 +556,7 @@ internal static partial class SelfTest
         yield return new WaitForSeconds(0.4f);
         Shoot(folder, "3-flight");
 
-        while (Mod.Battle.Run?.State != BattleState.Finished && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Finished && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.6f);
         Shoot(folder, "4-results");
     }
@@ -586,8 +586,8 @@ internal static partial class SelfTest
     {
         var problems = new List<string>();
 
-        if (result == null) problems.Add($"the battle did not finish within {TimeoutSeconds}s (state {Mod.Battle.Run?.State.ToString() ?? "no battle"})");
-        var ready = Mod.Actors.Actors.Count(a => a.Ready);
+        if (result == null) problems.Add($"the battle did not finish within {TimeoutSeconds}s (state {BasaltMod.Battle.Run?.State.ToString() ?? "no battle"})");
+        var ready = BasaltMod.Actors.Actors.Count(a => a.Ready);
         if (ready < chart.Actors.Count) problems.Add($"{ready} of {chart.Actors.Count} actor(s) came up ready");
         if (!_sawSimulatedActor) problems.Add("no actor was ever seen as a ready, simulated player");
 
@@ -623,12 +623,12 @@ internal static partial class SelfTest
     }
 
     /// <summary>How many lines carried this tag.</summary>
-    private static string CardText => Mod.Menu.SelectedChartDescription?.Text.text ?? "";
+    private static string CardText => BasaltMod.Menu.SelectedChartDescription?.Text.text ?? "";
 
     // As a hand pushing it would: through the game button's own onPressed, so its wiring is checked too.
     private static bool PushGameButton(string id)
     {
-        var button = Mod.Menu.ButtonRow?.Buttons.FirstOrDefault(b => b.Spec.Id == id);
+        var button = BasaltMod.Menu.ButtonRow?.Buttons.FirstOrDefault(b => b.Spec.Id == id);
         if (button?.Root.GetComponentInChildren<InteractionButton>(true) is not { } interaction) return false;
 
         interaction.onPressed.Invoke();
@@ -660,7 +660,7 @@ internal static partial class SelfTest
     private static IEnumerator QuitSoon()
     {
         yield return new WaitForSeconds(QuitDelaySeconds);
-        Mod.Battle.Stop("self-test over");
+        BasaltMod.Battle.Stop("self-test over");
         Application.Quit();
     }
 }

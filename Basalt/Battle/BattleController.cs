@@ -34,7 +34,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 {
     public BattleRun? Run { get; private set; }
 
-    // In the Ring or Pit because a chart brought you here, not a match or another mod.
+    // In the Ring or Pit via a chart, not matchmaking
     public bool InChartArena { get; private set; }
     public bool CanPickChartsHere { get => ArenaKind.Gym.IsLoaded() || (InChartArena && !field); private set; }
     public BattleVisualEvents Visuals { get; } = new(ReShade.CreateIfLoaded());
@@ -58,7 +58,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
     private const float MusicDecodeTimeoutSeconds = 90f;
 
 
-    // Seconds into the chart: the song's clock when there is one, else game time; -1 before GO.
+    // Seconds into the chart (can be negative before chart starts)
     public double ChartTime => Run is { State: BattleState.Running or BattleState.Finished } run
         ? Music.Clock ?? (Time.time - run.StartedAt)
         : -1;
@@ -272,7 +272,6 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
                 var spot = World(spec.At.X, 0f, spec.At.Z);
                 var yaw = Run.Frame.ActorYaw(spec.At.Facing);
 
-                // Spawning puts the head on the floor, so the body falls until placed properly.
                 var run = Run;
                 actor.OnReady += ready => MelonCoroutines.Start(PlaceWhenSettled(ready, spot, yaw, run));
                 actors.Spawn(actor, spot, Quaternion.Euler(0f, yaw, 0f));

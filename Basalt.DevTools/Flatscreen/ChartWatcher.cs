@@ -11,7 +11,7 @@ internal sealed class ChartWatcher(DesktopCamera camera)
     public bool On { get; private set; }
 
     // A battle being watched, not a recording.
-    public bool Watching => On && Mod.Battle.Run is { } run && run.Request.Mode != BattleMode.Record;
+    public bool Watching => On && BasaltMod.Battle.Run is { } run && run.Request.Mode != BattleMode.Record;
 
     public void Toggle()
     {
@@ -23,7 +23,7 @@ internal sealed class ChartWatcher(DesktopCamera camera)
             return;
         }
 
-        if (Mod.Battle.Run == null) Mod.Charts.StartBattle();
+        if (BasaltMod.Battle.Run == null) BasaltMod.Charts.StartBattle();
         Logger.Info("[Watch] on - battles show from above the lane, and you are kept on full health; Ctrl+W again to stop");
     }
 
@@ -35,7 +35,7 @@ internal sealed class ChartWatcher(DesktopCamera camera)
     // Up behind you over the backstop, looking down the lane.
     public static (Vector3 Position, Vector3 LookAt)? Overview()
     {
-        if (Mod.Battle.Run is not { Lane: { } lane } run) return null;
+        if (BasaltMod.Battle.Run is not { Lane: { } lane } run) return null;
 
         return (lane.ToWorld(1.5f, 3.6f, -0.4f), lane.ToWorld(0f, 0.8f, run.Request.Chart.Lane.Length * 0.6f));
     }

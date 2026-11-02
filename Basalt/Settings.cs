@@ -6,7 +6,7 @@ namespace Basalt;
 
 internal class Settings
 {
-    // Raised when a setting that ModEntry applies changes.
+    // Raised when a setting that BasaltMod applies changes.
     public event Action? Changed;
 
     public MelonPreferences_Category Category { get; private set; } = null!;

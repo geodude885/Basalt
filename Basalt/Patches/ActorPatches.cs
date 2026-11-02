@@ -16,7 +16,6 @@ namespace Basalt.Patches;
 
 public static class ActorPatches
 {
-    // Harmony only calls static methods, so what the patches use is handed over here, once.
     private static ActorsRegistry _actors = null!;
     private static BattleController _battle = null!;
 
@@ -199,7 +198,7 @@ public static class ActorPatches
             if (__exception == null || _throwLogged) return null;
 
             _throwLogged = true;
-            Logger.Debug($"[Actor.FingersThrew] PlayerHandPresence.GetHandPresenceInputForHand throws - expected without a headset; suppressed: {__exception.Message}");
+            Logger.Debug($"[Actor.FingersThrew] PlayerHandPresence.GetHandPresenceInputForHand throws without a headset; suppressed: {__exception.Message}");
             return null;
         }
     }

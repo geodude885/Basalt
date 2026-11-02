@@ -4,7 +4,6 @@ internal static class PatchGuard
 {
     public static bool Enabled { get; set; } = true;
 
-    // If any patches fail, don't crash, just disable all patches
     public static void Run(string name, Action body)
     {
         if (!Enabled) return;

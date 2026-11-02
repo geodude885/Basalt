@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace Basalt.Menu.Components;
 
-// Chart cover images (PNG or JPG), cut to a rough rock shape and cached until the file changes.
 internal class Covers(GameAssets assets)
 {
     // Room for a 2048 px PNG saved from the editor.
@@ -33,7 +32,7 @@ internal class Covers(GameAssets assets)
                 return Remember(path, file.LastWriteTimeUtc, null, $"{file.Name} is not a PNG or JPG");
             }
 
-            var cover = CutToRockShape(image);
+            var cover = ApplyRockMask(image);
             Logger.Debug($"[Cover.Loaded] {file.Name}: {image.width}x{image.height}, shown {cover.width}x{cover.height}");
             if (cover != image) UnityEngine.Object.Destroy(image);
             cover.hideFlags = HideFlags.DontUnloadUnusedAsset;
@@ -45,7 +44,6 @@ internal class Covers(GameAssets assets)
         }
     }
 
-    // Unlit and see-through, so the mask's soft edge blends into the panel behind it.
     public Material? Material(Texture2D texture)
     {
         var material = assets.Glass(Color.white);
@@ -56,8 +54,7 @@ internal class Covers(GameAssets assets)
         return material;
     }
 
-    // The centre square of the image, at most MaskedCoverSize across, with the mask multiplied into its alpha.
-    private Texture2D CutToRockShape(Texture2D image)
+    private Texture2D ApplyRockMask(Texture2D image)
     {
         if (LoadMask() is not { } mask) return image;
 

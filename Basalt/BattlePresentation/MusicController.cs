@@ -93,12 +93,11 @@ internal class MusicController
         Loading = false;
     }
 
-    // A later Load or Clear supersedes this one, and it stops where it is.
     private IEnumerator Decode(string path, DateTime written, int loadNumber)
     {
         var name = Path.GetFileName(path);
 
-        // Off the main thread: an MP3's length is found by reading through the whole file.
+        // Off the main thread as an MP3's length is found by reading through the whole file
         var opening = Task.Run(() => AudioDecoder.Open(path));
         while (!opening.IsCompleted) yield return null;
 
@@ -221,6 +220,7 @@ internal class MusicController
             var mixerGroups = Resources.FindObjectsOfTypeAll<AudioMixerGroup>().Where(g => g != null).ToList();
             var musicGroup = mixerGroups.FirstOrDefault(g => string.Equals(g.name, "Music", StringComparison.OrdinalIgnoreCase))
                              ?? mixerGroups.FirstOrDefault(g => g.name.Contains("Music", StringComparison.OrdinalIgnoreCase));
+
             if (musicGroup != null) _source.outputAudioMixerGroup = musicGroup;
             Logger.Debug($"[Music.Output] {(musicGroup == null ? "straight to the output" : $"through mixer group {musicGroup.name}")}");
             return true;

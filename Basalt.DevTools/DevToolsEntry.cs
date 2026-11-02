@@ -22,7 +22,7 @@ public class DevToolsEntry : MelonMod
 
     /// <summary>Orbits the battle's first actor, the test actor, or you.</summary>
     private readonly DesktopCamera _camera = new(
-        () => Mod.Actors.Actors.FirstOrDefault(a => a.Ready)?.Body?.Rig.Head.position ?? Camera.main?.transform.position,
+        () => BasaltMod.Actors.Actors.FirstOrDefault(a => a.Ready)?.Body?.Rig.Head.position ?? Camera.main?.transform.position,
         message => Logger.Info($"[DesktopCamera] {message}"));
 
     private MelonPreferences_Entry<bool> _invincibleInCharts = null!;
@@ -31,7 +31,7 @@ public class DevToolsEntry : MelonMod
     public override void OnInitializeMelon()
     {
         _watcher = new ChartWatcher(_camera);
-        if (Mod.Menu is null)
+        if (BasaltMod.Menu is null)
         {
             LoggerInstance.Error("Basalt is not loaded - the dev tools are off");
             return;
@@ -70,7 +70,7 @@ public class DevToolsEntry : MelonMod
 
     private void KeepInvincibleInCharts()
     {
-        if (!(_invincibleInCharts.Value || _watcher.Watching) || Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.Run?.Request.Mode == BattleMode.Record) return;
+        if (!(_invincibleInCharts.Value || _watcher.Watching) || BasaltMod.Battle.Run?.State != BattleState.Running || BasaltMod.Battle.Run?.Request.Mode == BattleMode.Record) return;
         if (BattlePlayer.Player is not { Controller: not null } localPlayer) return;
 
         var health = localPlayer.Data.HealthPoints;

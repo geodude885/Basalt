@@ -16,7 +16,7 @@ internal static partial class SelfTest
 
     private static Vector3? LaneOrigin => LanePoint(0f, 0f, 0f);
 
-    private static float LaneMetres => Mod.Battle.Run is { Lane: not null } run ? run.Request.Chart.Lane.Length : 0f;
+    private static float LaneMetres => BasaltMod.Battle.Run is { Lane: not null } run ? run.Request.Chart.Lane.Length : 0f;
 
     /// <summary>The count from the last <c>[Battle.Cleared] n structure(s)</c> line.</summary>
     private static int LastCleared =>
@@ -25,7 +25,7 @@ internal static partial class SelfTest
     private static PlayerController? You => BattlePlayer.Player?.Controller;
 
     private static Vector3? LanePoint(float x, float y, float z) =>
-        Mod.Battle.Run?.Lane is { } frame ? frame.ToWorld(x, y, z) : null;
+        BasaltMod.Battle.Run?.Lane is { } frame ? frame.ToWorld(x, y, z) : null;
 
     private static void ShowOverview()
     {

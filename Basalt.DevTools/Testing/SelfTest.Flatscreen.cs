@@ -65,10 +65,10 @@ internal static partial class SelfTest
     private static IEnumerator CheckClick(PlayerController controller, List<string> problems)
     {
         var deadline = Time.realtimeSinceStartup + 5f;
-        while (Mod.Menu.Root?.activeSelf != true && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Menu.Root?.activeSelf != true && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(1.2f);
 
-        var button = Mod.Menu.ButtonRow?.Buttons.FirstOrDefault(b => b.Spec.Id == "next");
+        var button = BasaltMod.Menu.ButtonRow?.Buttons.FirstOrDefault(b => b.Spec.Id == "next");
         if (button?.Root.GetComponentInChildren<InteractionButton>(true) is not { } interaction)
         {
             problems.Add("the menu had no game NEXT button");
@@ -79,7 +79,7 @@ internal static partial class SelfTest
         interaction.onPressed.AddListener((Action)(() => presses++));
 
         // Close by, as you would walk up to it: from its Gym spot, across the map, its other buttons overlap this one.
-        var menu = Mod.Menu.Root!.transform;
+        var menu = BasaltMod.Menu.Root!.transform;
         (var menuAt, var menuTurned) = (menu.position, menu.rotation);
         MenuMover.PlaceNearPlayer(menu, MenuPlacement.InFront);
         yield return new WaitForSeconds(0.5f);
@@ -113,7 +113,7 @@ internal static partial class SelfTest
         if (presses != 1) problems.Add($"the click pressed NEXT {presses} times");
         if (before == CardText) problems.Add("the click did not change the picker's card");
         if (FlatscreenControls.Pushing || interaction.IsPressed || interaction.PreInteractingHands?.Count > 0) problems.Add("the button was not released after the click");
-        Mod.Menu.ButtonRow?.Press("prev");
+        BasaltMod.Menu.ButtonRow?.Press("prev");
         menu.SetPositionAndRotation(menuAt, menuTurned);
     }
 

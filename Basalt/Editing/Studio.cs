@@ -86,7 +86,6 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (NewClip == null || Chart == null || Entry == null) return "no clip to keep";
 
-        // From the file as it is now: it may have been edited since the recording started
         var chartText = File.ReadAllText(Entry.File);
         if (ChartLoader.Load(chartText).Chart is not { } current) return $"{Entry.Name} has errors - fix them, then keep the clip";
         if (current.Actors.All(a => a.Id != _actorId)) return $"{Entry.Name} no longer has the actor {_actorId}";

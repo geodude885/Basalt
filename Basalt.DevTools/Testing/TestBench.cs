@@ -30,7 +30,7 @@ internal static class TestBench
     {
         if (Actor != null)
         {
-            Mod.Actors.Despawn(_actor!);
+            BasaltMod.Actors.Despawn(_actor!);
             Forget();
             return;
         }
@@ -42,7 +42,7 @@ internal static class TestBench
         var at = playerRig.Feet + (playerRig.Facing * SpawnDistance);
 
         _actor = new Actor("test", "Test Actor", "you", ShiftstoneHelpers.EquippedBy(playerController));
-        Mod.Actors.Spawn(_actor, at, Quaternion.LookRotation(-playerRig.Facing));
+        BasaltMod.Actors.Spawn(_actor, at, Quaternion.LookRotation(-playerRig.Facing));
         _mirroring = true;
     }
 

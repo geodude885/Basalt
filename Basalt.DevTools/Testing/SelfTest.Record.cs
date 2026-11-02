@@ -48,10 +48,10 @@ internal static partial class SelfTest
             yield break;
         }
 
-        Mod.Studio.StartRecording(entry);
+        BasaltMod.Studio.StartRecording(entry);
 
         var deadline = Time.realtimeSinceStartup + 90f;
-        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.5f);
 
         // The Ring loaded: your player is a new one.
@@ -61,9 +61,9 @@ internal static partial class SelfTest
             yield break;
         }
 
-        if (Mod.Battle.Run?.Lane is { } recordLane)
+        if (BasaltMod.Battle.Run?.Lane is { } recordLane)
         {
-            var at = Mod.Battle.ToLane(PlayerRig.From(playerController).Feet);
+            var at = BasaltMod.Battle.ToLane(PlayerRig.From(playerController).Feet);
             Logger.Info($"[SelfTest] recording from lane x {at.x:0.00}, z {at.z:0.00} (the actor's spot is z 8)");
             if (new Vector2(at.x, at.z - 8f).magnitude > 0.5f) problems.Add($"recording did not start in the actor's place: lane x {at.x:0.0}, z {at.z:0.0}");
             if (_shots) Shoot(ShotFolder(), "5-recording", recordLane, at);
@@ -88,7 +88,7 @@ internal static partial class SelfTest
 
         if (!PushGameButton("stop")) problems.Add("the panel had no STOP button while recording");
 
-        var clip = Mod.Studio.NewClip;
+        var clip = BasaltMod.Studio.NewClip;
         if (clip == null)
         {
             problems.Add("stopping did not make a clip");
@@ -109,9 +109,9 @@ internal static partial class SelfTest
         // The review: the actor performs it at you, running each recorded move.
         var movesBefore = Logged("Actor.Move");
         deadline = Time.realtimeSinceStartup + 60f;
-        while (Mod.Studio.State == StudioState.Reviewing && Time.realtimeSinceStartup < deadline)
+        while (BasaltMod.Studio.State == StudioState.Reviewing && Time.realtimeSinceStartup < deadline)
         {
-            if (_shots && Mod.Battle.ChartTime > 1.2 && !File.Exists(Path.Combine(ShotFolder(), "6-review.png")))
+            if (_shots && BasaltMod.Battle.ChartTime > 1.2 && !File.Exists(Path.Combine(ShotFolder(), "6-review.png")))
             {
                 ShowOverview();
                 yield return null;
@@ -121,8 +121,8 @@ internal static partial class SelfTest
             yield return null;
         }
 
-        var actor = Mod.Actors.Actors.Count > 0 ? Mod.Actors.Actors[0] : null;
-        if (Mod.Studio.State != StudioState.Deciding) problems.Add($"the review did not end in a decision (studio {Mod.Studio.State})");
+        var actor = BasaltMod.Actors.Actors.Count > 0 ? BasaltMod.Actors.Actors[0] : null;
+        if (BasaltMod.Studio.State != StudioState.Deciding) problems.Add($"the review did not end in a decision (studio {BasaltMod.Studio.State})");
         if (actor == null)
         {
             problems.Add("no actor performed the clip");
@@ -149,14 +149,14 @@ internal static partial class SelfTest
         var entry = Reloaded(file);
         var before = entry.Result.Chart!.Lane;
 
-        Mod.Studio.OpenChartOptions(entry);
+        BasaltMod.Studio.OpenChartOptions(entry);
         yield return new WaitForSeconds(1f);
-        Mod.Menu.ButtonRow?.Press("longer");
-        Mod.Menu.ButtonRow?.Press("longer");
-        Mod.Menu.ButtonRow?.Press("wider");
+        BasaltMod.Menu.ButtonRow?.Press("longer");
+        BasaltMod.Menu.ButtonRow?.Press("longer");
+        BasaltMod.Menu.ButtonRow?.Press("wider");
         yield return new WaitForSeconds(0.6f);
 
-        if (_shots && Mod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Player?.Controller is { } playerController)
+        if (_shots && BasaltMod.Studio.LaneSetup.Lane.Length > 0 && BattlePlayer.Player?.Controller is { } playerController)
         {
             var rig = PlayerRig.From(playerController);
             var eye = rig.Feet - (rig.Facing * 2.5f) + (Vector3.up * 3.2f) + (Vector3.Cross(Vector3.up, rig.Facing) * 1.5f);
@@ -165,7 +165,7 @@ internal static partial class SelfTest
             Shoot(ShotFolder(), "8-setup");
         }
 
-        if (Mod.Menu.ButtonRow?.Press("save") != true) problems.Add("no SAVE button in lane setup");
+        if (BasaltMod.Menu.ButtonRow?.Press("save") != true) problems.Add("no SAVE button in lane setup");
         yield return new WaitForSeconds(0.3f);
 
         var text = File.ReadAllText(file);

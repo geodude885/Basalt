@@ -16,9 +16,9 @@ internal static partial class SelfTest
     private static IEnumerator CheckActorHitbox()
     {
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while ((Mod.Battle.Run?.State != BattleState.Running || Mod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
+        while ((BasaltMod.Battle.Run?.State != BattleState.Running || BasaltMod.Battle.ChartTime < 0.8) && Time.realtimeSinceStartup < deadline) yield return null;
 
-        var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready);
+        var actor = BasaltMod.Actors.Actors.FirstOrDefault(a => a.Ready);
         var mesh = actor?.Body?.Controller.GetComponentInChildren<SkinnedMeshRenderer>();
         if (actor == null || mesh == null || LaneOrigin is not { } origin)
         {
@@ -42,7 +42,7 @@ internal static partial class SelfTest
                 yield break;
             }
 
-            if (recentProjectile) Mod.Actors.IgnoreStructure(pooled.gameObject, 0f, 2.5f);
+            if (recentProjectile) BasaltMod.Actors.IgnoreStructure(pooled.gameObject, 0f, 2.5f);
             body.isKinematic = false;
             body.position = from;
             body.linearVelocity = along * 10f;

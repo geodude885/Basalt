@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Basalt.Actors;
+using Basalt.Arenas;
 using Basalt.Battle;
 using Basalt.Editing;
 using Basalt.Services.Charts;
@@ -102,10 +103,9 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             Logger.Debug($"[Charts.Package] {Path.GetFileName(entry.File)}: {entry.Name}");
     }
 
-    // Checked each second between battles.
     public void ReloadChartsWhenChanged()
     {
-        if (Time.unscaledTime < _nextChartsCheck || battle.Run?.State is not BattleState.Finished) return;
+        if (Time.unscaledTime < _nextChartsCheck || Maps.IsCurrentlyOnline || battle.Run?.State is not (null or BattleState.Finished)) return;
 
         _nextChartsCheck = Time.unscaledTime + 1f;
 
@@ -120,7 +120,6 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         Logger.Info($"[Charts] reloaded: {library.Playable.Count()} of {library.Entries.Count} load");
     }
 
-    // Runs a studio save, reloads the charts it changed, and says what happened.
     public void Saved(Func<string> save)
     {
         try
@@ -136,7 +135,6 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         }
     }
 
-    // A new chart folder from the template, chosen; the boss wears your look and stones.
     public string? NewChart()
     {
         try

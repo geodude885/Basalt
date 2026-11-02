@@ -3,18 +3,18 @@ using Xunit;
 
 namespace Basalt.Tests.Services;
 
-public sealed class JsonBookTests : IDisposable
+public sealed class JsonFileRepositoryTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"Basalt-{Guid.NewGuid():N}", "places.json");
 
     [Fact]
     public void ASpotSurvivesARestartAndABrokenFileStartsEmpty()
     {
-        var book = new JsonFileRepository<SavedSpot>(_file);
-        book.Load();
-        Assert.Null(book.Get("Gym"));
+        var store = new JsonFileRepository<SavedSpot>(_file);
+        store.Load();
+        Assert.Null(store.Get("Gym"));
 
-        book.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
+        store.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
         var again = new JsonFileRepository<SavedSpot>(_file);
         again.Load();
         Assert.Equal(new SavedSpot(1f, 2f, 3f, 90f), again.Get("Gym"));
@@ -30,9 +30,9 @@ public sealed class JsonBookTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
         File.WriteAllText(_file, "{ broken");
 
-        var book = new JsonFileRepository<SavedSpot>(_file);
-        book.Load();
-        book.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
+        var store = new JsonFileRepository<SavedSpot>(_file);
+        store.Load();
+        store.Set("Gym", new SavedSpot(1f, 2f, 3f, 90f));
 
         Assert.Equal("{ broken", File.ReadAllText(_file + ".bad"));
         var again = new JsonFileRepository<SavedSpot>(_file);

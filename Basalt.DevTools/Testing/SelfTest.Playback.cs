@@ -64,13 +64,13 @@ internal static partial class SelfTest
 
         Logger.Info($"[SelfTest] playing \"{chart.Name}\" ({entry.Stem}): {recorded.Count} recorded move(s) over {chart.End:0.0}s");
         _keepPlayerAlive = true;
-        Mod.Battle.Start(new BattleRequest(chart) { AssetFolder = entry.AssetFolder });
+        BasaltMod.Battle.Start(new BattleRequest(chart) { AssetFolder = entry.AssetFolder });
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
-        if (Mod.Battle.Run?.State != BattleState.Running)
+        while (BasaltMod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        if (BasaltMod.Battle.Run?.State != BattleState.Running)
         {
-            problems.Add($"the chart never started (state {Mod.Battle.Run?.State.ToString() ?? "no battle"})");
+            problems.Add($"the chart never started (state {BasaltMod.Battle.Run?.State.ToString() ?? "no battle"})");
             yield break;
         }
 
@@ -92,15 +92,15 @@ internal static partial class SelfTest
         var behindSince = new Dictionary<IntPtr, double>();
         var longestBehind = (Seconds: 0.0, Name: "", Time: 0.0);
         deadline = Time.realtimeSinceStartup + (float)chart.End + 60f;
-        while (Mod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
+        while (BasaltMod.Battle.Run?.State == BattleState.Running && Time.realtimeSinceStartup < deadline)
         {
-            var t = Mod.Battle.ChartTime;
-            var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && a.Body.Clips.Playing);
+            var t = BasaltMod.Battle.ChartTime;
+            var actor = BasaltMod.Actors.Actors.FirstOrDefault(a => a.Ready && a.Body.Clips.Playing);
             if (actor != null) samples.Add((t, FastestStructureOf(actor)));
-            foreach (var standing in Mod.Actors.Actors)
+            foreach (var standing in BasaltMod.Actors.Actors)
             {
                 if (!standing.Ready) continue;
-                var height = Mod.Battle.ToLane(standing.Body.Rig.Feet).y;
+                var height = BasaltMod.Battle.ToLane(standing.Body.Rig.Feet).y;
                 if (height < lowestActor.Height) lowestActor = (height, standing.Id, t);
                 if (t > 0 && height > highestActor.Height) highestActor = (height, standing.Id, t);
             }
@@ -145,7 +145,7 @@ internal static partial class SelfTest
 
         foreach (var s in combat.Structures)
         {
-            if (s != null && s.gameObject.activeInHierarchy && Mod.Battle.ToLane(s.transform.position).z < -0.15f) behind[s.Pointer] = s.gameObject.name;
+            if (s != null && s.gameObject.activeInHierarchy && BasaltMod.Battle.ToLane(s.transform.position).z < -0.15f) behind[s.Pointer] = s.gameObject.name;
         }
 
         return behind;

@@ -25,7 +25,7 @@ internal static partial class SelfTest
         Logger.Info($"[SelfTest] look: yours \"{playerLook}\"{Environment.NewLine}default \"{plain}\"{Environment.NewLine}your stones: {string.Join(", ", stones)}");
 
         // 1. A chart made in game.
-        var folder = Mod.Charts.NewChart();
+        var folder = BasaltMod.Charts.NewChart();
         if (folder == null)
         {
             problems.Add("NEW CHART made no chart");
@@ -62,6 +62,16 @@ internal static partial class SelfTest
         File.WriteAllText(file, File.ReadAllText(file).Replace(edited, plain, StringComparison.Ordinal));
         var plainChart = ChartLoader.Load(File.ReadAllText(file)).Chart;
         if (plainChart != null) yield return PlayAndShoot(plainChart, folder, plain, "3-default", problems);
+
+        // 4. An edit made while idle in the menu is picked up without doing anything.
+        BasaltMod.Battle.Stop("look checked");
+        var fingerprintSettled = Time.realtimeSinceStartup + 2.5f;
+        while (Time.realtimeSinceStartup < fingerprintSettled) yield return null;
+        var renamed = $"Reload Test {Guid.NewGuid():N}";
+        File.WriteAllText(file, File.ReadAllText(file).Replace(made?.Name ?? "", renamed, StringComparison.Ordinal));
+        var reloadDeadline = Time.realtimeSinceStartup + 4f;
+        while (BasaltMod.Charts.Library.Find(renamed) == null && Time.realtimeSinceStartup < reloadDeadline) yield return null;
+        if (BasaltMod.Charts.Library.Find(renamed) == null) problems.Add("a chart edited while idle was not reloaded");
 
         try
         {
@@ -111,14 +121,14 @@ internal static partial class SelfTest
     private static IEnumerator PlayAndShoot(Chart chart, string folder, string expected, string shot, List<string> problems)
     {
         _keepPlayerAlive = true;
-        var before = Mod.Actors.Actors.ToList();
+        var before = BasaltMod.Actors.Actors.ToList();
         // The template's 12 m lane fits across the Ring from this spot.
-        Mod.Battle.Start(new BattleRequest(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }) { AssetFolder = folder });
+        BasaltMod.Battle.Start(new BattleRequest(chart with { Arena = new ArenaSpec(ArenaKind.Ring, 0f, -6f, 0f) }) { AssetFolder = folder });
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
         // This battle's actor - the last one, despawned, can still be listed.
-        var actor = Mod.Actors.Actors.FirstOrDefault(a => a.Ready && !before.Contains(a));
+        var actor = BasaltMod.Actors.Actors.FirstOrDefault(a => a.Ready && !before.Contains(a));
         if (actor is not { Ready: true })
         {
             problems.Add($"{shot}: no actor came up");
@@ -142,7 +152,7 @@ internal static partial class SelfTest
         Directory.CreateDirectory(shots);
         Shoot(shots, shot);
 
-        Mod.Battle.Stop("look shot taken");
+        BasaltMod.Battle.Stop("look shot taken");
         _keepPlayerAlive = false;
         yield return new WaitForSeconds(1f);
     }

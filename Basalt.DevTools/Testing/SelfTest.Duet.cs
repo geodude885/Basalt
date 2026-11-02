@@ -50,26 +50,26 @@ internal static partial class SelfTest
         }
 
         // Played back, both perform at once.
-        Mod.Battle.Start(new BattleRequest(duet) { AssetFolder = folder });
+        BasaltMod.Battle.Start(new BattleRequest(duet) { AssetFolder = folder });
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.8f);
 
-        var performing = Mod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
+        var performing = BasaltMod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
         Logger.Info($"[SelfTest] duet playback: {string.Join(", ", performing)} performing");
         if (performing.Count != 2) problems.Add($"played back, {performing.Count} of 2 actors performed ({string.Join(", ", performing)})");
 
-        Mod.Battle.OnPlayerDamaged(Actor.MaxHealth, 0);
-        if (Mod.Battle.Run?.State != BattleState.Finished) problems.Add("dying did not finish the battle");
-        var stillPerforming = Mod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
+        BasaltMod.Battle.OnPlayerDamaged(Actor.MaxHealth, 0);
+        if (BasaltMod.Battle.Run?.State != BattleState.Finished) problems.Add("dying did not finish the battle");
+        var stillPerforming = BasaltMod.Actors.Actors.Where(a => a.Ready && a.Body.Clips.Playing).Select(a => a.Id).ToList();
         if (stillPerforming.Count > 0) problems.Add($"after you died, {string.Join(", ", stillPerforming)} kept performing");
 
-        Mod.Battle.Stop("duet checked");
-        if (!Mod.Battle.CanPickChartsHere) problems.Add("no chart menu in the arena a chart brought you to");
+        BasaltMod.Battle.Stop("duet checked");
+        if (!BasaltMod.Battle.CanPickChartsHere) problems.Add("no chart menu in the arena a chart brought you to");
         if (MatchHandler.CurrentMatchError != MatchHandler.MatchError.None) problems.Add($"leaving a chart's arena with the match error {MatchHandler.CurrentMatchError}");
 
-        Mod.Battle.ReturnToGym();
-        if (Mod.Battle.CanPickChartsHere) problems.Add("the chart menu stayed up while fading out to the Gym");
+        BasaltMod.Battle.ReturnToGym();
+        if (BasaltMod.Battle.CanPickChartsHere) problems.Add("the chart menu stayed up while fading out to the Gym");
 
         deadline = Time.realtimeSinceStartup + TimeoutSeconds;
         while (!ArenaKind.Gym.IsLoaded() && Time.realtimeSinceStartup < deadline) yield return null;
@@ -79,15 +79,15 @@ internal static partial class SelfTest
     // Records the actor `actorId` walking, and keeps it; with `guideId`, that actor must be there performing, mimed.
     private static IEnumerator RecordAndKeep(string file, string actorId, string? guideId, List<string> problems)
     {
-        Mod.Studio.StartRecording(Reloaded(file), actorId);
+        BasaltMod.Studio.StartRecording(Reloaded(file), actorId);
 
         var deadline = Time.realtimeSinceStartup + TimeoutSeconds;
-        while (Mod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Battle.Run?.State != BattleState.Running && Time.realtimeSinceStartup < deadline) yield return null;
         yield return new WaitForSeconds(0.8f);
 
-        if (Mod.Battle.Run?.Request.Performer.Id != actorId) problems.Add($"recording {actorId} put you in {Mod.Battle.Run?.Request.Performer.Id}'s place");
+        if (BasaltMod.Battle.Run?.Request.Performer.Id != actorId) problems.Add($"recording {actorId} put you in {BasaltMod.Battle.Run?.Request.Performer.Id}'s place");
 
-        var present = Mod.Actors.Actors.Where(a => a.Ready).ToList();
+        var present = BasaltMod.Actors.Actors.Where(a => a.Ready).ToList();
         var guide = present.FirstOrDefault(a => a.Id == guideId);
         Logger.Info($"[SelfTest] recording {actorId}: actors there {string.Join(", ", present.Select(a => $"{a.Id}{(a.Body?.Clips.Playing == true ? " (performing)" : "")}"))}");
         if (present.Any(a => a.Id == actorId)) problems.Add($"recording {actorId}, the actor you replace was spawned too");
@@ -100,7 +100,7 @@ internal static partial class SelfTest
 
         if (!PushGameButton("stop")) problems.Add($"no STOP button while recording {actorId}");
         deadline = Time.realtimeSinceStartup + 60f;
-        while (Mod.Studio.State == StudioState.Reviewing && Time.realtimeSinceStartup < deadline) yield return null;
+        while (BasaltMod.Studio.State == StudioState.Reviewing && Time.realtimeSinceStartup < deadline) yield return null;
 
         yield return new WaitForSeconds(1.2f);
         if (!PushGameButton("keep")) problems.Add($"no KEEP button after recording {actorId}");

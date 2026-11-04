@@ -314,6 +314,30 @@
                   "y"
                 ]
               },
+              "offset": {
+                "description": "Aimed at you, shifted: x metres to your right across the lane, y metres up. Not with to; a projectile on the floor only takes x.",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "x"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "y"
+                    ]
+                  }
+                ]
+              },
               "speed": {
                 "type": "number",
                 "exclusiveMinimum": 0
@@ -327,6 +351,12 @@
                 "type": "boolean",
                 "description": "Thrown along the floor in the game's grounded state. Default true for Pillar, RockCube and Wall."
               }
+            },
+            "not": {
+              "required": [
+                "to",
+                "offset"
+              ]
             },
             "required": [
               "structure",

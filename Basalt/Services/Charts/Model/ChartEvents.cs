@@ -51,7 +51,9 @@ public record ProjectileEvent(
     internal static ProjectileEvent FromDto(ProjectileDto projectile, double time, int order, string actor)
     {
         var from = new Vector3(projectile.From!.X!.Value, projectile.From.Y!.Value, projectile.From.Z!.Value);
-        var to = projectile.To == null ? Aim.Player : Aim.Point(projectile.To.X!.Value, projectile.To.Y!.Value);
+        var to = projectile.To == null
+            ? Aim.PlayerOffset(projectile.Offset?.X ?? 0f, projectile.Offset?.Y ?? 0f)
+            : Aim.Point(projectile.To.X!.Value, projectile.To.Y!.Value);
         var telegraph = projectile.Telegraph ?? DefaultTelegraph;
 
         return new ProjectileEvent(time, order, projectile.Structure!, from, to, projectile.Speed!.Value, telegraph, actor) { Grounded = projectile.Grounded };
@@ -61,6 +63,7 @@ public record ProjectileEvent(
 public readonly record struct Aim(bool AtPlayer, float X, float Y)
 {
     public static Aim Player => new(true, 0f, 0f);
+    public static Aim PlayerOffset(float right, float up) => new(true, right, up);
     public static Aim Point(float x, float y) => new(false, x, y);
 }
 

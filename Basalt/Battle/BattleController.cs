@@ -413,11 +413,16 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
     private Vector3 AimPoint(Aim aim)
     {
-        return aim.AtPlayer && Run?.Request.Mode == BattleMode.Record && (Run?.Request.Mime ?? false)
+        if (!aim.AtPlayer) return World(aim.X, aim.Y, 0f);
+
+        var offset = World(aim.X, aim.Y, 0f) - World(0f, 0f, 0f);
+
+        var player = Run?.Request.Mode == BattleMode.Record && (Run?.Request.Mime ?? false)
             ? World(0f, 1.3f, 0f)
-            : aim.AtPlayer && BattlePlayer.Player?.Controller is { } playerController
+            : BattlePlayer.Player?.Controller is { } playerController
                 ? PlayerRig.From(playerController).Head.position + (Vector3.down * 0.25f)
-                : World(aim.X, aim.Y, 0f);
+                : World(0f, 1.3f, 0f);
+        return player + offset;
     }
 
     private void FinishBattle(bool survived, double seconds)

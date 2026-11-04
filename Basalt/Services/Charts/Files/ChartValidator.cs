@@ -241,6 +241,11 @@ internal class ChartValidator(ChartDto dto)
         if (p.To != null && (p.To.X == null || p.To.Y == null))
             yield return $"{path}.to needs x and y";
 
+        if (p.Offset != null && p.To != null)
+            yield return $"{path}.offset can't be used with to";
+        else if (p.Offset != null && p.Offset.X == null && p.Offset.Y == null)
+            yield return $"{path}.offset needs x or y";
+
         if ((p.Speed ?? 0f) <= 0f)
             yield return $"{path}.speed must be over 0 m/s";
 

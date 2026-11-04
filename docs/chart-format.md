@@ -129,6 +129,7 @@ Each has a time (`t` or `beat`), optionally `actor` (default: the first), and ex
 | `structure` | pool name | required | `Disc`, `Ball`, `Pillar`, `Wall`, `RockCube`, `BoulderBall`, `SmallRock`, `LargeRock`. |
 | `from` | `{ x, y, z }` | required | Where it appears: `z` over 0, and it may be outside the lane - shots can come from beyond the boss or across from the side. A grounded one (Disc, cube, Pillar, Wall) needs floor under it there. |
 | `to` | `{ x, y }` | at you | Where it arrives, on your end of the lane. |
+| `offset` | `{ x, y }` | none | Aimed at you, shifted: `x` metres to your right across the lane (negative is left), `y` metres up, from where a shot at you aims (0.25 m below your head). The directions follow the lane, not where you face. Not with `to`. A projectile on the floor only takes `x`. |
 | `speed` | m/s | required | Sets the flight time; the arc is chosen so it still arrives where aimed. |
 | `telegraph` | seconds | 0.5 | How long before the throw it is spawned: it comes up out of the floor at `from` like a player's spawn (with the spawn move's sound and dust), waits there, and at `t` flies with the punch's sound. |
 | `grounded` | bool | Pillar, RockCube, Wall: true | Thrown grounded: it rests on the floor in the game's grounded state - more damage - and is driven along the floor at its target (only the target's `x` matters), as a player's straight sends a grounded structure. `false` throws a Pillar, cube or Wall through the air instead; `true` grounds any other structure. A grounded one ignores `from.y`. |

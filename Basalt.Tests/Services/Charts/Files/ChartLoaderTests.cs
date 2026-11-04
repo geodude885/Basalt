@@ -175,6 +175,28 @@ public class ChartLoaderTests
     }
 
     [Fact]
+    public void AShotAtYouCanBeOffsetAcrossTheLaneAndUp()
+    {
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """
+            { "events": [
+                { "t": 1, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, "offset": { "x": 0.5, "y": 1 } } },
+                { "t": 2, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, "offset": { "y": -0.5 } } }
+            ] }
+            """).Chart!;
+
+        Assert.Equal(Aim.PlayerOffset(0.5f, 1f), ((ProjectileEvent)chart.Events[0]).To);
+        Assert.Equal(Aim.PlayerOffset(0f, -0.5f), ((ProjectileEvent)chart.Events[1]).To);
+    }
+
+    [Theory]
+    [InlineData("\"to\": { \"x\": 0, \"y\": 1 }, \"offset\": { \"x\": 1 }", "offset can't be used with to")]
+    [InlineData("\"offset\": {}", "offset needs x or y")]
+    public void ABadOffsetIsReported(string aim, string expected) =>
+        Assert.Contains(
+            ChartLoader.Load($$"""{ "events": [ { "t": 1, "projectile": { "structure": "Ball", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8, {{aim}} } } ] }""").Errors,
+            e => e.Contains($"events[0].projectile.{expected}", StringComparison.Ordinal));
+
+    [Fact]
     public void ANamedActorMustExistOnAProjectile() =>
         Assert.Contains(
             ChartLoader.Load(/*lang=json,strict*/ """{ "events": [ { "t": 1, "actor": "nobody", "projectile": { "structure": "Disc", "from": { "x": 0, "y": 1, "z": 8 }, "speed": 8 } } ] }""").Errors,

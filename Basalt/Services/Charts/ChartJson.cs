@@ -173,6 +173,7 @@ internal class ProjectileDto
     public string? Structure { get; set; }
     public PointDto? From { get; set; }
     public PointDto? To { get; set; }
+    public PointDto? Offset { get; set; }
     public float? Speed { get; set; }
     public float? Telegraph { get; set; }
     public bool? Grounded { get; set; }

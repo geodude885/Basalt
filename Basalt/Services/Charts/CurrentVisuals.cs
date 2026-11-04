@@ -19,7 +19,7 @@ public static class CurrentVisuals
             // Either get value based of fading between cue changes, or stay frozen
             foreach ((var cue, var cueEnd) in packCues.Zip(packCues.Skip(1).Select(c => c.Time).Append(time)))
             {
-                var k = cue.Fade <= 0 ? 1 : Math.Clamp((cueEnd - cue.Time) / cue.Fade, 0, 1);
+                var k = cue.Fade <= 0 || cue.Time <= 0 ? 1 : Math.Clamp((cueEnd - cue.Time) / cue.Fade, 0, 1);
 
                 var targets = cue.Off
                     ? values.Keys.ToDictionary(key => key, key => baseline(pack.Key, key), StringComparer.OrdinalIgnoreCase)

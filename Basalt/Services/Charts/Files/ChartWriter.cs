@@ -16,7 +16,12 @@ public static class ChartWriter
             Map = arena.Map.ToString().ToLowerInvariant(),
             At = new PointDto { X = RoundPosition(arena.X), Z = RoundPosition(arena.Z), Facing = RoundPosition(arena.Facing) },
         });
-        chart["lane"] = ChartJson.ToNode(new LaneDto { Length = RoundPosition(lane.Length), Width = RoundPosition(lane.Width) });
+        chart["lane"] = ChartJson.ToNode(new LaneDto
+        {
+            Length = RoundPosition(lane.Length),
+            Width = RoundPosition(lane.Width),
+            Gutter = lane.Gutter == Lane.DefaultGutter ? null : RoundPosition(lane.Gutter)
+        });
         chart["actors"] = ActorsJson(actors);
         return ChartJson.Write(chart);
     }

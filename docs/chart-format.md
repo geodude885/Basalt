@@ -58,7 +58,7 @@ Recorded clips are kept in the chart's own `clips/`.
 | `cover` | path | - | A PNG or JPG beside the chart, shown on the menu (square looks best; up to 16 MB, though 512 px is plenty). |
 | `bpm` | number | - | Beats per minute, for `beat` times. |
 | `bpmChanges` | list | none | Tempo changes after the start: `[ { "beat": 64, "bpm": 140 } ]`, each holding until the next. |
-| `lane` | object | 12 x 3 | `length` (over 2) and `width` in metres. |
+| `lane` | object | 12 x 3 | `length` (over 2) and `width` in metres, and `gutter`: the room you get beside the lane on each side before its walls, 0.3 m by default; 0 puts the walls on the lane's edges. |
 | `playerZone` | object | 2 m short of the far end, 3.5 m high | Where you may go: `length` along the lane from your end, `height` above the floor. Invisible walls stop you - not structures, not actors. |
 | `rules` | object | everything allowed | `playerSpawns`: `all`, `discs` (discs only - for moving) or `none` (moves only). `breakStillAfter`: seconds a structure may sit still in a battle before it breaks (default 3; 0 never) - a wall grounded in front of you does not soak up a whole section. `breakBehind`: `true` breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you (default `false`; one you spawn behind yourself goes too). |
 | `actors` | array | one at the far end | Below. |
@@ -169,8 +169,8 @@ change them as the battle goes - see `phases[].colours`.
 
 Shader looks, for players with [RumbleReShaded](https://github.com/Pepuldope/RumbleReShaded) (RRS)
 installed - everyone else plays the chart as it is. Each cue names an installed RRS **pack** and sets
-its sliders; the look fades in over `fade` seconds and holds until the next cue for that pack. Looks
-are temporary overrides: the player's own pack settings are never changed, and every pack is theirs
+its sliders; the look fades in over `fade` seconds and holds until the next cue for that pack. A cue
+at time 0 skips its fade and shows from the start of the countdown. Looks are temporary overrides: the player's own pack settings are never changed, and every pack is theirs
 again when the battle ends or stops.
 
 ```json

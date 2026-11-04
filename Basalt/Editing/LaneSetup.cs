@@ -50,7 +50,7 @@ internal class LaneSetup(GameAssets assets)
 
         var inLane = anchor.ToLocal(rig.Feet);
         var along = Math.Max(0.5f, inLane.z);
-        if (along > Lane.Length) Lane = new Lane(Math.Min(Lane.MaxLength, MathF.Ceiling(along)), Lane.Width);
+        if (along > Lane.Length) Lane = Lane with { Length = Math.Min(Lane.MaxLength, MathF.Ceiling(along)) };
 
         var across = Math.Clamp(inLane.x, -Lane.Width / 2f, Lane.Width / 2f);
         Actors[0] = Actors[0] with { At = new Spot(MathF.Round(across, 2), MathF.Round(Math.Min(along, Lane.Length), 2)) };

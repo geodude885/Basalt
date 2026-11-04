@@ -19,6 +19,8 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
 
     public void Reset() => _lastBeat = -1;
 
+    public void ApplyOpeningLooks(Chart chart) => shaders?.ApplyLooksAt(chart.Shaders, 0);
+
     public void Update(Chart chart, double chartTime)
     {
         if (shaders == null) return;

@@ -25,7 +25,7 @@ internal class Arena(GameAssets assets)
     {
         var along = Quaternion.LookRotation(origin.Forward.ToUnity());
         var layer = GameHelpers.LayerUnder(origin.Position.ToUnity());
-        var across = lane.Width + (2f * (ArenaCollision.SideGap + ArenaCollision.Thickness));
+        var across = lane.Width + (2f * (lane.Gutter + ArenaCollision.Thickness));
         var ends = lane.Width + 2f + (2f * ArenaCollision.Thickness);
         var behind = ArenaCollision.EndGap + ArenaCollision.Thickness;
         var tall = ArenaCollision.Height + ArenaCollision.WallLengthThroughFloor;
@@ -40,7 +40,7 @@ internal class Arena(GameAssets assets)
 
         // From behind the backstop to beyond the far wall, leaving no gap at the corners.
         var run = lane.Length + (2f * behind);
-        var sideX = (lane.Width / 2f) + ArenaCollision.SideGap + (ArenaCollision.Thickness / 2f);
+        var sideX = (lane.Width / 2f) + lane.Gutter + (ArenaCollision.Thickness / 2f);
         Colliders.Wall("Basalt_WallLeft", At(-sideX, lane.Length / 2f), along, new Vector3(ArenaCollision.Thickness, tall, run), layer);
         Colliders.Wall("Basalt_WallRight", At(sideX, lane.Length / 2f), along, new Vector3(ArenaCollision.Thickness, tall, run), layer);
 
@@ -80,7 +80,7 @@ internal class Arena(GameAssets assets)
         if (!panes) return;
 
         var height = zone?.Height ?? PlayerZone.DefaultHeight;
-        var paneX = halfWidth + ArenaCollision.SideGap;
+        var paneX = halfWidth + lane.Gutter;
         var near = -ArenaCollision.EndGap;
         var far = lane.Length + ArenaCollision.EndGap;
         var middle = (near + far) / 2f;

@@ -11,8 +11,7 @@ internal class ArenaCollision
     public const float WallLengthThroughFloor = 2f;
     public const float Thickness = 2f;
 
-    // Gaps between lane edge and collider
-    public const float SideGap = 0.3f;
+    // Gaps between lane ends and collider
     public const float EndGap = 0.75f;
     public const float PlayerEndGap = 0.3f;
 

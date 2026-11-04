@@ -129,6 +129,11 @@
           "type": "number",
           "exclusiveMinimum": 0,
           "default": 3
+        },
+        "gutter": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.3
         }
       }
     },

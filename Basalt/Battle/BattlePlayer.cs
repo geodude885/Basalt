@@ -36,7 +36,7 @@ internal class BattlePlayer
 
         var rig = PlayerRig.From(playerController);
         var at = frame.ToLocal(rig.Feet);
-        float side = (chart.Lane.Width / 2f) + 0.3f, back = -0.75f;
+        float side = (chart.Lane.Width / 2f) + chart.Lane.Gutter, back = -0.75f;
         var far = zoned ? chart.PlayerZone.Length + 0.3f : chart.Lane.Length + 0.75f;
         var above = rig.Vr.position.y - frame.Position.Y;
         var tooHigh = zoned && above > chart.PlayerZone.Height + 0.8f;

@@ -31,6 +31,32 @@ public class LaneSetupTests
     }
 
     [Fact]
+    public void ALaneKeepsItsGutterThroughASetupSave()
+    {
+        const string Text = /*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3, "gutter": 0 } }""";
+        var chart = ChartLoader.Load(Text).Chart!;
+        (var lane, var actors) = chart.Lane.Resize(chart.Actors, 14f, 3.5f);
+
+        var saved = ChartWriter.WriteLaneSetup(Text, new ArenaSpec(ArenaKind.Gym), lane, actors);
+
+        Assert.Equal(new Lane(14f, 3.5f, 0f), ChartLoader.Load(saved).Chart!.Lane);
+    }
+
+    [Fact]
+    public void AnUnsetGutterIsNotWritten()
+    {
+        var chart = ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "length": 12, "width": 3 } }""").Chart!;
+
+        var saved = ChartWriter.WriteLaneSetup("{}", new ArenaSpec(ArenaKind.Gym), chart.Lane, chart.Actors);
+
+        Assert.DoesNotContain("gutter", saved, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ANegativeGutterIsRefused() =>
+        Assert.Contains("lane.gutter cannot be negative", ChartLoader.Load(/*lang=json,strict*/ """{ "lane": { "gutter": -1 } }""").Errors);
+
+    [Fact]
     public void LaneSetupMovesActorsButKeepsEditsMadeSinceItOpened()
     {
         var opened = new ActorSpec("boss", "Boss", new Spot(0, 12), "you");

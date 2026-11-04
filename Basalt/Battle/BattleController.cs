@@ -175,6 +175,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
 
             case BattleState.Countdown:
                 KeepLane();
+                Visuals.ApplyOpeningLooks(run.Request.Chart);
                 var left = run.CountdownEnds - Time.time;
                 if (left > 0f) Board.Show($"{run.Request.Chart.Name}\n{Mathf.CeilToInt(left)}");
                 else if (Music.Loading && Time.time < run.MusicDeadline) Board.Show($"{run.Request.Chart.Name}\nloading music {Music.Progress * 100:0}%");

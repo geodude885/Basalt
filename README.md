@@ -21,7 +21,6 @@ Basalt/                 the mod
   Menu/                 the Basalt menu: its screens, components (card, buttons, slider) and chart selection
   Services/             game-free and unit tested: charts, clips, audio, scoring, JSON storage
 Basalt.Tests/           xUnit: services, patch targets against the interop
-tools/                  song analysis, cpp2il-isil.py
 ```
 
 UIFramework is required. RumbleReShaded is optional: only `Presentation/Shaders/ReShade.cs` touches its API, and

@@ -34,6 +34,9 @@ internal class ChartValidator(ChartDto dto)
 
         if (_lane.Width <= 0f)
             yield return "lane.width must be greater than 0";
+
+        if (_lane.Gutter < 0f)
+            yield return "lane.gutter cannot be negative";
     }
 
     private IEnumerable<string> ValidatePlayerZone()

@@ -69,9 +69,18 @@ public class ShaderCueTests
     public void ALaterCueFadesOnFromWhereTheLastWasCutOff()
     {
         // The first fade is a quarter done (0.75) when the second cuts in and heads for 2.
-        var cues = new[] { Cue(0, "Pack", 4, ("Contrast", 0f)), Cue(1, "Pack", 1, ("Contrast", 2f)) };
+        var cues = new[] { Cue(1, "Pack", 4, ("Contrast", 0f)), Cue(2, "Pack", 1, ("Contrast", 2f)) };
 
-        Assert.Equal(0.75f + ((2f - 0.75f) * 0.5f), CurrentVisuals.Evaluate(cues, 1.5, Yours)["Pack"].Values["Contrast"], 3);
+        Assert.Equal(0.75f + ((2f - 0.75f) * 0.5f), CurrentVisuals.Evaluate(cues, 2.5, Yours)["Pack"].Values["Contrast"], 3);
+    }
+
+    [Fact]
+    public void ACueAtTheStartIsFullyOnAlready()
+    {
+        var cues = new[] { Cue(0, "Pack", 4, ("Contrast", 0f)) };
+
+        Assert.Equal(0f, CurrentVisuals.Evaluate(cues, 0, Yours)["Pack"].Values["Contrast"]);
+        Assert.Equal(0f, CurrentVisuals.Evaluate(cues, 1, Yours)["Pack"].Values["Contrast"]);
     }
 
     [Fact]

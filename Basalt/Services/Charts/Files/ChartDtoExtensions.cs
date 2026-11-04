@@ -4,7 +4,10 @@ namespace Basalt.Services.Charts.Files;
 
 internal static class ChartDtoExtensions
 {
-    public static Lane ToLane(this ChartDto dto) => new(dto.Lane?.Length ?? Lane.Default.Length, dto.Lane?.Width ?? Lane.Default.Width);
+    public static Lane ToLane(this ChartDto dto) => new(
+        dto.Lane?.Length ?? Lane.Default.Length,
+        dto.Lane?.Width ?? Lane.Default.Width,
+        dto.Lane?.Gutter ?? Lane.DefaultGutter);
 
     public static TempoMap? ToTempo(this ChartDto dto)
     {

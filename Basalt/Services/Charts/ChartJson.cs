@@ -130,6 +130,7 @@ internal class LaneDto
 {
     public float? Length { get; set; }
     public float? Width { get; set; }
+    public float? Gutter { get; set; }
 }
 
 internal class ActorDto

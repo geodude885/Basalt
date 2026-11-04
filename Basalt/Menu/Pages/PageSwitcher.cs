@@ -13,6 +13,7 @@ internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonFil
     private readonly RecordingPage _recording = new(studio);
     private readonly ReviewRecordingPage _review = new(charts, studio);
     private readonly LaneSetupPage _laneSetup = new(charts, studio);
+    private readonly FlashingNoticePage _flashingNotice = new(charts);
 
     public IMenuScreen? Current => studio.State switch
     {
@@ -20,6 +21,8 @@ internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonFil
         StudioState.Setup => _laneSetup,
         StudioState.Reviewing => null,
         StudioState.Deciding => battle.Run?.State is null or BattleState.Finished ? _review : null,
-        _ => !Maps.IsCurrentlyOnline && battle.CanPickChartsHere && battle.Run?.State is null or BattleState.Finished ? _charts : null,
+        _ => !Maps.IsCurrentlyOnline && battle.CanPickChartsHere && battle.Run?.State is null or BattleState.Finished
+            ? charts.AskingAboutFlashing ? _flashingNotice : _charts
+            : null,
     };
 }

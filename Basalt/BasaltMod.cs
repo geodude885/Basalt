@@ -23,13 +23,13 @@ namespace Basalt;
 
 public class BasaltMod : MelonMod
 {
+    internal static Settings Settings { get; } = new();
     internal static ActorsRegistry Actors { get; private set; } = null!;
     internal static BattleController Battle { get; private set; } = null!;
     internal static Studio Studio { get; private set; } = null!;
     internal static ChartSelection Charts { get; private set; } = null!;
     internal static BasaltMenu Menu { get; private set; } = null!;
 
-    private readonly Settings _settings = new();
     private GameAssets _assets = null!;
 
     public override void OnInitializeMelon()
@@ -49,15 +49,15 @@ public class BasaltMod : MelonMod
         _assets = new GameAssets();
 
         Actors = new ActorsRegistry();
-        Battle = new BattleController(Actors, scores, _assets, _settings);
+        Battle = new BattleController(Actors, scores, _assets, Settings);
         Studio = new Studio(Battle, _assets);
-        Charts = new ChartSelection(library, _settings, Battle, Studio);
-        Menu = new BasaltMenu(new PageSwitcher(Charts, library, scores, _settings, Battle, Studio), menuSpots, _assets);
+        Charts = new ChartSelection(library, Settings, Battle, Studio);
+        Menu = new BasaltMenu(new PageSwitcher(Charts, library, scores, Settings, Battle, Studio), menuSpots, _assets);
 
-        _settings.Create();
+        Settings.Create();
         Charts.ReloadCharts();
         ApplySettings();
-        _settings.Changed += ApplySettings;
+        Settings.Changed += ApplySettings;
 
         Logger.Debug($"[Init] actor patches: {ActorPatches.Apply(HarmonyInstance, Actors, Battle)} methods");
         Logger.Debug($"[Init] arena patches: {ArenaPatches.Apply(HarmonyInstance, Battle)} methods");
@@ -69,10 +69,10 @@ public class BasaltMod : MelonMod
             ("New", "New chart", "Chart editing: make a new chart folder from a template, and pick it.", () => IfEditing(() => Charts.NewChart())),
         })
         {
-            UIFramework.UI.CreateButtonEntry(_settings.Category, text, name, description, handler);
+            UIFramework.UI.CreateButtonEntry(Settings.Category, text, name, description, handler);
         }
 
-        UIFramework.UI.RegisterMelon(this, _settings.Category);
+        UIFramework.UI.RegisterMelon(this, Settings.Category);
         Logger.Info($"Basalt loaded: {library.Playable.Count()} chart(s)");
     }
 
@@ -118,13 +118,14 @@ public class BasaltMod : MelonMod
 
     private void ApplySettings()
     {
-        Logger.Level = _settings.LogLevel.Value;
-        Battle.Visuals.ShaderIntensity = _settings.ChartVisuals.Value;
+        Logger.Level = Settings.LogLevel.Value;
+        Battle.Visuals.ShaderIntensity = Settings.ChartVisuals.Value;
+        Battle.Visuals.Flashing = Settings.Flashing.Value;
     }
 
-    private void IfEditing(Action action)
+    private static void IfEditing(Action action)
     {
-        if (_settings.Editing.Value) action();
+        if (Settings.Editing.Value) action();
         else Logger.Info("turn on Chart editing in the Basalt settings to use the chart-making tools");
     }
 }

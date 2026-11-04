@@ -1,4 +1,5 @@
 using Basalt.Battle;
+using Basalt.Services.Charts;
 using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.Players.Subsystems;
 using UnityEngine;
@@ -7,7 +8,8 @@ namespace Basalt.BattlePresentation.Shaders;
 
 internal class BattleVisualEvents(IShaderProvider? shaders)
 {
-    private long _lastBeat = -1;
+    public FlashingSetting Flashing { get; set; } = FlashingSetting.Full;
+
 
     public float ShaderIntensity
     {
@@ -15,9 +17,24 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
         set => shaders?.ShaderIntensity = Math.Clamp(value, 0f, 1f);
     }
 
+    private const float ReducedFlashesPerSecond = 3f;
+
+    private long _lastBeat = -1;
+
     public void PreloadChartPacks(Chart chart) => shaders?.PreloadPacks(chart.Shaders.Select(v => v.Pack));
 
     public void Reset() => _lastBeat = -1;
+
+    public void SetStage(Anchor lane)
+    {
+        if (shaders == null) return;
+
+        shaders.SetGlobal("stageX", lane.Position.X);
+        shaders.SetGlobal("stageY", lane.Position.Y);
+        shaders.SetGlobal("stageZ", lane.Position.Z);
+        shaders.SetGlobal("stageFacing", lane.Yaw);
+        shaders.SetGlobal("stage", 1f);
+    }
 
     public void ApplyOpeningLooks(Chart chart) => shaders?.ApplyLooksAt(chart.Shaders, 0);
 
@@ -32,10 +49,15 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
 
         if (BattlePlayer.Player?.Data is { } playerData) shaders.SetGlobal("health", playerData.HealthPoints / (float)PlayerHealth.MAX_PLAYER_HEALTH);
 
+        shaders.SetGlobal("noFlashing", Flashing == FlashingSetting.Off ? 1f : 0f);
+        shaders.SetGlobal("flashLimit", Flashing == FlashingSetting.Reduced ? ReducedFlashesPerSecond : 0f);
+        shaders.SetGlobal("beatsPerSecond", chart.Tempo is { } current ? (float)(current.BpmAt(Math.Max(0, chartTime)) / 60) : 0f);
+
         if (chart.Tempo is not { } tempo) return;
 
         var beat = tempo.SecondsToBeat(Math.Max(0, chartTime));
         shaders.SetGlobal("beat", (float)(beat - Math.Floor(beat)));
+        shaders.SetGlobal("beatNumber", (float)Math.Floor(beat));
 
         var wholeBeat = (long)Math.Floor(beat);
         if (wholeBeat == _lastBeat) return;
@@ -54,6 +76,11 @@ internal class BattleVisualEvents(IShaderProvider? shaders)
         shaders.SetGlobal("running", 0f);
         shaders.SetGlobal("time", 0f);
         shaders.SetGlobal("beat", 0f);
+        shaders.SetGlobal("beatNumber", 0f);
+        shaders.SetGlobal("noFlashing", 0f);
+        shaders.SetGlobal("flashLimit", 0f);
+        shaders.SetGlobal("beatsPerSecond", 0f);
         shaders.SetGlobal("health", 1f);
+        shaders.SetGlobal("stage", 0f);
     }
 }

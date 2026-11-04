@@ -52,8 +52,31 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         Logger.Info($"chart: {entry.Name} ({entry.Difficulty ?? entry.Stem})");
     }
 
+    public bool AskingAboutFlashing { get; private set; }
+
+    public void AnswerFlashingNotice(bool reduce)
+    {
+        if (reduce) settings.Flashing.Value = FlashingSetting.Reduced;
+
+        settings.FlashingNoticeSeen.Value = true;
+
+        Settings.Save(settings.FlashingNoticeSeen);
+
+        AskingAboutFlashing = false;
+
+        Logger.Info($"[Flashing] notice seen - flashing {settings.Flashing.Value}");
+
+        StartBattle();
+    }
+
     public void StartBattle()
     {
+        if (!settings.FlashingNoticeSeen.Value)
+        {
+            AskingAboutFlashing = true;
+            return;
+        }
+
         var entry = CurrentlyChosen;
         if (entry == null)
         {

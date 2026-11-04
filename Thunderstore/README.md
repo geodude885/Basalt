@@ -7,6 +7,15 @@ game-simulated player - standing in it, moving and using its moves. Survive to t
 boss is the bonus. Battles run solo, wherever you stand or in the Gym, Ring or Pit, optionally to
 music. Charts are shared as `.bbchart` packages.
 
+> **Photosensitivity warning.** Charts can include flashing lights and strobes that may trigger
+> seizures in people with photosensitive epilepsy. If you or anyone in your family has had a seizure
+> or epilepsy, consult a doctor before playing. Stop playing at once if you feel dizzy, see altered
+> vision, or have eye or muscle twitches.
+>
+> To reduce or turn off flashing: Basalt's settings (UIFramework) > **Flashing** > *Reduced* (at most
+> 3 flashes a second) or *Off* (no strobes or beat flashes). Basalt also asks the first time you start
+> a chart.
+
 **Needs** MelonLoader 0.7.3 and UIFramework. **Optional:** RumbleReShaded 1.2.0-dev.2 or later, for charts' shader
 looks - older versions just skip them.
 

@@ -239,6 +239,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
             }
 
             Run.Frame = frame.Value;
+            Visuals.SetStage(Run.Frame);
             StructureSweeper.ClearAll();
             var performer = request.Performer;
 

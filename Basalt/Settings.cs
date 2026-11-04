@@ -13,6 +13,8 @@ internal class Settings
     public MelonPreferences_Entry<bool> Editing { get; private set; } = null!;
     public MelonPreferences_Entry<bool> ShowPhaseBanners { get; private set; } = null!;
     public MelonPreferences_Entry<float> ChartVisuals { get; private set; } = null!;
+    public MelonPreferences_Entry<FlashingSetting> Flashing { get; private set; } = null!;
+    public MelonPreferences_Entry<bool> FlashingNoticeSeen { get; private set; } = null!; // Hidden
     public MelonPreferences_Entry<string> Chart { get; private set; } = null!; // Hidden
     public MelonPreferences_Entry<LogLevel> LogLevel { get; private set; } = null!; // Hidden
 
@@ -29,6 +31,11 @@ internal class Settings
         ChartVisuals = Applied(Category.CreateEntry("ChartVisuals", 1f, "Shader Intensity", "With RumbleReShaded, how intense shader effects are applied",
             false, false, new SliderDescriptor() { Min = 0f, Max = 1f, DecimalPlaces = 2 }));
 
+        Flashing = Applied(Category.CreateEntry("Flashing", Basalt.FlashingSetting.Full, "Flashing",
+            "Strobes and flashing lights in charts. Reduced maxes at 3 a second."));
+
+        FlashingNoticeSeen = Category.CreateEntry("FlashingNoticeSeen", false, "Flashing notice seen", null, is_hidden: true);
+
         Editing = Category.CreateEntry("Editing", false, "Chart Editing", "Show chart creation/editing tools");
 
         Chart = Category.CreateEntry("Chart", "", "Chart", null, is_hidden: true);
@@ -36,9 +43,18 @@ internal class Settings
         LogLevel = Applied(Category.CreateEntry("LogLevel", Basalt.LogLevel.Info, "Log level", null, is_hidden: true));
     }
 
+    public static void Save(MelonPreferences_Entry entry) => entry.Category.SaveToFile(false);
+
     private MelonPreferences_Entry<T> Applied<T>(MelonPreferences_Entry<T> entry)
     {
         entry.OnEntryValueChanged.Subscribe((_, _) => Changed?.Invoke());
         return entry;
     }
+}
+
+internal enum FlashingSetting
+{
+    Full,
+    Reduced,
+    Off,
 }

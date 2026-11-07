@@ -8,8 +8,23 @@ namespace Basalt.BattlePresentation.Shaders;
 
 internal class BattleVisualEvents(IShaderProvider? shaders)
 {
-    public FlashingSetting Flashing { get; set; } = FlashingSetting.Full;
+    public FlashingSetting Flashing
+    {
+        get;
+        set
+        {
+            field = value;
+            shaders?.FlashingSmoothingDelaySeconds = value switch
+            {
+                FlashingSetting.Reduced => ReducedLookDelay,
+                FlashingSetting.Off => OffLookDelay,
+                _ => 0f,
+            };
+        }
+    } = FlashingSetting.Full;
 
+    private const float ReducedLookDelay = 0.2f;
+    private const float OffLookDelay = 0.75f;
 
     public float ShaderIntensity
     {

@@ -16,7 +16,18 @@ internal class ReShade : IShaderProvider
     public static bool IsLoaded =>
         MelonBase.RegisteredMelons.FirstOrDefault(m => m.Info.Name == "RumbleReShaded")?.Info.SemanticVersion is { } version && version >= MinVersion;
 
+    private const string WeightKey = "\0weight";
+
     private readonly Dictionary<string, PackOverride?> _overridesByPack = new(StringComparer.OrdinalIgnoreCase);
+    private readonly VisualFlashingReducer _smoother = new();
+    private LookTimeline? _timeline;
+    private IReadOnlyList<ShaderCue>? _timelineCues;
+
+    public float FlashingSmoothingDelaySeconds
+    {
+        get => _smoother.Delay;
+        set => _smoother.Delay = value;
+    }
     private IReadOnlyList<PackInfo> _installedPacks = [];
 
     public static IShaderProvider? CreateIfLoaded() => IsLoaded ? new ReShade() : null;
@@ -39,16 +50,24 @@ internal class ReShade : IShaderProvider
     {
         if (cues.Count == 0) return;
 
-        foreach ((var packName, var look) in CurrentVisuals.Evaluate(cues, chartTime, PlayerValue))
+        if (!ReferenceEquals(cues, _timelineCues))
+        {
+            _timeline = new LookTimeline(cues, PlayerValue);
+            _timelineCues = cues;
+        }
+
+        var deltaTime = Time.deltaTime;
+        foreach ((var packName, var look) in _timeline!.VisualsAt(chartTime))
         {
             if (!_overridesByPack.TryGetValue(packName, out var packOverride))
                 _overridesByPack[packName] = packOverride = RRS.Override(ModId, packName);
             if (packOverride == null) continue;
 
             // An "off" cue hands the pack back to the player; Strength blends the chart's look over theirs.
-            packOverride.Weight = look.On ? ShaderIntensity : 0f;
+            packOverride.Weight = _smoother.WithFlashingReduction(packName, WeightKey, look.On ? 1f : 0f, deltaTime, 0f) * ShaderIntensity;
             packOverride.Enabled = true;
-            foreach ((var parameter, var value) in look.Values) packOverride.Set(parameter, value);
+            foreach ((var parameter, var value) in look.Values)
+                packOverride.Set(parameter, _smoother.WithFlashingReduction(packName, parameter, value, deltaTime, _timeline.PlayerDefaultParameters(packName, parameter)));
         }
     }
 
@@ -56,6 +75,9 @@ internal class ReShade : IShaderProvider
     {
         foreach (var packOverride in _overridesByPack.Values) packOverride?.Dispose();
         _overridesByPack.Clear();
+        _smoother.Reset();
+        _timeline = null;
+        _timelineCues = null;
     }
 
     private float PlayerValue(string packName, string parameter)

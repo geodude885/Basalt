@@ -7,6 +7,8 @@ internal interface IShaderProvider
 {
     float ShaderIntensity { get; set; }
 
+    float FlashingSmoothingDelaySeconds { get; set; }
+
     void PreloadPacks(IEnumerable<string> packNames);
 
     void ApplyLooksAt(IReadOnlyList<ShaderCue> cues, double chartTime);

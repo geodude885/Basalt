@@ -70,7 +70,28 @@ public sealed class ChartLibraryTests : IDisposable
         Assert.NotEqual(easy.ScoreKey, hard.ScoreKey);
     }
 
-    private static ChartEntry Entry(string json) => new("chart.json", ChartLoader.Load(json), ChartSource.Folder);
+    [Fact]
+    public void DifficultiesAreLabelledByDifficultyAndAPackageBesideItsFolderIsMarked()
+    {
+        var hard = Entry(/*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""", Path.Combine("Charts", "song-hard", "chart.json"));
+        var normal = Entry(/*lang=json,strict*/ """{ "name": "Song", "difficulty": "Normal" }""", Path.Combine("Charts", "song-normal", "chart.json"));
+        var packagedHard = Entry(/*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""", Path.Combine("Charts", "Song.bbchart"), ChartSource.Package, "hard");
+
+        Assert.Equal(new[] { "Hard", "Normal" }, ChartLibrary.DifficultyLabels([hard, normal]));
+        Assert.Equal(new[] { "Hard", "Hard (package)", "Normal" }, ChartLibrary.DifficultyLabels([hard, packagedHard, normal]));
+    }
+
+    [Fact]
+    public void DifficultiesStillSharingALabelSayWhereTheyComeFrom()
+    {
+        var hard = Entry(/*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""", Path.Combine("Charts", "song-hard", "chart.json"));
+        var copy = Entry(/*lang=json,strict*/ """{ "name": "Song", "difficulty": "Hard" }""", Path.Combine("Charts", "song-hard (copy)", "chart.json"));
+
+        Assert.Equal(new[] { "Hard (folder song-hard)", "Hard (folder song-hard (copy))" }, ChartLibrary.DifficultyLabels([hard, copy]));
+    }
+
+    private static ChartEntry Entry(string json, string file = "chart.json", ChartSource source = ChartSource.Folder, string? part = null) =>
+        new(file, ChartLoader.Load(json), source, Part: part);
 
     private void WriteChart(string name, string json)
     {

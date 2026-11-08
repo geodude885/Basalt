@@ -67,15 +67,26 @@ public static class ChartPackage
         var names = zip.Entries.Select(e => e.FullName.Replace('\\', '/')).ToList();
         if (names.Contains(ChartLibrary.FolderChartFile)) return null;
 
-        var nested = names.FirstOrDefault(n => n.Count(c => c == '/') == 1 && n.EndsWith("/" + ChartLibrary.FolderChartFile, StringComparison.Ordinal));
-        if (nested == null) return $"has no {ChartLibrary.FolderChartFile} at the top";
+        var chartFolders = names
+            .Where(n => n.Count(c => c == '/') == 1 && n.EndsWith("/" + ChartLibrary.FolderChartFile, StringComparison.Ordinal))
+            .Select(n => n[..(n.IndexOf('/') + 1)])
+            .ToList();
+        if (chartFolders.Count == 0) return $"has no {ChartLibrary.FolderChartFile} at the top";
 
-        var folder = nested[..(nested.IndexOf('/') + 1)];
-        if (!names.All(n => n.StartsWith(folder, StringComparison.Ordinal))) return $"has no {ChartLibrary.FolderChartFile} at the top";
+        var stray = names.FirstOrDefault(n => !chartFolders.Any(folder => n.StartsWith(folder, StringComparison.Ordinal)));
+        if (stray != null) return $"has \"{stray}\" outside its chart folder{(chartFolders.Count == 1 ? "" : "s")} - everything should be inside {string.Join(", ", chartFolders)}";
 
-        prefix = folder;
+        prefix = chartFolders.Count == 1 ? chartFolders[0] : "";
         return null;
     }
+
+    public static IReadOnlyList<string> ChartFoldersIn(string unpacked) =>
+        File.Exists(Path.Combine(unpacked, ChartLibrary.FolderChartFile))
+            ? [unpacked]
+            : Directory.EnumerateDirectories(unpacked)
+                .Where(folder => File.Exists(Path.Combine(folder, ChartLibrary.FolderChartFile)))
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
     private static string Hash(string file)
     {

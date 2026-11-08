@@ -14,7 +14,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 {
     private long _chartsFingerprint;
     private string? _actorToRecordId;
-    private string? _chosenFile;
+    private string? _chosenId;
     private float _nextChartsCheck;
 
     public ChartLibrary Library => library;
@@ -23,12 +23,12 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     {
         get
         {
-            var entry = (_chosenFile == null ? null : library.Entries.FirstOrDefault(e => string.Equals(e.File, _chosenFile, StringComparison.OrdinalIgnoreCase)))
+            var entry = (_chosenId == null ? null : library.Entries.FirstOrDefault(e => string.Equals(e.Id, _chosenId, StringComparison.OrdinalIgnoreCase)))
                         ?? library.Entries.FirstOrDefault(e => string.Equals(e.Stem, settings.Chart.Value, StringComparison.OrdinalIgnoreCase))
                         ?? library.Find(settings.Chart.Value)
                         ?? library.Playable.FirstOrDefault()
                         ?? (library.Entries.Count > 0 ? library.Entries[0] : null);
-            _chosenFile = entry?.File;
+            _chosenId = entry?.Id;
             return entry;
         }
     }
@@ -120,10 +120,10 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
         library.Reload();
 
         foreach (var entry in library.Entries.Where(e => !e.Result.Ok))
-            Logger.Info($"chart {Path.GetFileName(entry.File)} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
+            Logger.Info($"chart {entry.FileName} has problems:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", entry.Result.Errors)}");
 
         foreach (var entry in library.Entries.Where(e => e.Source == ChartSource.Package && e.Result.Ok))
-            Logger.Debug($"[Charts.Package] {Path.GetFileName(entry.File)}: {entry.Name}");
+            Logger.Debug($"[Charts.Package] {entry.FileName}: {entry.Name}");
     }
 
     public void ReloadChartsWhenChanged()
@@ -186,7 +186,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
 
     private void Choose(ChartEntry entry)
     {
-        _chosenFile = entry.File;
+        _chosenId = entry.Id;
         settings.Chart.Value = entry.Stem;
     }
     public ActorSpec? ActorToRecord => CurrentlyChosen?.Result.Chart is { } chart ? chart.Actors.FirstOrDefault(a => a.Id == _actorToRecordId) ?? chart.DefaultActor : null;

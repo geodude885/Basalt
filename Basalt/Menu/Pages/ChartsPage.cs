@@ -49,9 +49,7 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
             var difficulties = library.DifficultiesOf(chosen);
             if (difficulties.Count < 2) return null;
 
-            var sharedDifficulties = difficulties.GroupBy(e => e.Difficulty, StringComparer.OrdinalIgnoreCase)
-                .Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var labels = difficulties.Select(entry => (entry.Difficulty == null || sharedDifficulties.Contains(entry.Difficulty) ? entry.Stem : entry.Difficulty).ToUpperInvariant()).ToList();
+            var labels = ChartLibrary.DifficultyLabels(difficulties).Select(label => label.ToUpperInvariant()).ToList();
             return new MenuSlider($"difficulty:{chosen.Name}", labels, difficulties.ToList().IndexOf(chosen), step => charts.ChooseDifficulty(difficulties[step]));
         }
     }
@@ -73,7 +71,7 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
                 var errors = string.Join("\n", entry.Result.Errors.Take(4)) + (entry.Result.Errors.Count > 4 ? $"\n...and {entry.Result.Errors.Count - 4} more (see the log)" : "");
                 return new MenuCard(
                     position + $"{entry.Name}\n<color=#ff7060><size=55%>does not load:</size></color>\n" +
-                    $"<size=38%>{errors}</size>\n<size=40%><i>fix and save {Path.GetFileName(entry.File)}</i></size>");
+                    $"<size=38%>{errors}</size>\n<size=40%><i>{(entry.Source == ChartSource.Package ? $"in {entry.Origin} - fix the chart and package it again" : $"fix and save {entry.FileName}")}</i></size>");
             }
 
             var by = string.Join("  |  ", new[] { chart.Info.Author == null ? null : $"by {chart.Info.Author}", chart.Info.Difficulty }.Where(p => p != null));
@@ -88,6 +86,7 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
                 $"<size=50%>{length}</size>\n" +
                 (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "") +
                 $"<size=55%>{(best == null ? "no best yet" : $"best: {RankLook.Markup(best.Rank)} {best.Score}")}</size>" +
+                (settings.Editing.Value ? $"\n<size=40%><i>from {entry.Origin}</i></size>" : "") +
                 (settings.Editing.Value && chart.Actors.Count > 1 ? $"\n<size=45%>Selected recording actor: {charts.ActorToRecord?.Name}</size>" : ""),
                 chart.Cover == null ? null : ChartFiles.EnsureInsideFolder(entry.AssetFolder, chart.Cover));
         }

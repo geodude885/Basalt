@@ -2,8 +2,14 @@ using Basalt.Services.Charts.Files;
 
 namespace Basalt.Services.Charts;
 
-public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source, string? Folder = null)
+public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source, string? Folder = null, string? Part = null)
 {
+    public string Id => Part == null ? File : $"{File}/{Part}";
+    public string FileName => Source == ChartSource.Folder
+        ? $"{Stem}/{ChartLibrary.FolderChartFile}"
+        : Part == null ? Path.GetFileName(File) : $"{Path.GetFileName(File)}/{Part}";
+    public string Origin => Source == ChartSource.Folder ? $"folder {Stem}" : $"package {FileName}";
+
     public string AssetFolder => Folder ?? Path.GetDirectoryName(File) ?? "";
     public string? Difficulty => Result.Chart?.Info.Difficulty;
     public bool CanEdit => Result.Chart != null && Source != ChartSource.Package;
@@ -12,7 +18,7 @@ public record ChartEntry(string File, ChartLoadResult Result, ChartSource Source
     public string Name => Result.Chart?.Name ?? Stem;
     public string Stem => Source == ChartSource.Folder
         ? Path.GetFileName(Path.GetDirectoryName(File)) ?? ""
-        : Path.GetFileNameWithoutExtension(File);
+        : Part == null ? Path.GetFileNameWithoutExtension(File) : $"{Path.GetFileNameWithoutExtension(File)}/{Part}";
 }
 
 public class ChartLibrary(string folder, string? packageCache = null)
@@ -37,7 +43,7 @@ public class ChartLibrary(string folder, string? packageCache = null)
             .Select(file => new ChartEntry(file, Read(file), ChartSource.Folder));
         var packages = Packages()
             .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
-            .Select(Unpack);
+            .SelectMany(Unpack);
 
         _entries = folders.Concat(packages).ToList();
     }
@@ -49,6 +55,20 @@ public class ChartLibrary(string folder, string? packageCache = null)
             .OrderBy(e => DifficultyRank(e.Difficulty))
             .ThenBy(e => e.Difficulty, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    public static IReadOnlyList<string> DifficultyLabels(IReadOnlyList<ChartEntry> difficulties)
+    {
+        var labels = difficulties.Select(e => e.Difficulty ?? e.Stem).ToList();
+        labels = Disambiguate(labels, i => difficulties[i].Source == ChartSource.Package ? $"{labels[i]} (package)" : labels[i]);
+        labels = Disambiguate(labels, i => $"{difficulties[i].Difficulty ?? difficulties[i].Stem} ({difficulties[i].Origin})");
+        return labels;
+    }
+
+    private static List<string> Disambiguate(List<string> labels, Func<int, string> relabel)
+    {
+        var shared = labels.GroupBy(l => l, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return labels.Select((label, i) => shared.Contains(label) ? relabel(i) : label).ToList();
+    }
 
     public ChartEntry? Find(string name) =>
         _entries.FirstOrDefault(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase))
@@ -64,12 +84,18 @@ public class ChartLibrary(string folder, string? packageCache = null)
     private IEnumerable<string> Packages() =>
         Directory.EnumerateFiles(folder, "*" + ChartPackage.Extension).Concat(Directory.EnumerateFiles(folder, "*.zip"));
 
-    private ChartEntry Unpack(string package)
+    private IEnumerable<ChartEntry> Unpack(string package)
     {
         (var unpackedFolder, var error) = ChartPackage.Unpack(package, _packageCache);
-        return unpackedFolder == null
-            ? new ChartEntry(package, new ChartLoadResult(null, new[] { error ?? "could not be unpacked" }), ChartSource.Package)
-            : new ChartEntry(package, Read(Path.Combine(unpackedFolder, FolderChartFile)), ChartSource.Package, unpackedFolder);
+        var chartFolders = unpackedFolder == null ? [] : ChartPackage.ChartFoldersIn(unpackedFolder);
+        if (chartFolders.Count == 0)
+            return [new ChartEntry(package, new ChartLoadResult(null, new[] { error ?? $"has no {FolderChartFile}" }), ChartSource.Package)];
+
+        return chartFolders.Select(chartFolder => new ChartEntry(package,
+            Read(Path.Combine(chartFolder, FolderChartFile)),
+            ChartSource.Package,
+            chartFolder,
+            chartFolder == unpackedFolder ? null : Path.GetFileName(chartFolder)));
     }
 
     private static ChartLoadResult Read(string file)

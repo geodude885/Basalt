@@ -72,7 +72,7 @@ internal class Studio(BattleController battle, GameAssets assets)
     {
         if (NewClip == null || Chart == null || Entry == null) return;
 
-        var take = new PerformanceClip(Math.Round(_recordingStartedAtChartTime, 3), NewClip.Name, MathF.Round(NewClip.Start, 2)) { Mime = Mime };
+        var take = ChartWriter.Take(_recordingStartedAtChartTime, NewClip, Mime);
         var chart = Chart with
         {
             Performances = ChartWriter.UpdateActorPerformance(Chart, _actorId, take),
@@ -91,8 +91,6 @@ internal class Studio(BattleController battle, GameAssets assets)
         if (current.Actors.All(a => a.Id != _actorId)) return $"{Entry.Name} no longer has the actor {_actorId}";
 
         var clip = NewClip;
-        ChartClips().Save(clip);
-
         var keptText = ChartWriter.WritePerformances(chartText, current, _actorId, clip, _recordingStartedAtChartTime, Mime);
 
         if (BattlePlayer.Player?.Data?.PlayerMeasurement is { Length: > 0f } playerMeasurement)
@@ -101,6 +99,7 @@ internal class Studio(BattleController battle, GameAssets assets)
             keptText = ChartWriter.WriteActors(keptText, current.Actors.Select(a => a.Id == _actorId ? a with { Measurement = size } : a).ToList());
         }
 
+        ChartClips().Save(clip);
         ChartFiles.BackupAndSave(Entry.File, chartText, keptText);
         battle.Stop("clip kept");
 
@@ -137,11 +136,12 @@ internal class Studio(BattleController battle, GameAssets assets)
         var chartText = File.ReadAllText(Entry.File);
         if (ChartLoader.Load(chartText).Chart is not { } current) return $"{Entry.Name} has errors - fix them, then save the lane";
 
-        ChartFiles.BackupAndSave(Entry.File, chartText, LaneSetup.WriteIntoChartText(chartText, current));
+        var savedText = LaneSetup.WriteIntoChartText(chartText, current);
+
+        ChartFiles.BackupAndSave(Entry.File, chartText, savedText);
         ExitChartOptions();
         return $"saved {Entry.Name}'s lane";
     }
-
     public void ExitChartOptions()
     {
         LaneSetup.RemovePreview();

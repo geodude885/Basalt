@@ -84,6 +84,17 @@ public class ActorPerformanceTests
     }
 
     [Fact]
+    public void AClipRecordedBeforeZeroStartsAtZeroSkippingWhatCameBefore()
+    {
+        const string text = /*lang=json,strict*/ """{ "actors": [ { "id": "boss" } ], "end": 5 }""";
+        var loaded = ChartLoader.Load(ChartWriter.WritePerformances(text, Load(text), "boss", Recorded("boss-clip-1", 0f, 4f), -0.15));
+
+        Assert.True(loaded.Ok, string.Join("; ", loaded.Errors));
+        Assert.Equal(new PerformanceClip(0, "boss-clip-1", 0.15), Assert.Single(Assert.Single(loaded.Chart!.Performances).Clips));
+        Assert.Equal(5, loaded.Chart.End);
+    }
+
+    [Fact]
     public void ClipNamesCountUp()
     {
         var folder = Path.Combine(Path.GetTempPath(), $"Basalt-{Guid.NewGuid():N}");

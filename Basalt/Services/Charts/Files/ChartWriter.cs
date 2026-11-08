@@ -36,13 +36,14 @@ public static class ChartWriter
         return ChartJson.Write(chart);
     }
 
+    public static PerformanceClip Take(double at, Clip clip, bool mime) =>
+        new(Math.Round(Math.Max(at, 0), 3), clip.Name, Math.Round(clip.Start - Math.Min(at, 0), 2)) { Mime = mime };
+
     public static string WritePerformances(string chartText, Chart chart, string actorId, Clip clip, double at, bool mime = false)
     {
         var chartJson = ChartJson.Parse(chartText);
 
-        var performances = UpdateActorPerformance(chart,
-            actorId,
-            new PerformanceClip(Math.Round(at, 3), clip.Name, MathF.Round(clip.Start, 2)) { Mime = mime });
+        var performances = UpdateActorPerformance(chart, actorId, Take(at, clip, mime));
 
         var lastClipEnd = at + clip.Duration - clip.Start;
 

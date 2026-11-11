@@ -61,7 +61,11 @@ internal class ProjectileManager(ActorsRegistry actors)
 
         // What the game spawns on the ground rests on the floor, whatever height the chart gave.
         if (projectile.RestsOnFloor)
-            origin.y += floor + GroundedHeightOffFloor - LowestPoint(pooled.transform, origin, facing);
+        {
+            var lowest = LowestPoint(pooled.transform, body, origin, facing);
+            Logger.Debug($"[Projectile.Placed] #{id} {projectile.Structure}: floor {floor:F3}, pivot {origin.y:F3}, bottom {lowest:F3} ({origin.y - lowest:F3} below pivot)");
+            origin.y += floor + GroundedHeightOffFloor - lowest;
+        }
 
         Vector3 below = new(origin.x, Math.Min(origin.y, floor) - height, origin.z);
         var rise = Math.Min(MinSpawnTimeSeconds, projectile.Telegraph * 0.8f);
@@ -233,7 +237,7 @@ internal class ProjectileManager(ActorsRegistry actors)
         return moved < slide.Velocity.magnitude * since * 0.25f;
     }
 
-    private static float LowestPoint(Transform structure, Vector3 at, Quaternion facing)
+    private static float LowestPoint(Transform structure, Rigidbody? body, Vector3 at, Quaternion facing)
     {
         structure.SetPositionAndRotation(at, facing);
         Physics.SyncTransforms();
@@ -241,7 +245,9 @@ internal class ProjectileManager(ActorsRegistry actors)
         var lowest = float.MaxValue;
         foreach (var c in structure.GetComponentsInChildren<Collider>())
         {
-            if (c != null && c.enabled && !c.isTrigger) lowest = Math.Min(lowest, c.bounds.min.y);
+            if (c == null || !c.enabled || c.isTrigger) continue;
+            if (body != null && c.attachedRigidbody != body) continue;
+            lowest = Math.Min(lowest, c.bounds.min.y);
         }
 
         return lowest == float.MaxValue ? at.y : lowest;

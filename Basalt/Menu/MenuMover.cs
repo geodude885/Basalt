@@ -14,6 +14,8 @@ internal class MenuMover(JsonFileRepository<SavedSpot> spots)
     private const float DistanceBehind = 1f;
     private const float FollowDistance = 1.6f;
 
+    private static readonly SavedSpot DefaultGymSpot = new(0.945f, 1.387f, -3.585f, 241.4f);
+
     public void PlaceOnOpening(Transform menu, MenuPlacement placement)
     {
         if (placement != MenuPlacement.InFront || !PlaceAtGymSpot(menu)) PlaceNearPlayer(menu, placement);
@@ -63,8 +65,9 @@ internal class MenuMover(JsonFileRepository<SavedSpot> spots)
 
     private bool PlaceAtGymSpot(Transform menu)
     {
-        if (!ArenaKind.Gym.IsLoaded() || spots.Get(Maps.GymScene) is not { } spot) return false;
+        if (!ArenaKind.Gym.IsLoaded()) return false;
 
+        var spot = spots.Get(Maps.GymScene) ?? DefaultGymSpot;
         menu.SetPositionAndRotation(new Vector3(spot.X, spot.Y, spot.Z), Quaternion.Euler(0f, spot.Yaw, 0f));
         return true;
     }

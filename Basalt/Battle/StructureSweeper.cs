@@ -1,3 +1,4 @@
+using Basalt.Arenas;
 using Basalt.Services.Charts;
 using Basalt.Services.Charts.Model;
 using Il2CppRUMBLE.MoveSystem;
@@ -5,10 +6,11 @@ using UnityEngine;
 
 namespace Basalt.Battle;
 
-// Break structures after n seconds, or when behind lane back wall
+// Break structures after n seconds, or when n metres behind the back wall
 internal class StructureSweeper
 {
-    private const float BehindMargin = 0.05f;
+    private const float BehindBackstop = 1.75f;
+    private const float BreakLine = -(ArenaCollision.EndGap + BehindBackstop);
 
     private static readonly string[] PlayerStructures = { "Disc", "Ball", "RockCube", "Pillar", "Wall" };
 
@@ -61,7 +63,7 @@ internal class StructureSweeper
 
             if (behind is { } frame && IsBehindLane(structure, frame))
             {
-                Break(structure, "behind the lane", sound: false);
+                Break(structure, "behind the backstop", sound: false, dust: false);
                 continue;
             }
 
@@ -79,7 +81,7 @@ internal class StructureSweeper
 
             if (Time.time - still.Since < afterSeconds) continue;
 
-            Break(structure, $"still for {afterSeconds:0.#}s", sound: true);
+            Break(structure, $"still for {afterSeconds:0.#}s", sound: true, dust: true);
             _still.Remove(structure.Pointer);
         }
 
@@ -104,14 +106,14 @@ internal class StructureSweeper
             }
         }
 
-        return front is > float.NegativeInfinity and < -BehindMargin;
+        return front is > float.NegativeInfinity and < BreakLine;
     }
 
-    private static void Break(Structure structure, string why, bool sound)
+    private static void Break(Structure structure, string why, bool sound, bool dust)
     {
         try
         {
-            structure.Kill(Vector3.zero, sound, true, false);
+            structure.Kill(Vector3.zero, sound, dust, false);
             Logger.Debug($"[Battle.CleanedUp] {structure.gameObject.name} {why} - broken");
         }
         catch (Exception e)

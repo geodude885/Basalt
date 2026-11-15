@@ -15,13 +15,15 @@ public static class RankLook
 
     public static bool IsAnimated(string rank) => rank is "SS" or "SS+";
 
-    public static string Markup(string rank, double time = 0) => rank switch
+    public static string Markup(string rank, double time = 0, bool sized = true) => rank switch
     {
         "S" => $"<b>{Letters(rank, _ => Blue)}</b>",
-        "SS" => $"<b><size=115%>{Letters(rank, i => ShimmerCentre + (ShimmerSpread * Math.Sin(2 * Math.PI * ((time * ShimmerPerSecond) + (i * ShimmerPerLetter)))))}</size></b>",
-        "SS+" => $"<b><size=135%>{Letters(rank, i => (time * RainbowPerSecond) + (i * RainbowPerLetter))}</size></b>",
+        "SS" => $"<b>{Sized(115, sized, Letters(rank, i => ShimmerCentre + (ShimmerSpread * Math.Sin(2 * Math.PI * ((time * ShimmerPerSecond) + (i * ShimmerPerLetter))))))}</b>",
+        "SS+" => $"<b>{Sized(135, sized, Letters(rank, i => (time * RainbowPerSecond) + (i * RainbowPerLetter)))}</b>",
         _ => rank,
     };
+
+    private static string Sized(int percent, bool sized, string text) => sized ? $"<size={percent}%>{text}</size>" : text;
 
     private static string Letters(string rank, Func<int, double> hue) =>
         string.Concat(rank.Select((letter, i) => $"<color=#{Bright(hue(i))}>{letter}</color>"));

@@ -37,11 +37,12 @@ internal class BattleInfoBoard(GameAssets assets)
         _hideAt = seconds is float s ? Time.time + s : float.PositiveInfinity;
     }
 
-    public void ShowResult(BattleResult result, string? best = null)
+    public void ShowResult(BattleResult result, BestScore? previousBest = null, bool isNewBest = false)
     {
         var outcome = result.Survived ? "SURVIVED" : "DEFEATED";
         string Text(float time)
         {
+            var best = isNewBest ? "New Best" : previousBest == null ? null : $"best {RankLook.Markup(previousBest.Rank, time)} {previousBest.Score}";
             return $"{result.Chart}\n" +
                 $"{outcome}   rank {RankLook.Markup(result.Rank, time)}\n" +
                 $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +
@@ -50,7 +51,7 @@ internal class BattleInfoBoard(GameAssets assets)
         }
 
         Show(Text(0f));
-        if (RankLook.IsAnimated(result.Rank)) _animated = Text;
+        if (RankLook.IsAnimated(result.Rank) || (previousBest != null && RankLook.IsAnimated(previousBest.Rank))) _animated = Text;
     }
 
     public void Hide()

@@ -45,6 +45,7 @@ internal class BasaltMenu(PageSwitcher screens, JsonFileRepository<SavedSpot> sp
         _screen = screen;
 
         if (Time.time >= _nextRefresh) Refresh();
+        else SelectedChartDescription!.Animate();
 
         if (screen.FollowsPlayer && MenuMover.UpdateFollowPlayer(Root!.transform, screen.Placement))
             ButtonRow!.HasMovedOrBecomeVisible();

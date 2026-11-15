@@ -80,9 +80,9 @@ public class ScoreKeeperTests
     [InlineData(16, 0, "B")]
     [InlineData(16, 10, "B+")]
     [InlineData(16, 15, "A")]
-    [InlineData(16, 500, "A")]
+    [InlineData(16, 500, "A+")]
     [InlineData(4, 500, "S")]
-    public void DamageDealtBuysBackDamageTakenUpToAnA(int taken, double dealt, string rank) =>
+    public void DamageDealtBuysBackDamageTakenUpToAnAPlus(int taken, double dealt, string rank) =>
         Assert.Equal(rank, ScoreKeeper.Rank(true, taken, dealt));
 
     [Theory]
@@ -91,8 +91,8 @@ public class ScoreKeeperTests
     [InlineData(20, 5, "C+")]
     [InlineData(20, 10, "B")]
     [InlineData(20, 25, "A")]
-    [InlineData(20, 500, "A")]
-    [InlineData(1, 500, "A")]
-    public void DamageDealtLiftsADefeatUpToAnA(int taken, double dealt, string rank) =>
+    [InlineData(20, 500, "A+")]
+    [InlineData(1, 500, "A+")]
+    public void DamageDealtLiftsADefeatUpToAnAPlus(int taken, double dealt, string rank) =>
         Assert.Equal(rank, ScoreKeeper.Rank(false, taken, dealt, lasted: 0.1));
 }

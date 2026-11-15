@@ -451,7 +451,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
             Logger.Error($"[Scores.SaveFailed] {e.Message}");
         }
 
-        Board.ShowResult(result, isNewBest ? "New Best" : previousBest == null ? null : $"best {RankLook.Markup(previousBest.Rank)} {previousBest.Score}");
+        Board.ShowResult(result, isNewBest ? null : previousBest, isNewBest);
 
         Logger.Info(
             $"[Battle] {result.Chart}: {(result.Survived ? "survived" : "defeated")} - rank {result.Rank}, score {result.Score}; " +

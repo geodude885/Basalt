@@ -5,6 +5,7 @@ using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
+using Basalt.Services.Help;
 using Basalt.Services.Scoring;
 using static Basalt.Menu.MenuColours;
 
@@ -12,6 +13,8 @@ namespace Basalt.Menu.Pages;
 
 internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileRepository<BestScore> scores, Settings settings, BattleController battle, Studio studio) : IMenuScreen
 {
+    public InfoPage Guide { get; } = new("guide", PlayerGuide.Topics);
+
     public IReadOnlyList<MenuButton> Buttons
     {
         get
@@ -21,6 +24,7 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
                 new("prev", "PREV", Orange, () => charts.StepSong(-1)),
                 new("start", "START", Green, charts.StartBattle),
                 new("next", "NEXT", Orange, () => charts.StepSong(1)),
+                new("info", "INFO", Blue, Guide.Open),
             };
 
             if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new MenuButton("gym", "GYM", Orange, battle.ReturnToGym));
@@ -79,16 +83,24 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
 
             var best = scores.Get(entry.ScoreKey);
 
-            return new MenuCard(
-                position +
+            var before = position +
                 $"{chart.Name}\n" +
                 (by.Length > 0 ? $"<size=55%>{by}</size>\n" : "") +
                 $"<size=50%>{length}</size>\n" +
-                (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "") +
-                $"<size=55%>{(best == null ? "no best yet" : $"best: {RankLook.Markup(best.Rank)} {best.Score}")}</size>" +
+                (chart.Info.Description != null ? $"<size=45%><i>{chart.Info.Description}</i></size>\n" : "");
+            var after =
                 (settings.Editing.Value ? $"\n<size=40%><i>from {entry.Origin}</i></size>" : "") +
-                (settings.Editing.Value && chart.Actors.Count > 1 ? $"\n<size=45%>Selected recording actor: {charts.ActorToRecord?.Name}</size>" : ""),
-                chart.Cover == null ? null : ChartFiles.EnsureInsideFolder(entry.AssetFolder, chart.Cover));
+                (settings.Editing.Value && chart.Actors.Count > 1 ? $"\n<size=45%>Selected recording actor: {charts.ActorToRecord?.Name}</size>" : "");
+
+            string TextAt(double time)
+            {
+                return before + $"<size=55%>{(best == null ? "no best yet" : $"best: {RankLook.Markup(best.Rank, time)} {best.Score}")}</size>" + after;
+            }
+
+            return new MenuCard(
+                TextAt(0),
+                chart.Cover == null ? null : ChartFiles.EnsureInsideFolder(entry.AssetFolder, chart.Cover),
+                best != null && RankLook.IsAnimated(best.Rank) ? TextAt : null);
         }
     }
 }

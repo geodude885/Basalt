@@ -21,10 +21,11 @@ public record BestScore(int Score, string Rank, bool Survived, DateTime When)
 // Surviving to the end: 1000, otherwise * 0.9 * percentage lasted
 // Damage to actors adds points
 // Damage taken removes points
-// Rank is by damage taken; damage to actors can offset it, up to an A
+// Rank is by damage taken; damage to actors can offset it, up to an A+
 public class ScoreKeeper
 {
     public const int SurvivalPoints = 1000;
+    public const double ShareOfSurvivalWhenLost = 0.9;
     public const int ActorDamagePoints = 10;
     public const int DamageTakenPoints = 25;
 
@@ -42,8 +43,8 @@ public class ScoreKeeper
         ("C", int.MaxValue),
     };
 
-    private const double CompletionRequiredForDPlus = 0.5;
-    private const string DealingDamageCanRaiseToRank = "A";
+    public const double CompletionRequiredForDPlus = 0.5;
+    public const string DealingDamageCanRaiseToRank = "A+";
     private const int MaximumDamageCountedAgainstScore = 20;
 
     private readonly string _chart;
@@ -76,7 +77,7 @@ public class ScoreKeeper
     {
         var lasted = battleLength <= 0 ? 1 : Math.Clamp(seconds / battleLength, 0, 1);
 
-        var survival = survived ? SurvivalPoints : SurvivalPoints * 0.9 * lasted;
+        var survival = survived ? SurvivalPoints : SurvivalPoints * ShareOfSurvivalWhenLost * lasted;
 
         var score = survival + (_actorDamage * ActorDamagePoints) - (DamageTaken * DamageTakenPoints);
 

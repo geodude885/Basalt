@@ -11,7 +11,7 @@ internal interface IMenuScreen
     bool FollowsPlayer => false;
 }
 
-internal record MenuCard(string Text, string? CoverPath = null);
+internal record MenuCard(string Text, string? CoverPath = null, Func<double, string>? TextAt = null);
 internal record MenuButton(string Id, string Label, Color Colour, Action Press);
 internal record MenuSlider(string Id, IReadOnlyList<string> Labels, int Step, Action<int> Choose);
 

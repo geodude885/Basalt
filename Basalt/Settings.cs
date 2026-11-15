@@ -31,7 +31,7 @@ internal class Settings
         ChartVisuals = Applied(Category.CreateEntry("ChartVisuals", 1f, "Shader Intensity", "With RumbleReShaded, how intense shader effects are applied",
             false, false, new SliderDescriptor() { Min = 0f, Max = 1f, DecimalPlaces = 2 }));
 
-        Flashing = Applied(Category.CreateEntry("Flashing", Basalt.FlashingSetting.Full, "Flashing",
+        Flashing = Applied(Category.CreateEntry("Flashing", FlashingSetting.Full, "Flashing",
             "Strobes and flashing lights in charts. Reduced maxes at 3 a second."));
 
         FlashingNoticeSeen = Category.CreateEntry("FlashingNoticeSeen", false, "Flashing notice seen", null, is_hidden: true);

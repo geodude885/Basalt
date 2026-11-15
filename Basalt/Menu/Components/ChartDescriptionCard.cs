@@ -11,6 +11,7 @@ internal class ChartDescriptionCard
 
     private const float RockDepth = 0.04f;
     private const float CoverSize = 0.32f;
+    private const float TextPadding = 0.025f;
 
     private readonly Covers _covers;
     private string? _coverPath;
@@ -26,6 +27,7 @@ internal class ChartDescriptionCard
         Text.fontSizeMin = 0.3f;
         Text.fontSizeMax = 1.2f;
         Text.enableWordWrapping = true;
+        Text.margin = new Vector4(TextPadding, TextPadding, TextPadding, TextPadding);
 
         Cover = GameObject.CreatePrimitive(PrimitiveType.Quad);
         Cover.name = "Cover";
@@ -35,13 +37,20 @@ internal class ChartDescriptionCard
         Cover.SetActive(false);
     }
 
+    private Func<double, string>? _textAt;
+
     public void Show(MenuCard card)
     {
-        Text.text = card.Text;
+        _textAt = card.TextAt;
+        Text.text = card.TextAt?.Invoke(Time.time) ?? card.Text;
         ShowCover(card.CoverPath);
     }
 
-    // Scaled to the image's shape; without one, the text has the whole card.
+    public void Animate()
+    {
+        if (_textAt != null) Text.text = _textAt(Time.time);
+    }
+
     private void ShowCover(string? path)
     {
         var texture = path == null ? null : _covers.Get(path);

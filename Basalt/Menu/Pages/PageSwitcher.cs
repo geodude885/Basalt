@@ -20,9 +20,21 @@ internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonFil
         StudioState.Recording => battle.Run?.State == BattleState.Running ? _recording : null,
         StudioState.Setup => _laneSetup,
         StudioState.Reviewing => null,
-        StudioState.Deciding => battle.Run?.State is null or BattleState.Finished ? _review : null,
-        _ => !Maps.IsCurrentlyOnline && battle.CanPickChartsHere && battle.Run?.State is null or BattleState.Finished
-            ? charts.AskingAboutFlashing ? _flashingNotice : _charts
-            : null,
+        StudioState.Deciding => NoBattleRunning ? _review : null,
+        _ => ChartPickerOpen ? ChartPicking : null,
     };
+
+    private bool NoBattleRunning => battle.Run?.State is null or BattleState.Finished;
+
+    private bool ChartPickerOpen => !Maps.IsCurrentlyOnline && battle.CanPickChartsHere && NoBattleRunning;
+
+    private IMenuScreen ChartPicking
+    {
+        get
+        {
+            if (charts.AskingAboutFlashing) return _flashingNotice;
+            if (_charts.Guide.IsOpen) return _charts.Guide;
+            return _charts;
+        }
+    }
 }

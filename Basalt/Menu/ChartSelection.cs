@@ -6,6 +6,7 @@ using Basalt.Editing;
 using Basalt.Services.Charts;
 using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
+using Basalt.Services.Modes;
 using UnityEngine;
 
 namespace Basalt.Menu;
@@ -18,6 +19,8 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
     private float _nextChartsCheck;
 
     public ChartLibrary Library => library;
+
+    public GameMode GameMode { get; set; } = GameMode.Normal;
 
     public ChartEntry? CurrentlyChosen
     {
@@ -90,7 +93,7 @@ internal class ChartSelection(ChartLibrary library, Settings settings, BattleCon
             return;
         }
 
-        battle.Start(new BattleRequest(entry.Result.Chart) { AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey });
+        battle.Start(new BattleRequest(entry.Result.Chart) { AssetFolder = entry.AssetFolder, ScoreKey = entry.ScoreKey, GameMode = GameMode });
     }
 
     public void StepActorToRecord()

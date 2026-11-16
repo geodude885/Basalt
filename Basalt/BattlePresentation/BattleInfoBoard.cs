@@ -1,3 +1,4 @@
+using Basalt.Services.Modes;
 using Basalt.Services.Scoring;
 using Il2CppTMPro;
 using UnityEngine;
@@ -37,12 +38,15 @@ internal class BattleInfoBoard(GameAssets assets)
         _hideAt = seconds is float s ? Time.time + s : float.PositiveInfinity;
     }
 
-    public void ShowResult(BattleResult result, BestScore? previousBest = null, bool isNewBest = false)
+    public void ShowResult(BattleResult result, BestScore? previousBest = null, bool isNewBest = false, GameMode mode = GameMode.Normal)
     {
-        var outcome = result.Survived ? "SURVIVED" : "DEFEATED";
+        var outcome = mode == GameMode.Normal ? result.Survived ? "SURVIVED" : "DEFEATED" : mode.ToString().ToUpperInvariant();
         string Text(float time)
         {
-            var best = isNewBest ? "New Best" : previousBest == null ? null : $"best {RankLook.Markup(previousBest.Rank, time)} {previousBest.Score}";
+            var best = !mode.SavesScores() ? "not saved"
+                : isNewBest ? "New Best"
+                    : previousBest == null ? null
+                        : $"best: {RankLook.Markup(previousBest.Rank, time)} {previousBest.Score}";
             return $"{result.Chart}\n" +
                 $"{outcome}   rank {RankLook.Markup(result.Rank, time)}\n" +
                 $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +

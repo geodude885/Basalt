@@ -33,8 +33,7 @@ internal class PageSwitcher(ChartSelection charts, ChartLibrary library, JsonFil
         get
         {
             if (charts.AskingAboutFlashing) return _flashingNotice;
-            if (_charts.Guide.IsOpen) return _charts.Guide;
-            return _charts;
+            return _charts.Panels.FirstOrDefault(p => p.IsOpen) ?? (IMenuScreen)_charts;
         }
     }
 }

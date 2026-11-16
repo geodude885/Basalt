@@ -8,6 +8,7 @@ using Basalt.Services.Charts;
 using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
 using Basalt.Services.Clips;
+using Basalt.Services.Modes;
 using Basalt.Services.Scoring;
 using MelonLoader;
 using UnityEngine;
@@ -210,7 +211,9 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         run.Score.PlayerDamaged(amount);
         Logger.Debug($"[Battle.YouWereHit] -{amount}, {healthNow} left");
         Visuals.FireEvent("hit", BattlePlayer.Head, Mathf.Clamp01(amount / 5f), 0.6f);
-        if (healthNow <= 0) FinishBattle(survived: false, ChartTime);
+
+        if (run.Request.GameMode.PlayerInvincible()) BattlePlayer.ResetHealth();
+        else if (healthNow <= 0) FinishBattle(survived: false, ChartTime);
     }
 
     public void OnActorDamaged(int amount)
@@ -439,7 +442,7 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         Visuals.FireEvent(survived ? "survived" : "defeated", BattlePlayer.Head, 1f, 2f);
         Visuals.End();
 
-        var scoreKey = run.Request.ScoreKey;
+        var scoreKey = run.Request.GameMode.SavesScores() ? run.Request.ScoreKey : null;
         var previousBest = scoreKey == null ? null : scores.Get(scoreKey);
         var isNewBest = scoreKey != null && (previousBest == null || previousBest.IsBeatenBy(result));
         try
@@ -451,10 +454,10 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
             Logger.Error($"[Scores.SaveFailed] {e.Message}");
         }
 
-        Board.ShowResult(result, isNewBest ? null : previousBest, isNewBest);
+        Board.ShowResult(result, isNewBest ? null : previousBest, isNewBest, run.Request.GameMode);
 
         Logger.Info(
-            $"[Battle] {result.Chart}: {(result.Survived ? "survived" : "defeated")} - rank {result.Rank}, score {result.Score}; " +
+            $"[Battle] {result.Chart} ({run.Request.GameMode}): {(result.Survived ? "survived" : "defeated")} - rank {result.Rank}, score {result.Score}; " +
             $"damage taken {result.DamageTaken} in {result.HitsTaken} hits, boss damage {result.ActorDamage:0.#}, " +
             $"{result.ProjectilesLaunched} projectiles in {result.Seconds:0.0}s");
 

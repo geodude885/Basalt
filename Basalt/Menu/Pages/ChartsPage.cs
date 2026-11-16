@@ -5,7 +5,7 @@ using Basalt.Services;
 using Basalt.Services.Charts;
 using Basalt.Services.Charts.Files;
 using Basalt.Services.Charts.Model;
-using Basalt.Services.Help;
+using Basalt.Services.Modes;
 using Basalt.Services.Scoring;
 using static Basalt.Menu.MenuColours;
 
@@ -13,7 +13,10 @@ namespace Basalt.Menu.Pages;
 
 internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileRepository<BestScore> scores, Settings settings, BattleController battle, Studio studio) : IMenuScreen
 {
-    public InfoPage Guide { get; } = new("guide", PlayerGuide.Topics);
+    private readonly InfoPage _guide = new();
+    private readonly ModesPage _modes = new(charts);
+
+    public IReadOnlyList<PanelPage> Panels => [_guide, _modes];
 
     public IReadOnlyList<MenuButton> Buttons
     {
@@ -24,7 +27,8 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
                 new("prev", "PREV", Orange, () => charts.StepSong(-1)),
                 new("start", "START", Green, charts.StartBattle),
                 new("next", "NEXT", Orange, () => charts.StepSong(1)),
-                new("info", "INFO", Blue, Guide.Open),
+                new("mode", "MODE", Blue, _modes.Open),
+                new("info", "INFO", Blue, _guide.Open),
             };
 
             if (!ArenaKind.Gym.IsLoaded()) buttons.Add(new MenuButton("gym", "GYM", Orange, battle.ReturnToGym));
@@ -82,8 +86,9 @@ internal class ChartsPage(ChartSelection charts, ChartLibrary library, JsonFileR
             var length = $"{chart.End:0}s";
 
             var best = scores.Get(entry.ScoreKey);
+            var mode = charts.GameMode == GameMode.Normal ? "" : $"<size=45%><color=#3c78f0><b>{charts.GameMode.ToString().ToUpperInvariant()}</b></color></size>\n";
 
-            var before = position +
+            var before = mode + position +
                 $"{chart.Name}\n" +
                 (by.Length > 0 ? $"<size=55%>{by}</size>\n" : "") +
                 $"<size=50%>{length}</size>\n" +

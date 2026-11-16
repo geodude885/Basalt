@@ -43,7 +43,7 @@ public class ScoreKeeper
         ("C", int.MaxValue),
     };
 
-    public const double CompletionRequiredForDPlus = 0.5;
+    private const double CompletionRequiredForDPlus = 0.5;
     public const string DealingDamageCanRaiseToRank = "A+";
     private const int MaximumDamageCountedAgainstScore = 20;
 

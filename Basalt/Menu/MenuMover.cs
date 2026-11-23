@@ -9,7 +9,7 @@ namespace Basalt.Menu;
 internal class MenuMover(JsonFileRepository<SavedSpot> spots)
 {
     private const float DistanceAhead = 0.75f;
-    private const float HeightAboveEyes = -0.35f;
+    private const float HeightAboveFeet = 1.35f;
     private const float SidewaysToRight = 0f;
     private const float DistanceBehind = 1f;
     private const float FollowDistance = 1.6f;
@@ -29,9 +29,9 @@ internal class MenuMover(JsonFileRepository<SavedSpot> spots)
         var right = Vector3.Cross(Vector3.up, facing);
         var position = placement switch
         {
-            MenuPlacement.Beside => rig.Head.position + (facing * 0.35f) - (right * 0.8f) + (Vector3.down * 0.45f),
-            MenuPlacement.Behind => rig.Head.position - (facing * DistanceBehind) + (Vector3.up * HeightAboveEyes),
-            _ => rig.Head.position + (facing * DistanceAhead) + (Vector3.up * HeightAboveEyes) + (right * SidewaysToRight),
+            MenuPlacement.Beside => rig.Feet + (facing * 0.35f) - (right * 0.8f) + (Vector3.up * HeightAboveFeet),
+            MenuPlacement.Behind => rig.Feet - (facing * DistanceBehind) + (Vector3.up * HeightAboveFeet),
+            _ => rig.Feet + (facing * DistanceAhead) + (Vector3.up * HeightAboveFeet) + (right * SidewaysToRight),
         };
 
         menu.SetPositionAndRotation(position, Quaternion.LookRotation((position - rig.Head.position).Flat()));

@@ -12,10 +12,11 @@ internal record ActorPose(
         (rig.LeftHand.localPosition, rig.LeftHand.localRotation),
         (rig.RightHand.localPosition, rig.RightHand.localRotation));
 
-    public static ActorPose DefaultPose(PlayerRig playerRig)
+    private const float FallbackEyeHeight = 1.6f;
+
+    public static ActorPose DefaultPose(float measuredHeight)
     {
-        var eye = playerRig.Head.localPosition.y;
-        if (eye < 1f) eye = 1.6f;
+        var eye = measuredHeight >= 1f ? measuredHeight : FallbackEyeHeight;
 
         return new ActorPose(
             (new Vector3(0f, eye, 0f), Quaternion.identity),

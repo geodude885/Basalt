@@ -74,9 +74,9 @@ internal static class ActorSpawner
 
         var rig = PlayerRig.From(controller);
         var footing = new ActorPlacement(actor, controller, rig);
-        var clips = new ClipPlayer(actor, controller, rig, footing, ActorPose.DefaultPose(PlayerRig.From(BattlePlayer.Player?.Controller!)));
+        var clips = new ClipPlayer(actor, controller, rig, footing, ActorPose.DefaultPose(player.Data.PlayerMeasurement.Length));
 
-        Logger.Info($"[Actor.Spawned] {actor}: type {controller.ControllerType}, look \"{actor.PlayerCustomisation}\", at {floorPosition.Describe()}; " +
+        Logger.Info($"[Actor.Spawned] {actor}: type {controller.ControllerType}, look \"{actor.PlayerCustomisation}\", height {player.Data.PlayerMeasurement.Length:0.00}, at {floorPosition.Describe()}; " +
             $"moves: {string.Join(", ", controller.PlayerProcessor.availableStacks.ToArray().Select(s => s.CachedName))}");
 
         return new ActorBody(player, controller, rig, footing, clips, new ActorCollisions(controller), hiddenUi);

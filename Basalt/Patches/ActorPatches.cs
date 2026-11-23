@@ -51,6 +51,27 @@ public static class ActorPatches
         }
     }
 
+    [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.ReduceHealth))]
+    public static class PlayerDamageCap
+    {
+        public static void Prefix(PlayerHealth __instance, ref short amount)
+        {
+            var capped = amount;
+            PatchGuard.Run(nameof(PlayerDamageCap), () =>
+            {
+                if (capped <= 1 || _battle.PlayerDamageCap is not { } cap) return;
+
+                var localPlayer = BattlePlayer.Player;
+                var controller = __instance.ParentController;
+                if (localPlayer == null || controller?.assignedPlayer == null || controller.assignedPlayer.Pointer != localPlayer.Pointer) return;
+
+                capped = (short)Math.Min(capped, cap);
+            });
+
+            amount = capped;
+        }
+    }
+
     [HarmonyPatch(typeof(PlayerHealth), nameof(PlayerHealth.SetHealth))]
     public static class NoLethalSetHealth
     {

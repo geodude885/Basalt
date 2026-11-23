@@ -204,6 +204,11 @@ internal class BattleController(ActorsRegistry actors, JsonFileRepository<BestSc
         }
     }
 
+    public int? PlayerDamageCap =>
+        Run is { State: BattleState.Running } run && run.Request.Mode != BattleMode.Record && !run.Request.GameMode.FullStructureDamage()
+            ? GameModes.DamagePerHit
+            : null;
+
     public void OnPlayerDamaged(int amount, int healthNow)
     {
         if (Run is not { State: BattleState.Running } run || run.Request.Mode == BattleMode.Record) return;

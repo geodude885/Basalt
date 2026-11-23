@@ -40,18 +40,21 @@ internal class BattleInfoBoard(GameAssets assets)
 
     public void ShowResult(BattleResult result, BestScore? previousBest = null, bool isNewBest = false, GameMode mode = GameMode.Normal)
     {
-        var outcome = mode == GameMode.Normal ? result.Survived ? "SURVIVED" : "DEFEATED" : mode.ToString().ToUpperInvariant();
+        var survived = result.Survived ? "SURVIVED" : "DEFEATED";
+        var outcome = mode == GameMode.Normal ? survived
+            : $"{mode.ToString().ToUpperInvariant()} {survived}";
         string Text(float time)
         {
-            var best = !mode.SavesScores() ? "not saved"
+            var best = !mode.SavesScores() ? "Not saved"
                 : isNewBest ? "New Best"
                     : previousBest == null ? null
-                        : $"best: {RankLook.Markup(previousBest.Rank, time)} {previousBest.Score}";
+                        : $"Best: {RankLook.Markup(previousBest.Rank, time, false)} {previousBest.Score}";
             return $"{result.Chart}\n" +
-                $"{outcome}   rank {RankLook.Markup(result.Rank, time)}\n" +
-                $"score {result.Score}{(best == null ? "" : $"   <size=70%>{best}</size>")}\n" +
-                $"<size=70%>damage taken {result.DamageTaken} ({result.HitsTaken} hits)  |  " +
-                $"boss damage {result.ActorDamage:0.#}  |  {result.Seconds:0.0}s</size>";
+                $"{outcome} Rank: {RankLook.Markup(result.Rank, time)}\n" +
+                $"Score: {result.Score}\n" +
+                $"{(best == null ? "" : $"<size=50%>{best}</size>")}\n" +
+                $"<size=70%>Damage taken: {result.DamageTaken}</size>\n" +
+                $"<size=70%>Boss damage: {result.ActorDamage:0.#}</size>";
         }
 
         Show(Text(0f));

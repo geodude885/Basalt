@@ -20,7 +20,16 @@ internal class GameAssets
 
     private const string PreferredFont = "RUMBLE Text Material";
 
-    public static readonly Color TextOnRock = new(0.12f, 0.1f, 0.09f);
+    public static readonly Color TextOnRock = new(0.906f, 0.89f, 0.863f);
+    private static readonly Color BasaltRock = new(0.22f, 0.226f, 0.237f);
+    private static readonly Color BasaltRockShade = new(0.145f, 0.15f, 0.16f);
+
+    public static readonly Color TextInWorld = new(0.12f, 0.1f, 0.09f);
+
+    private const string RockColour = "Color_D943764B";
+    private const string RockShadeColour = "_Grounded_color";
+
+    private Material? _basaltRock;
 
     public bool MenuPartsLoaded => _rockTemplate != null && _buttonTemplate != null && _sliderTemplate != null;
 
@@ -113,8 +122,26 @@ internal class GameAssets
         rock.transform.localRotation = Quaternion.identity;
         rock.transform.localScale = new Vector3(1f / _rockBounds.size.x, 1f / _rockBounds.size.y, 1f / _rockBounds.size.z);
         rock.transform.localPosition = Vector3.Scale(-_rockBounds.center, rock.transform.localScale);
+        Tint(rock);
         rock.SetActive(true);
         return holder;
+    }
+
+    private void Tint(GameObject rock)
+    {
+        foreach (var renderer in rock.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer.sharedMaterial is not { } original || !original.HasProperty(RockColour)) continue;
+
+            if (_basaltRock == null)
+            {
+                _basaltRock = new Material(original) { name = "Basalt_Rock" };
+                _basaltRock.SetColor(RockColour, BasaltRock);
+                if (_basaltRock.HasProperty(RockShadeColour)) _basaltRock.SetColor(RockShadeColour, BasaltRockShade);
+            }
+
+            renderer.sharedMaterial = _basaltRock;
+        }
     }
 
     private bool EnsureRockPanelLoaded()

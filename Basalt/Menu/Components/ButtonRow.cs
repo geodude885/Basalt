@@ -10,6 +10,8 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
     private const int ButtonsPerRow = 5;
     private const float RowSpacing = 0.21f;
     private const float PressCooldown = 0.5f;
+    private const float ButtonScale = 0.85f;
+    private const float ButtonDrop = -0.028f;
 
     private const float AfterMenuMovedLockForSeconds = 1f;
 
@@ -71,8 +73,10 @@ internal class ButtonRow(Transform menu, GameAssets assets, Action pressed)
         {
             if (made != null) PressedByHand(made);
         });
-        game!.transform.localPosition = new Vector3(0f, -0.02f, -0.02f);
+
+        game!.transform.localPosition = new Vector3(0f, ButtonDrop, -0.02f);
         game.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        game.transform.localScale *= ButtonScale;
         var cap = game.GetComponentsInChildren<Renderer>(true).First(r => r.name == "Button");
 
         var face = assets.CreateRockPanel("Face", holder.transform, new Vector3(0f, 0.01f, 0.01f), new Vector3(ButtonWidth, 0.16f, 0.02f))!;

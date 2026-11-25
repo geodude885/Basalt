@@ -50,7 +50,7 @@ internal class StepSlider(Transform menu, GameAssets assets)
         foreach ((var label, var i) in spec.Labels.Select((label, i) => (label, i)))
         {
             var at = Vector3.Lerp(placed.First, placed.Last, spec.Labels.Count == 1 ? 0f : i / (float)(spec.Labels.Count - 1));
-            var text = assets.CreateText(holder.transform, new Vector3(at.x + 0.17f, at.y, -0.01f), new Vector2(0.16f, 0.05f), 0.5f, GameAssets.TextOnRock);
+            var text = assets.CreateText(holder.transform, new Vector3(at.x + 0.17f, at.y, -0.01f), new Vector2(0.16f, 0.05f), 0.5f, GameAssets.TextInWorld);
             text.enableAutoSizing = true;
             text.fontSizeMin = 0.2f;
             text.fontSizeMax = 0.5f;

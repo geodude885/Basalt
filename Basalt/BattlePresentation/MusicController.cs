@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using Basalt.Services.Audio;
+using Il2CppRUMBLE.Managers;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -13,6 +14,7 @@ internal class MusicController
     private const float FadeSeconds = 1.5f;
 
     private const float MaxVolume = 0.56f;
+    private const float SilentVolume = 0.001f;
 
     private const int ChunksDecodedAhead = 30;
     private const int ChunksCopiedPerFrame = 4;
@@ -223,6 +225,8 @@ internal class MusicController
 
             if (musicGroup != null) _source.outputAudioMixerGroup = musicGroup;
             Logger.Debug($"[Music.Output] {(musicGroup == null ? "straight to the output" : $"through mixer group {musicGroup.name}")}");
+
+            WarnIfGameMusicOff();
             return true;
         }
         catch (Exception e)
@@ -244,5 +248,13 @@ internal class MusicController
         }
 
         if (loadNumber == _loadNumber && source != null) source.Stop();
+    }
+
+    private static void WarnIfGameMusicOff()
+    {
+        if (AudioManager.instance is not { ConfigLoaded: true } audio) return;
+
+        if (audio.Config.MasterVolume < SilentVolume || audio.Config.MusicVolume < SilentVolume)
+            Logger.Warning($"RUMBLE's master or music volume is off. Turn enable music and in game to be able to hear Basalt audio");
     }
 }

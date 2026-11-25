@@ -9,6 +9,9 @@ internal class InfoPage() : PanelPage("guide")
 
     internal static IReadOnlyList<Topic> Topics { get; } =
     [
+        new("Setup",
+            $"Music: Ensure that Rumble music is enabled in order to hear songs whilst playing.\n" +
+            $"Shaders: RumbleReShaded is optional, but strongly recommended. For the best experience, ensure it is enabled in UiFramework, and the shader pack supplied with Basalt is in your shaders folder"),
         new("Score",
             $"Surviving to the end gives you the full amount of points from completing a chart. Losing will reduce this, depending on how far though the chart you were.\n" +
             $"Each point of damage you do deal will add points, and each point of damage you take will remove some."),
